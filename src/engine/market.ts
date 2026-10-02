@@ -20,7 +20,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 const round = (value: number) => Math.round(value * 100) / 100;
 
 function emptyGood(id: GoodId): GoodMarketState {
-  return { stock: 0, production: 0, demand: 0, consumption: 0, price: GOODS[id].basePrice, shortage: 0 };
+  return { stock: 0, production: 0, demand: 0, consumption: 0, price: GOODS[id].basePrice, shortage: 0, imported: 0, exported: 0 };
 }
 
 export function createDefaultMarket(): ProvinceMarket {
@@ -41,6 +41,8 @@ export function normalizeMarket(market?: Partial<ProvinceMarket>): ProvinceMarke
       consumption: Math.max(0, current?.consumption ?? 0),
       price: clamp(current?.price ?? GOODS[id].basePrice, GOODS[id].basePrice * 0.5, GOODS[id].basePrice * 3),
       shortage: Math.max(0, current?.shortage ?? 0),
+      imported: Math.max(0, current?.imported ?? 0),
+      exported: Math.max(0, current?.exported ?? 0),
     }];
   })) as Record<GoodId, GoodMarketState>;
   return { goods, purchasingPower: clamp(market?.purchasingPower ?? 50, 0, 100) };
@@ -117,6 +119,7 @@ export function processProvinceMarket(province: Province): ProvinceMarket {
     return [id, {
       stock: round(stock), production: production[id], demand: demand[id], consumption: round(consumption),
       price: calculateLocalPrice(id, available, demand[id]), shortage: round(shortage),
+      imported: 0, exported: 0,
     }];
   })) as Record<GoodId, GoodMarketState>;
   const market = { goods, purchasingPower: 50 };

@@ -18,6 +18,7 @@ import { getStabilityModifiers, processDailyStabilityRecovery } from './stabilit
 import { calculateUnrestEconomicImpact } from './unrest';
 import { calculateSatisfaction, getWorkerAvailability, normalizePopulation, processProvincePopulation } from './population';
 import { calculateMarketSatisfactionAdjustment, processProvinceMarket } from './market';
+import { processInternalTrade } from './internalTrade';
 
 /**
  * Constantes de balanceamento do jogo
@@ -191,7 +192,7 @@ export function processDailyTick(
   const buildTimeMultiplier = (techBonuses?.buildTimeMultiplier ?? 1.0) * lawBuildTimeMultiplier * stabilityModifiers.constructionSpeed;
   const recruitmentSpeedMultiplier = stabilityModifiers.recruitmentSpeed;
 
-  const updatedProvinces = provinces.map((province) => {
+  let updatedProvinces: Province[] = provinces.map((province) => {
     // Calcula impacto econômico do unrest local
     const unrest = province.unrest ?? 0;
     const unrestImpact = calculateUnrestEconomicImpact(unrest);
@@ -237,6 +238,21 @@ export function processDailyTick(
       buildings: updatedBuildings,
     };
   });
+
+  // Local production/consumption is followed by deterministic domestic
+  // redistribution, then market-sensitive satisfaction is finalized.
+  updatedProvinces = processInternalTrade(updatedProvinces).map(province => ({
+    ...province,
+    population: {
+      ...province.population,
+      satisfaction: calculateSatisfaction(
+        province,
+        country.activeLaws?.taxation || 'taxation_normal',
+        { atWar, economicMultiplier: goldIncomeMultiplier * calculateUnrestEconomicImpact(province.unrest ?? 0).goldMultiplier,
+          marketAdjustment: calculateMarketSatisfactionAdjustment(province.market!) }
+      ),
+    },
+  }));
 
   // Calcula despesas
   const expenses = calculateCountryExpenses(country, updatedProvinces);

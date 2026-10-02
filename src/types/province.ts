@@ -139,6 +139,9 @@ export interface GoodMarketState {
   consumption: number;
   price: number;
   shortage: number;
+  /** Transient flow metrics for the latest economic tick. */
+  imported: number;
+  exported: number;
 }
 
 export interface ProvinceMarket {

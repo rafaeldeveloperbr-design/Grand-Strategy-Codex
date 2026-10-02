@@ -1,9 +1,8 @@
 /**
  * battleContinuousTick.ts - FIX RECUO - TYPED
  */
-import { processDailyBattle, finalizeBattle } from '../../engine/combat';
+import { processBattleDay, finalizeBattle, synchronizeBattle } from '../../engine/combat';
 import { checkRebelTerritoryReturn } from '../../engine/rebellions';
-import { applyConquestUnrest } from '../../engine/unrest';
 import { applyStabilityPrestigeChanges } from '../../engine/stability';
 import type {
   Army,
@@ -17,7 +16,8 @@ import type {
 } from '../../types';
 import type { GameDate } from '../../types/date';
 import type { ToastType } from '../../types/toast';
-import { calculateArmySize, applyTroopLoss } from '../../engine/combat/combatCalculations';
+import { calculateArmySize } from '../../engine/combat/combatCalculations';
+import { transferProvince } from '../../engine/territoryTransfer';
 
 
 // ===== TIPOS QUE FALTAVAM =====
@@ -38,8 +38,6 @@ type ArmyWithMovement = Army & {
   destination: string | null;
   path: string[];
 };
-
-type ProvinceWithOriginal = Province & { originalOwner?: string };
 
 type FinalResultEnriched = CombatResult & {
   retreatInfo?: RetreatInfo | null;
@@ -103,40 +101,20 @@ type Params = {
 
 export function processBattleContinuous(p: Params) {
   let { armies, provinces, countries, wars, currentActiveBattles, recruitments, buildingConstructions } = p;
-  const { snapshot, playerCountryTag, addLog, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef, cancelProvinceActivities } = p;
+  const { snapshot, playerCountryTag, addLog, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef } = p;
 
   const finishedBattles: Array<{ battle: BattleExtended; retreatInfo: RetreatInfo | null }> = [];
   const stillActiveBattles: BattleExtended[] = [];
 
   for (const battle of currentActiveBattles) {
     const province = provinces.find(pr => pr.id === battle.provinceId);
-    const attacker = armies.find(a => a.id === battle.attackerArmyId);
-    const defender = armies.find(a => a.id === battle.defenderArmyId);
-    if (!province || !attacker || !defender) {
-      stillActiveBattles.push(battle);
+    if (!province) {
+      armies = armies.map(a => battle.participantArmyIds.includes(a.id) ? { ...a, inCombat: false } : a);
       continue;
     }
-    const result = processDailyBattle(battle, attacker, defender, province, provinces, wars) as {
-      battle: BattleExtended;
-      attacker: Army;
-      defender: Army;
-      finished: boolean;
-      retreatInfo: RetreatInfo | null;
-    };
-
-    armies = armies.map(a => {
-      if (a.id === attacker.id) return result.attacker;
-      if (a.id === defender.id) return result.defender;
-      if (battle.participantArmyIds.includes(a.id)) {
-        const entryDay = battle.reinforcementEntryDay?.[a.id];
-        const daysSinceEntry = entryDay !== undefined ? (battle.daysTotal - battle.daysRemaining - entryDay) : 10;
-        const isFresh = daysSinceEntry < 2;
-        const lossRate = isFresh ? 0.02 : 0.04;
-        const dailyLoss = Math.floor(calculateArmySize(a) * lossRate);
-        return applyTroopLoss(a, dailyLoss);
-      }
-      return a;
-    });
+    const repaired = synchronizeBattle(battle, armies) || battle;
+    const result = processBattleDay(repaired, armies, province, provinces);
+    armies = result.armies;
 
     if (result.finished) {
       finishedBattles.push({ battle: result.battle, retreatInfo: result.retreatInfo });
@@ -154,8 +132,8 @@ export function processBattleContinuous(p: Params) {
     const retreatInfo = fbWrapper.retreatInfo || fb.retreatInfo || null;
 
     const province = provinces.find(pr => pr.id === fb.provinceId);
-    const attacker = armies.find(a => a.id === fb.attackerArmyId);
-    const defender = armies.find(a => a.id === fb.defenderArmyId);
+    const attacker = armies.find(a => a.id === fb.attackerArmyId) || fb.attackerInitialSnapshot;
+    const defender = armies.find(a => a.id === fb.defenderArmyId) || fb.defenderInitialSnapshot;
     if (!province || !attacker || !defender) continue;
 
     let finalResult: Omit<FinalResultEnriched, 'totalAttackerInitial' | 'totalDefenderInitial' | 'attackerReinfInitial' | 'defenderReinfInitial' | 'attackerCurrentTroops' | 'defenderCurrentTroops' | 'participantDetails' | 'reinforcementInitialSize'>;
@@ -291,30 +269,21 @@ export function processBattleContinuous(p: Params) {
 
     armies = updatedArmies;
 
-    const remainingDefenders = armies.filter(a => a.location === province.id && a.owner === defender.owner && !a.inCombat && calculateArmySize(a) > 0);
+    const remainingDefenders = armies.filter(a => a.location === province.id
+      && fb.participantSides?.[a.id] === 'defender' && calculateArmySize(a) > 0);
 
     if (enrichedResult.winner === 'attacker' && remainingDefenders.length === 0) {
       const oldOwner = province.owner;
       const rebelReturnOwner = checkRebelTerritoryReturn(attacker);
       const newProvinceOwner = rebelReturnOwner || attacker.owner;
-      provinces = provinces.map(pr => {
-        if (pr.id === province.id) {
-          const isLiberation = !!rebelReturnOwner;
-          const conqueredProvince = isLiberation ? { ...pr, owner: newProvinceOwner, unrest: 0 } : applyConquestUnrest({ ...pr, owner: newProvinceOwner }, snapshot.date);
-          const withOriginal: ProvinceWithOriginal = { ...conqueredProvince, originalOwner: (conqueredProvince as ProvinceWithOriginal).originalOwner || oldOwner };
-          return withOriginal;
-        }
-        return pr;
-      });
-      countries = countries.map(c => {
-        if (c.tag === newProvinceOwner) return { ...c, provinces: [...c.provinces, province.id] };
-        if (c.tag === oldOwner) return { ...c, provinces: c.provinces.filter(pid => pid !== province.id) };
-        return c;
-      });
-      const cancelResult = cancelProvinceActivities(province.id, oldOwner, attacker.owner, recruitments, buildingConstructions, provinces);
-      recruitments = cancelResult.recruitments;
-      buildingConstructions = cancelResult.constructions;
-      provinces = cancelResult.provinces;
+      const transferred = transferProvince(
+        { provinces, countries, recruitments, constructions: buildingConstructions },
+        province.id, newProvinceOwner, { date: snapshot.date, liberation: !!rebelReturnOwner }
+      );
+      provinces = transferred.provinces;
+      countries = transferred.countries;
+      recruitments = transferred.recruitments;
+      buildingConstructions = transferred.constructions;
       const updatedFinalResult: FinalResultEnriched = { ...enrichedResult, territoryChanged: true, newOwner: newProvinceOwner };
       addLog(`⚔️ ${attacker.owner} conquistou ${province.name} de ${oldOwner}! ${retreatInfo?.retreated ? `Inimigo recuou para ${retreatInfo.toName} com ${retreatInfo.troops}` : ''}`);
       setBattleHistory((prev) => [updatedFinalResult, ...prev]);

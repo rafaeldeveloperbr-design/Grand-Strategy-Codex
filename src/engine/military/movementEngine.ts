@@ -162,8 +162,8 @@ export function processArmyMovement(
   provinces: Province[],
   diplomacy: DiplomaticRelation[]
 ): { updatedArmies: Army[]; arrivedArmies: Army[]; updatedProvinces: Province[] } {
+  void diplomacy;
   const arrivedArmies: Army[] = [];
-  const capturedProvinces: Province[] = [];
 
   const updatedArmies = armies.map((army) => {
     if (army.inCombat) {
@@ -226,21 +226,6 @@ export function processArmyMovement(
       };
     }
 
-    if (reachedProvince.owner !== army.owner) {
-      const relation = diplomacy.find(
-        (r) =>
-          (r.countryA === army.owner && r.countryB === reachedProvince.owner) ||
-          (r.countryA === reachedProvince.owner && r.countryB === army.owner)
-      );
-
-      if (relation && relation.status === 'war') {
-        capturedProvinces.push({
-          ...reachedProvince,
-          owner: army.owner,
-        });
-      }
-    }
-
     if (army.path.length > 0) {
       const remainingPath = army.path.slice(1);
 
@@ -275,12 +260,9 @@ export function processArmyMovement(
     return !hasArrived;
   });
 
-  const updatedProvinces = provinces.map((prov) => {
-    const captured = capturedProvinces.find((cp) => cp.id === prov.id);
-    return captured || prov;
-  });
-
-  return { updatedArmies: movingArmies, arrivedArmies, updatedProvinces };
+  // Territory is deliberately not mutated here. Arrival processing validates
+  // the war/rebel rules and delegates ownership changes to transferProvince.
+  return { updatedArmies: movingArmies, arrivedArmies, updatedProvinces: provinces };
 }
 
 export function mergeArmies(army1: Army, army2: Army): Army {

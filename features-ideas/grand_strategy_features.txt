@@ -1,0 +1,760 @@
+GRAND STRATEGY — BANCO DE FEATURES
+====================================
+Objetivo: usar esta lista como backlog para implementar aos poucos.
+Regra principal: adicionar uma feature por vez e evitar aumentar a complexidade sem necessidade.
+
+FASE 1 — BASE DO JOGO
+---------------------
+[ ] Mapa mundial com províncias
+[ ] Países jogáveis
+[ ] Exército e movimentação
+[ ] Batalhas
+[ ] Diplomacia
+[ ] Economia básica
+[ ] Construção de prédios
+[ ] Tecnologia
+[ ] Governo
+[ ] Estabilidade e descontentamento
+[ ] Rebeliões
+[ ] IA básica
+[ ] Sistema de datas e passagem do tempo
+[ ] Condições de vitória/derrota
+[ ] Histórico de batalhas
+[ ] Registro de notificações
+[ ] Diferentes níveis de dificuldade
+
+FASE 1.5 — POLIMENTO E ESTABILIDADE
+------------------------------------
+[ ] Melhorar desempenho do game loop
+[ ] Evitar lógica de jogo dentro dos componentes React
+[ ] Centralizar e organizar GameState
+[ ] Separar claramente UI, engine, dados e tipos
+[ ] Criar testes para sistemas críticos
+[ ] Corrigir dependências/ciclos entre módulos
+[ ] Melhorar mensagens de erro e logs
+[ ] Sistema de save/load confiável
+[ ] Autosave
+[ ] Tela de pausa
+[ ] Velocidade do jogo: pausa, 1x, 2x, 3x, 4x
+[ ] Ferramentas de debug separadas do gameplay
+
+POPULAÇÃO
+---------
+[ ] População por província
+[ ] Crescimento populacional
+[ ] Migração
+[ ] Urbanização
+[ ] Classes sociais
+[ ] Trabalhadores
+[ ] Desemprego
+[ ] Qualificação da população
+[ ] Alfabetização
+[ ] Expectativa de vida
+[ ] Poder de compra
+[ ] Felicidade/satisfação
+[ ] Grupos culturais
+[ ] Minorias
+[ ] População mobilizada para guerra
+
+ECONOMIA AVANÇADA
+-----------------
+[ ] Recursos naturais
+[ ] Ferro
+[ ] Carvão
+[ ] Petróleo
+[ ] Gás
+[ ] Madeira
+[ ] Alimentos
+[ ] Minerais
+[ ] Produção por província
+[ ] Consumo interno
+[ ] Oferta e demanda
+[ ] Preços dinâmicos
+[ ] Inflação
+[ ] PIB
+[ ] PIB per capita
+[ ] Dívida pública
+[ ] Juros
+[ ] Reservas financeiras
+[ ] Orçamento do governo
+[ ] Gastos militares
+[ ] Gastos sociais
+[ ] Investimentos públicos
+[ ] Impostos por categoria
+[ ] Subsídios
+[ ] Corrupção
+[ ] Crises econômicas
+[ ] Recessão
+[ ] Boom econômico
+
+INDÚSTRIA E PRODUÇÃO
+--------------------
+[ ] Fábricas civis
+[ ] Fábricas militares
+[ ] Estaleiros
+[ ] Minas
+[ ] Fazendas
+[ ] Usinas de energia
+[ ] Refinarias
+[ ] Indústrias avançadas
+[ ] Cadeia de produção
+[ ] Capacidade industrial
+[ ] Manutenção das instalações
+[ ] Eficiência industrial
+[ ] Gargalos de produção
+[ ] Falta de matéria-prima
+[ ] Complexos industriais especializados
+
+COMÉRCIO
+--------
+[ ] Mercado interno
+[ ] Comércio internacional
+[ ] Importações
+[ ] Exportações
+[ ] Rotas comerciais
+[ ] Acordos comerciais
+[ ] Tarifas
+[ ] Embargos
+[ ] Bloqueios econômicos
+[ ] Dependência de recursos estrangeiros
+[ ] Mercado mundial
+[ ] Preços influenciados por guerras
+[ ] Contrabando
+[ ] Sanções econômicas
+
+POLÍTICA INTERNA
+----------------
+[ ] Partidos políticos
+[ ] Ideologias
+[ ] Eleições
+[ ] Parlamento
+[ ] Coalizões
+[ ] Oposição
+[ ] Fações internas
+[ ] Popularidade do governo
+[ ] Aprovação popular
+[ ] Protestos
+[ ] Greves
+[ ] Manifestações
+[ ] Crises políticas
+[ ] Golpes
+[ ] Mudanças de governo
+[ ] Leis
+[ ] Reformas
+[ ] Corrupção política
+[ ] Escândalos
+[ ] Influência de grupos econômicos
+
+GOVERNO
+-------
+[ ] Tipos de governo
+[ ] Monarquia
+[ ] República
+[ ] Ditadura
+[ ] Democracia
+[ ] Governo militar
+[ ] Governo revolucionário
+[ ] Constituição
+[ ] Ministérios
+[ ] Ministros
+[ ] Políticas nacionais
+[ ] Leis econômicas
+[ ] Leis militares
+[ ] Leis sociais
+[ ] Leis de imigração
+[ ] Leis comerciais
+
+DIPLOMACIA
+----------
+[ ] Relações diplomáticas
+[ ] Alianças
+[ ] Pactos de não agressão
+[ ] Garantias de independência
+[ ] Acordos comerciais
+[ ] Tratados de paz
+[ ] Vassalagem
+[ ] Estados tributários
+[ ] Esferas de influência
+[ ] Relações de confiança
+[ ] Reputação internacional
+[ ] Rivalidades
+[ ] Ultimatos
+[ ] Demandas diplomáticas
+[ ] Conferências de paz
+[ ] Organização internacional
+[ ] Votação internacional
+
+GUERRA
+------
+[ ] Diferentes tipos de guerra
+[ ] Objetivos de guerra
+[ ] Casus belli
+[ ] Guerra limitada
+[ ] Guerra total
+[ ] Guerra civil
+[ ] Guerras de independência
+[ ] Capitulação
+[ ] Ocupação
+[ ] Cerco
+[ ] Frente de batalha
+[ ] Guerra de desgaste
+[ ] Moral das tropas
+[ ] Experiência militar
+[ ] Organização do exército
+[ ] Comandantes
+[ ] Generais com atributos
+[ ] Estratégias militares
+[ ] Doutrinas
+[ ] Mobilização
+[ ] Reservistas
+[ ] Desmobilização
+[ ] Manutenção militar
+[ ] Custo da guerra
+
+LOGÍSTICA MILITAR
+-----------------
+[ ] Suprimentos
+[ ] Combustível
+[ ] Munição
+[ ] Capacidade logística
+[ ] Linhas de suprimento
+[ ] Portos
+[ ] Ferrovias
+[ ] Estradas
+[ ] Caminhões
+[ ] Depósitos militares
+[ ] Isolamento de tropas
+[ ] Penalidades por falta de suprimento
+[ ] Terreno afetando logística
+
+FORÇAS ARMADAS
+--------------
+[ ] Infantaria
+[ ] Infantaria mecanizada
+[ ] Artilharia
+[ ] Tanques
+[ ] Forças especiais
+[ ] Cavalaria
+[ ] Defesa aérea
+[ ] Caças
+[ ] Bombardeiros
+[ ] Reconhecimento aéreo
+[ ] Porta-aviões
+[ ] Destroyers
+[ ] Submarinos
+[ ] Cruzadores
+[ ] Frotas
+[ ] Bases militares
+[ ] Experiência das unidades
+[ ] Equipamentos diferentes
+[ ] Modernização das tropas
+
+TECNOLOGIA
+----------
+[ ] Árvore tecnológica
+[ ] Tecnologias econômicas
+[ ] Tecnologias industriais
+[ ] Tecnologias militares
+[ ] Tecnologias navais
+[ ] Tecnologias aéreas
+[ ] Tecnologias de infraestrutura
+[ ] Tecnologias sociais
+[ ] Tecnologias secretas
+[ ] Tecnologias exclusivas por país
+[ ] Corrida tecnológica
+[ ] Roubo de tecnologia
+
+ESPIONAGEM
+----------
+[ ] Espiões
+[ ] Agentes secretos
+[ ] Rede de inteligência
+[ ] Espionagem econômica
+[ ] Espionagem militar
+[ ] Sabotagem
+[ ] Contraespionagem
+[ ] Golpes patrocinados
+[ ] Apoio a rebeldes
+[ ] Roubo de tecnologia
+[ ] Informações sobre exércitos inimigos
+[ ] Informações falsas
+
+REBeliões E CONFLITOS INTERNOS
+------------------------------
+[ ] Grupos rebeldes
+[ ] Separatismo
+[ ] Nacionalismo
+[ ] Movimentos de independência
+[ ] Guerrilhas
+[ ] Terrorismo como mecânica abstrata de conflito interno
+[ ] Guerra civil
+[ ] Facções rebeldes
+[ ] Apoio estrangeiro aos rebeldes
+[ ] Autonomia regional
+[ ] Independência
+[ ] Integração cultural
+[ ] Assimilação
+[ ] Ocupação militar
+
+CULTURA E IDENTIDADE
+--------------------
+[ ] Culturas por província
+[ ] Cultura dominante
+[ ] Minorias culturais
+[ ] Religiões
+[ ] Tolerância religiosa
+[ ] Conversão
+[ ] Assimilação cultural
+[ ] Identidade nacional
+[ ] Nacionalismo
+[ ] Língua
+[ ] Bônus culturais
+[ ] Conflitos culturais
+
+EVENTOS DINÂMICOS
+-----------------
+[ ] Eventos aleatórios
+[ ] Eventos históricos
+[ ] Eventos econômicos
+[ ] Eventos políticos
+[ ] Eventos militares
+[ ] Desastres naturais
+[ ] Epidemias como evento abstrato
+[ ] Crises diplomáticas
+[ ] Escândalos
+[ ] Descobertas tecnológicas
+[ ] Acidentes industriais
+[ ] Grandes projetos
+[ ] Eventos com escolhas
+[ ] Consequências diferentes para cada escolha
+[ ] Cadeias de eventos
+
+DECISÕES NACIONAIS
+------------------
+[ ] Decisões exclusivas por país
+[ ] Projetos nacionais
+[ ] Reformas
+[ ] Campanhas militares
+[ ] Investimentos especiais
+[ ] Decisões diplomáticas
+[ ] Decisões econômicas
+[ ] Decisões de emergência
+[ ] Decisões com requisitos
+[ ] Decisões com consequências futuras
+
+FOCOS / OBJETIVOS NACIONAIS
+---------------------------
+[ ] Árvore de focos
+[ ] Focos políticos
+[ ] Focos econômicos
+[ ] Focos militares
+[ ] Focos diplomáticos
+[ ] Focos tecnológicos
+[ ] Focos exclusivos de cada país
+[ ] Caminhos alternativos
+[ ] Objetivos secretos
+[ ] Recompensas por completar focos
+
+PERSONAGENS
+----------
+[ ] Presidente/monarca
+[ ] Ministros
+[ ] Generais
+[ ] Almirantes
+[ ] Cientistas
+[ ] Líderes políticos
+[ ] Empresários
+[ ] Personagens com atributos
+[ ] Traços positivos
+[ ] Traços negativos
+[ ] Lealdade
+[ ] Popularidade
+[ ] Rivalidades
+[ ] Morte/aposentadoria
+[ ] Sucessão
+[ ] Personagens históricos ou fictícios
+
+ADMINISTRAÇÃO TERRITORIAL
+-------------------------
+[ ] Governadores
+[ ] Estados/províncias
+[ ] Regiões
+[ ] Capitais
+[ ] Regiões estratégicas
+[ ] Autonomia
+[ ] Estados clientes
+[ ] Territórios ocupados
+[ ] Colônias
+[ ] Infraestrutura regional
+[ ] Investimentos regionais
+
+COLONIZAÇÃO E IMPÉRIO
+---------------------
+[ ] Colônias
+[ ] Expansão colonial
+[ ] Recursos coloniais
+[ ] Administração colonial
+[ ] Movimentos de independência
+[ ] Estados clientes
+[ ] Territórios ultramarinos
+[ ] Disputas coloniais
+[ ] Conferências coloniais
+
+MARINHA E COMÉRCIO MARÍTIMO
+---------------------------
+[ ] Rotas marítimas
+[ ] Controle de mares
+[ ] Portos
+[ ] Frotas comerciais
+[ ] Comboios
+[ ] Bloqueios navais
+[ ] Pirataria como mecânica abstrata
+[ ] Batalhas navais
+[ ] Transporte de tropas por mar
+
+FORÇA AÉREA
+-----------
+[ ] Superioridade aérea
+[ ] Bombardeio
+[ ] Interceptação
+[ ] Reconhecimento
+[ ] Apoio aéreo
+[ ] Bases aéreas
+[ ] Alcance
+[ ] Combustível
+[ ] Produção de aeronaves
+
+INFRAESTRUTURA
+-------------
+[ ] Estradas
+[ ] Ferrovias
+[ ] Portos
+[ ] Aeroportos
+[ ] Ferrovias militares
+[ ] Infraestrutura energética
+[ ] Comunicações
+[ ] Infraestrutura urbana
+[ ] Nível de desenvolvimento por província
+
+ENERGIA
+-------
+[ ] Carvão
+[ ] Petróleo
+[ ] Gás
+[ ] Hidrelétrica
+[ ] Nuclear
+[ ] Solar
+[ ] Eólica
+[ ] Rede elétrica
+[ ] Capacidade energética
+[ ] Consumo industrial
+[ ] Crises de energia
+[ ] Apagões
+[ ] Dependência energética
+
+MEIO AMBIENTE
+-------------
+[ ] Poluição
+[ ] Desmatamento
+[ ] Emissões
+[ ] Qualidade ambiental
+[ ] Desastres climáticos
+[ ] Políticas ambientais
+[ ] Investimento em energia limpa
+[ ] Consequências econômicas da poluição
+
+SAÚDE E SOCIEDADE
+-----------------
+[ ] Sistema de saúde
+[ ] Hospitais
+[ ] Educação
+[ ] Universidades
+[ ] Saneamento
+[ ] Moradia
+[ ] Segurança pública
+[ ] Qualidade de vida
+[ ] Desigualdade
+[ ] Pobreza
+[ ] Desenvolvimento humano
+
+RANKINGS
+--------
+[ ] Ranking militar
+[ ] Ranking econômico
+[ ] Ranking tecnológico
+[ ] Ranking diplomático
+[ ] Ranking populacional
+[ ] Ranking industrial
+[ ] Ranking de prestígio
+[ ] Ranking de desenvolvimento
+
+PRESTÍGIO E REPUTAÇÃO
+---------------------
+[ ] Prestígio nacional
+[ ] Reputação diplomática
+[ ] Reputação militar
+[ ] Reputação comercial
+[ ] Respeito internacional
+[ ] Consequências por quebrar tratados
+[ ] Consequências por iniciar guerras
+[ ] Reconhecimento internacional
+
+IMERSÃO E INTERFACE
+-------------------
+[ ] Jornal mundial
+[ ] Manchetes dinâmicas
+[ ] Feed de acontecimentos
+[ ] Histórico do país
+[ ] Linha do tempo
+[ ] Estatísticas detalhadas
+[ ] Gráficos econômicos
+[ ] Gráficos populacionais
+[ ] Gráficos militares
+[ ] Mapa com filtros
+[ ] Mapa político
+[ ] Mapa econômico
+[ ] Mapa de população
+[ ] Mapa de recursos
+[ ] Mapa de infraestrutura
+[ ] Mapa de guerra
+[ ] Mapa diplomático
+[ ] Tooltips detalhados
+[ ] Alertas importantes
+[ ] Sons e música dinâmica
+
+IA AVANÇADA
+-----------
+[ ] IA econômica
+[ ] IA militar
+[ ] IA diplomática
+[ ] IA política
+[ ] IA de construção
+[ ] IA de pesquisa
+[ ] IA de recrutamento
+[ ] IA de logística
+[ ] IA de guerra
+[ ] IA de comércio
+[ ] IA de espionagem
+[ ] Personalidade de cada país
+[ ] Países agressivos
+[ ] Países expansionistas
+[ ] Países defensivos
+[ ] Países comerciais
+[ ] Países isolacionistas
+[ ] IA com objetivos próprios
+[ ] IA reagindo ao comportamento do jogador
+
+SISTEMA DE RELAÇÕES ENTRE PAÍSES
+---------------------------------
+[ ] Confiança
+[ ] Medo
+[ ] Respeito
+[ ] Rivalidade
+[ ] Dependência econômica
+[ ] Dependência militar
+[ ] Relação histórica
+[ ] Interesse territorial
+[ ] Interesse em recursos
+[ ] Ameaça percebida
+[ ] Memória diplomática
+[ ] IA lembrando ações anteriores do jogador
+
+SISTEMA DE MEMÓRIA DO MUNDO
+---------------------------
+[ ] Histórico de guerras
+[ ] Histórico de tratados
+[ ] Mudança de fronteiras
+[ ] Queda de impérios
+[ ] Criação de novos países
+[ ] Países desaparecendo
+[ ] Mudança de alianças
+[ ] Consequências de guerras antigas
+[ ] Eventos influenciados pelo passado
+
+SISTEMA DE CRISES
+-----------------
+[ ] Crise econômica
+[ ] Crise política
+[ ] Crise militar
+[ ] Crise diplomática
+[ ] Crise energética
+[ ] Crise alimentar
+[ ] Crise de desemprego
+[ ] Crise de legitimidade
+[ ] Crise de sucessão
+[ ] Crise separatista
+
+GRANDES PROJETOS
+----------------
+[ ] Canal
+[ ] Ferrovia continental
+[ ] Megausina
+[ ] Represa
+[ ] Projeto espacial
+[ ] Porta-aviões
+[ ] Complexo industrial
+[ ] Cidade planejada
+[ ] Universidade nacional
+[ ] Projeto militar secreto
+[ ] Projeto com vários anos de construção
+
+CONQUISTAS
+----------
+[ ] Conquistas do jogador
+[ ] Conquistas secretas
+[ ] Conquistas por país
+[ ] Conquistas militares
+[ ] Conquistas econômicas
+[ ] Conquistas diplomáticas
+[ ] Conquistas de desenvolvimento
+[ ] Conquistas engraçadas/raras
+
+CAMPANHAS E CENÁRIOS
+--------------------
+[ ] Cenário moderno
+[ ] Cenário histórico
+[ ] Cenário de guerra
+[ ] Cenário de crise econômica
+[ ] Cenário de guerra civil
+[ ] Cenário futurista
+[ ] Cenários personalizados
+[ ] Condições especiais por cenário
+
+FINAL DE JOGO
+-------------
+[ ] Vitória militar
+[ ] Vitória econômica
+[ ] Vitória diplomática
+[ ] Vitória tecnológica
+[ ] Vitória por prestígio
+[ ] Vitória por desenvolvimento
+[ ] Finais diferentes
+[ ] Resumo completo da campanha
+[ ] Linha do tempo da partida
+[ ] Estatísticas finais
+[ ] Maiores potências
+[ ] Maiores guerras
+[ ] Países que desapareceram
+[ ] Mudanças territoriais
+
+SAVE / LOAD
+-----------
+[ ] Save manual
+[ ] Autosave
+[ ] Múltiplos slots
+[ ] Nome personalizado da campanha
+[ ] Data do save
+[ ] Backup de save
+[ ] Exportar/importar save
+[ ] Verificação de versão do save
+
+MULTIPLAYER — FUTURO
+--------------------
+[ ] Multiplayer cooperativo
+[ ] Multiplayer competitivo
+[ ] Turnos sincronizados
+[ ] Salas
+[ ] Convites
+[ ] Chat
+[ ] Ranking online
+[ ] Histórico de partidas
+
+MODDING — FUTURO
+----------------
+[ ] Países customizados
+[ ] Províncias customizadas
+[ ] Tecnologias customizadas
+[ ] Unidades customizadas
+[ ] Eventos customizados
+[ ] Focos customizados
+[ ] Cenários customizados
+[ ] Regras customizadas
+
+IDEIAS ESPECIAIS / DIFERENCIAIS
+--------------------------------
+[ ] Mundo continuar evoluindo mesmo sem o jogador
+[ ] IA criar suas próprias alianças
+[ ] Países mudarem de regime
+[ ] Países se dividirem
+[ ] Países se unificarem
+[ ] Revoluções mudarem fronteiras
+[ ] Economia influenciar política
+[ ] Política influenciar economia
+[ ] Economia influenciar guerra
+[ ] Guerra influenciar economia
+[ ] Guerra gerar crises internas
+[ ] Diplomacia influenciar guerras
+[ ] Recursos influenciarem diplomacia
+[ ] Tecnologia mudar completamente estratégias
+[ ] Histórico da campanha influenciar eventos futuros
+[ ] Países desenvolverem rivalidades ao longo das partidas
+[ ] Notícias reagirem aos acontecimentos do mundo
+[ ] Sistema de consequências em cadeia
+[ ] Eventos raros e inesperados
+[ ] Mundo com "história própria" gerada pela partida
+
+REGRA DE IMPLEMENTAÇÃO
+----------------------
+1. Não implementar tudo ao mesmo tempo.
+2. Priorizar sistemas que se conectam aos sistemas já existentes.
+3. Implementar uma mecânica pequena antes de criar um sistema gigante.
+4. Testar cada feature antes de começar a próxima.
+5. Evitar colocar lógica de jogo diretamente nos componentes React.
+6. Manter UI, engine, dados e tipos separados.
+7. Sempre perguntar: "isso realmente melhora a experiência do jogo?"
+8. Se uma feature começar a quebrar vários sistemas, simplificar antes de continuar.
+
+ORDEM SUGERIDA PARA EVOLUÇÃO
+----------------------------
+1. Estabilizar a arquitetura atual
+2. Melhorar save/load
+3. População
+4. Recursos
+5. Produção
+6. Mercado e preços
+7. Comércio internacional
+8. Política interna
+9. Eventos
+10. Personagens
+11. Logística militar
+12. Espionagem
+13. Cultura/religião
+14. IA avançada
+15. Grandes projetos
+16. Mundo dinâmico
+17. Cenários
+18. Modding
+19. Multiplayer
+
+IDEIA CENTRAL DO JOGO
+---------------------
+O objetivo não é simplesmente adicionar centenas de sistemas.
+
+O mais interessante é fazer os sistemas conversarem entre si:
+
+GUERRA
+  ↓
+consumo de recursos
+  ↓
+falta de produção
+  ↓
+aumento de preços
+  ↓
+inflação
+  ↓
+queda do poder de compra
+  ↓
+insatisfação da população
+  ↓
+protestos
+  ↓
+crise política
+  ↓
+mudança de governo
+  ↓
+nova política externa
+  ↓
+novas alianças ou guerras
+
+Quanto mais o mundo conseguir produzir consequências desse tipo sozinho,
+mais o jogo terá sensação de "história viva".

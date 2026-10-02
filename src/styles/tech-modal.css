@@ -1,0 +1,388 @@
+/* tech-modal.css - VERSÃO FINAL LIMPA */
+
+.tech-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center
+}
+
+.tech-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, .75);
+    backdrop-filter: blur(4px)
+}
+
+.tech-modal__container.tree-modal {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: 95vw;
+    max-width: 1350px;
+    max-height: 90vh;
+    overflow: hidden;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .8)
+}
+
+.tech-modal__header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #0f172a;
+    border-bottom: 1px solid #334155
+}
+
+.tech-modal__header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #f8fafc
+}
+
+.tech-modal__close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 22px;
+    cursor: pointer
+}
+
+.tech-modal__close:hover {
+    color: #fff
+}
+
+/* CONTAINERS COM SCROLL */
+.tree-container,
+.research-columns {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    background: #0f172a
+}
+
+.tree-container {
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+    background: radial-gradient(ellipse at top, #1e293b 0%, #0f172a 100%)
+}
+
+/* FOCO - NIVEIS */
+.tree-level {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    position: relative
+}
+
+.tree-node-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center
+}
+
+/* CARD BASE */
+.tree-node {
+    width: 155px;
+    min-height: 215px;
+    background: linear-gradient(180deg, #1e293b 0%, #162032 100%);
+    border: 1.5px solid #334155;
+    border-radius: 10px;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: all .2s ease;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .3)
+}
+
+.tree-node:hover {
+    transform: translateY(-3px);
+    border-color: #60a5fa;
+    box-shadow: 0 8px 20px rgba(96, 165, 250, .25);
+    z-index: 5
+}
+
+.tree-node-icon {
+    font-size: 26px;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .5))
+}
+
+.tree-node h4 {
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #f1f5f9;
+    margin: 0 0 6px;
+    text-transform: uppercase;
+    letter-spacing: .3px
+}
+
+.tree-desc {
+    font-size: 10.5px;
+    line-height: 1.3;
+    color: #94a3b8;
+    margin: 0 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+.tree-reward {
+    font-size: 10px;
+    font-weight: 700;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, .1);
+    border: 1px solid rgba(251, 191, 36, .2);
+    border-radius: 4px;
+    padding: 3px 6px;
+    margin-top: auto
+}
+
+/* ESTADOS FOCO */
+.tree-node.active {
+    background: linear-gradient(180deg, #422006 0%, #2a1a05 100%);
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 1px #f59e0b, 0 0 20px rgba(245, 158, 11, .5);
+    animation: pulse 2s infinite
+}
+
+.tree-node.completed {
+    background: linear-gradient(180deg, #052e16 0%, #0a2a12 100%);
+    border-color: #22c55e;
+    opacity: .9
+}
+
+.tree-node.completed::after {
+    content: '✓';
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    color: #22c55e;
+    font-weight: bold;
+    font-size: 14px
+}
+
+.tree-node.locked {
+    opacity: .38;
+    filter: grayscale(.7);
+    border-style: dashed;
+    border-color: #475569;
+    pointer-events: none
+}
+
+.tree-node:not(.active):not(.completed):not(.locked) {
+    opacity: .95
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 1px #f59e0b, 0 0 15px rgba(245, 158, 11, .4)
+    }
+
+    50% {
+        box-shadow: 0 0 0 1px #f59e0b, 0 0 25px rgba(245, 158, 11, .7)
+    }
+}
+
+/* PROGRESSO */
+.tree-progress-wrap {
+    width: 100%;
+    margin-top: 8px
+}
+
+.tree-progress {
+    height: 5px;
+    background: #0f172a;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid #334155
+}
+
+.tree-progress div {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    transition: width .3s
+}
+
+.tree-time {
+    font-size: 9.5px;
+    color: #fbbf24;
+    margin-top: 4px;
+    display: block;
+    font-weight: 600
+}
+
+.tree-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: #334155;
+    color: #e2e8f0;
+    border: 1px solid #475569;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: .2s
+}
+
+.tree-btn:hover:not(:disabled) {
+    background: #3b82f6;
+    border-color: #60a5fa;
+    color: #fff
+}
+
+.tree-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed
+}
+
+.tree-btn.cancel-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+.tree-btn.cancel-btn:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* PESQUISA - 3 COLUNAS */
+.research-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding: 20px;
+    align-items: stretch
+}
+
+.research-col {
+    background: rgba(30, 41, 59, .6);
+    border: 1px solid #334155;
+    border-top-width: 3px;
+    border-radius: 12px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    height: fit-content;
+    min-height: 100%
+}
+
+.research-col h3 {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #f8fafc;
+    margin: 0 0 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #334155
+}
+
+.tree-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    flex: 1;
+    width: 100%;
+}
+
+.research-node {
+    width: 100%;
+    min-height: 210px
+}
+
+.research-node.blocked {
+    opacity: .6
+}
+
+.research-node.locked-prereq {
+    opacity: .5;
+    filter: grayscale(.4);
+    border-style: dashed
+}
+
+.tree-meta {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin: 6px 0;
+    font-size: 10px;
+    font-weight: 700;
+    color: #cbd5e1
+}
+
+.tree-meta .gold.no-gold {
+    color: #ef4444
+}
+
+.tree-prereq {
+    font-size: 9px;
+    color: #f87171;
+    background: rgba(239, 68, 68, .1);
+    padding: 3px 5px;
+    border-radius: 4px;
+    margin: 4px 0;
+    text-align: center
+}
+
+/* FOCOS EM COLUNAS - IGUAL PESQUISA */
+.focus-columns {
+    background: #0f172a;
+}
+
+.focus-columns .research-col {
+    min-height: 100%;
+}
+
+.focus-columns .tree-node {
+    width: 100%;
+    /* ocupa a coluna toda */
+}
+
+/* PADRONIZA PESQUISA = FOCO */
+.research-columns .tree-node,
+.research-columns .research-node,
+.focus-columns .tree-node {
+    width: 100% !important;
+    min-height: 220px;
+}
+
+.research-columns .research-col,
+.focus-columns .research-col {
+    padding: 14px 12px;
+}
+
+.research-col {
+    border-top: 3px solid;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.3);
+    transition: box-shadow 0.2s;
+}
+
+.research-col:hover {
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+}

@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@import "./styles/base.css";
+@import "./styles/topbar.css";
+@import "./styles/gamemap.css";
+@import "./styles/province-panel.css";
+@import "./styles/army.css";
+@import "./styles/diplomacy-war.css";
+@import "./styles/battle.css";
+@import "./styles/endgame.css";
+@import "./styles/system.css";
+@import "./styles/settings.css";
+@import "./styles/government.css";
+@import "./styles/tech-modal.css";
+@import "./styles/cheat-responsive.css";

@@ -1,0 +1,661 @@
+/* === Layout Principal === */
+.game{
+  display: grid;
+  grid-template-rows: 56px 1fr 36px;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.game__main{
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ============================================================
+ * MAPA - Container e SVG
+ * ============================================================ */
+.map-container{
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #0d1b2a;
+}
+
+/* === Controles de Zoom === */
+.map__zoom-controls{
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 50;
+}
+
+.map__zoom-btn{
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: var(--shadow-sm);
+}
+
+.map__zoom-btn:hover{
+  background: var(--bg-hover);
+  border-color: var(--border-light);
+}
+
+/* === Instruções === */
+.map__instructions{
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  background: rgba(15, 20, 25, 0.85);
+  border-radius: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+  z-index: 50;
+  white-space: nowrap;
+}
+
+@keyframes slideIn{
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn{
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp{
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce{
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.tech-modal__reward span{
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
+.army-info{
+  flex: 1;
+}
+
+.army-info h3{
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.army-info p{
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.winner-badge{
+  background: var(--accent-green);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* Estatísticas do Exército */
+.army-stats{
+  margin-bottom: 16px;
+}
+
+.stat-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.stat-row .stat-label{
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.stat-row .stat-value{
+  color: var(--text-primary);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.stat-row.casualties .stat-value{
+  color: var(--accent-red);
+}
+
+/* ============================================================
+ * SCROLLBAR CUSTOMIZADA
+ * ============================================================ */
+::-webkit-scrollbar{
+  width: 6px;
+}
+
+::-webkit-scrollbar-track{
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb{
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover{
+  background: var(--border-light);
+}
+
+/* ============================================================
+ * RESPONSIVIDADE
+ * ============================================================ */
+@media (max-width: 1024px){
+  .top-bar__resources {
+    gap: 8px;
+  }
+
+  .top-bar__resource {
+    padding: 4px 8px;
+  }
+
+  .province-panel {
+    width: 260px;
+    min-width: 260px;
+  }
+}
+
+@media (max-width: 768px){
+  .top-bar {
+    padding: 0 8px;
+    gap: 8px;
+  }
+
+  .top-bar__country {
+    min-width: auto;
+    padding: 4px 8px;
+  }
+
+  .top-bar__country-name {
+    font-size: 11px;
+  }
+
+  .top-bar__resources {
+    gap: 4px;
+  }
+
+  .top-bar__resource {
+    padding: 2px 6px;
+  }
+
+  .top-bar__resource-label {
+    display: none;
+  }
+
+  .province-panel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 280px;
+    height: 100%;
+  }
+
+  .game__bottom-bar {
+    gap: 12px;
+  }
+
+  .game__bottom-label {
+    display: none;
+  }
+}
+
+@keyframes bounce{
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+/* Responsividade */
+@media (max-width: 768px){
+  .endgame-modal__container {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .endgame-modal__title {
+    font-size: 36px;
+  }
+
+  .endgame-modal__stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .endgame-modal__actions {
+    flex-direction: column;
+  }
+
+  .endgame-modal__btn {
+    max-width: none;
+  }
+}
+
+/* ============================================================
+ * SISTEMA DE TOASTS / NOTIFICAÇÕES
+ * ============================================================ */
+.toast-container{
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
+  pointer-events: none;
+  max-width: 400px;
+}
+
+.toast{
+  pointer-events: auto;
+  min-width: 280px;
+  max-width: 400px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  animation: slideIn 0.3s ease-out;
+  background: var(--bg-panel);
+  border-left: 4px solid var(--border-light);
+}
+
+.toast-content{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toast-title{
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.toast-message{
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.toast-close{
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+.toast-close:hover{
+  color: var(--text-primary);
+}
+
+/* Tipos de Toast */
+.toast-success{
+  border-left-color: var(--accent-green);
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.05), var(--bg-panel));
+}
+
+.toast-success .toast-title{
+  color: var(--accent-green);
+}
+
+.toast-error{
+  border-left-color: var(--accent-red);
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.05), var(--bg-panel));
+}
+
+.toast-error .toast-title{
+  color: var(--accent-red);
+}
+
+.toast-warning{
+  border-left-color: var(--accent-gold);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), var(--bg-panel));
+}
+
+.toast-warning .toast-title{
+  color: var(--accent-gold);
+}
+
+.toast-info{
+  border-left-color: var(--accent-blue);
+  background: linear-gradient(135deg, rgba(52, 152, 219, 0.05), var(--bg-panel));
+}
+
+.toast-info .toast-title{
+  color: var(--accent-blue);
+}
+
+@keyframes slideIn{
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Responsividade */
+@media (max-width: 768px){
+  .toast-container {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+  
+  .toast {
+    min-width: auto;
+    max-width: none;
+  }
+}
+
+/* Responsividade */
+@media (max-width: 768px){
+  .notification-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .notification-modal__header h3 {
+    font-size: 18px;
+  }
+
+  .notification-modal__footer {
+    flex-direction: column;
+  }
+
+  .notification-modal__btn {
+    width: 100%;
+  }
+}
+
+@keyframes pulse{
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Responsividade */
+@media (max-width: 768px){
+  .ai-log-modal {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .ai-log-modal__header h3 {
+    font-size: 18px;
+  }
+
+  .ai-log-modal__filters {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ai-log-modal__filter-group {
+    width: 100%;
+  }
+
+  .ai-log-modal__select {
+    flex: 1;
+  }
+
+  .ai-log-modal__footer {
+    flex-direction: column;
+  }
+
+  .ai-log-modal__count {
+    text-align: center;
+  }
+
+  .ai-log-modal__btn {
+    width: 100%;
+  }
+}
+
+/* ============================================================
+ * COMPONENTE DE SELEÇÃO DE DIFICULDADE
+ * ============================================================ */
+.difficulty-selector{
+  background: var(--bg-panel);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.difficulty-selector__title{
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.difficulty-selector__options{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.difficulty-selector__option{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.difficulty-selector__option:hover{
+  background: var(--bg-hover);
+  border-color: var(--border-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.difficulty-selector__option--active{
+  border-color: var(--accent-blue);
+  background: rgba(52, 152, 219, 0.1);
+  box-shadow: 0 0 12px rgba(52, 152, 219, 0.3);
+}
+
+.difficulty-selector__icon{
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.difficulty-selector__info{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.difficulty-selector__name{
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.difficulty-selector__description{
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+/* Responsividade */
+@media (max-width: 768px){
+  .difficulty-selector__options {
+    grid-template-columns: 1fr;
+  }
+  
+  .difficulty-selector__option {
+    padding: 12px;
+  }
+  
+  .difficulty-selector__icon {
+    font-size: 28px;
+  }
+  
+  .difficulty-selector__name {
+    font-size: 13px;
+  }
+  
+  .difficulty-selector__description {
+    font-size: 10px;
+  }
+}
+
+/* Province Panel Responsivo */
+@media (max-width: 768px){
+  .settings-modal {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .settings-modal__header h2 {
+    font-size: 20px;
+  }
+
+  .settings-modal__content {
+    padding: 16px;
+  }
+
+  
+  .province-panel {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  .province-panel__layout {
+    flex-direction: column;
+  }
+
+  .province-panel__sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-height: 200px;
+    border-left: none;
+    border-top: 2px solid var(--border-color);
+  }
+}
+
+/* Responsividade */
+@media (max-width: 768px){
+  .government-modal {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .government-modal__header h2 {
+    font-size: 20px;
+  }
+
+  .government-modal__content {
+    padding: 16px;
+  }
+
+  .government-modal__laws {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+ * ANIMAÇÃO DE PULSO PARA AGITAÇÃO PROVINCIAL (UNREST)
+ * ============================================================ */
+@keyframes unrestPulse{
+  0% {
+    opacity: 0.3;
+    r: 12px;
+  }
+  50% {
+    opacity: 0.9;
+    r: 16px;
+  }
+  100% {
+    opacity: 0.3;
+    r: 12px;
+  }
+}
+
+.unrest-critical-pulse{
+  animation: unrestPulse 1.2s infinite ease-in-out;
+}
+
+
+/* FIX cheat */
+.cheat-toggle-btn,.cheat-panel{left:20px!important;right:auto!important;bottom:20px!important;z-index:9999!important;}

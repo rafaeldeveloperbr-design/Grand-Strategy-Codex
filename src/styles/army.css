@@ -1,0 +1,110 @@
+/* === Army Marker no SVG === */
+.army-marker{
+  transition: transform 0.3s ease;
+}
+
+.army-marker:hover .army-marker__body{
+  filter: brightness(1.3);
+}
+
+.army-marker--selected .army-marker__body{
+  filter: brightness(1.2) drop-shadow(0 0 4px #FFD700);
+}
+
+/* === Hover state para ArmyMarker === */
+.army-marker--hovered .army-marker__body{
+  filter: brightness(1.2);
+}
+
+.battle-report-army{
+  flex: 1;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.3s;
+}
+
+.battle-report-army.winner{
+  border-color: var(--accent-green);
+  box-shadow: 0 0 20px rgba(46, 204, 113, 0.2);
+}
+
+.battle-report-army.loser{
+  border-color: var(--accent-red);
+  opacity: 0.85;
+}
+
+/* Cabeçalho do Exército */
+.army-header{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.army-flag{
+  font-size: 36px;
+}
+
+/* Detalhamento por Unidade */
+.unit-breakdown{
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.unit-breakdown h4{
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.unit-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.unit-icon{
+  font-size: 18px;
+}
+
+.unit-name{
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.unit-stats{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.unit-stats .initial{
+  color: var(--text-secondary);
+}
+
+.unit-stats .arrow{
+  color: var(--text-muted);
+}
+
+.unit-stats .final{
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.unit-stats .lost{
+  color: var(--accent-red);
+  font-weight: 600;
+}

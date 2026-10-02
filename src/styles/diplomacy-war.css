@@ -1,0 +1,465 @@
+/* === Painel de Diplomacia === */
+.diplomacy-panel{
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.diplomacy-panel__header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.diplomacy-panel__country-info{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.diplomacy-panel__flag{
+  font-size: 32px;
+}
+
+.diplomacy-panel__name{
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.diplomacy-panel__tag{
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.diplomacy-panel__close{
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.diplomacy-panel__close:hover{
+  color: var(--accent-red);
+}
+
+.diplomacy-panel__section{
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.diplomacy-panel__subtitle{
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.diplomacy-panel__status-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.diplomacy-panel__status-icon{
+  font-size: 24px;
+}
+
+.diplomacy-panel__status-text{
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.diplomacy-panel__pact-days{
+  font-size: 12px;
+  color: var(--accent-blue);
+  margin-left: auto;
+}
+
+.diplomacy-panel__opinion-section{
+  margin-top: 12px;
+}
+
+.diplomacy-panel__opinion-header{
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.diplomacy-panel__opinion-label{
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.diplomacy-panel__opinion-value{
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.diplomacy-panel__opinion-bar{
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.diplomacy-panel__opinion-fill{
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.diplomacy-panel__opinion-marker{
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 12px;
+  background: var(--text-primary);
+  transform: translateX(-50%);
+}
+
+.diplomacy-panel__opinion-label-text{
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.diplomacy-panel__actions{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diplomacy-panel__action-btn{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.diplomacy-panel__action-btn:hover:not(:disabled){
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
+}
+
+.diplomacy-panel__action-btn:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.diplomacy-panel__action-btn--war:hover:not(:disabled){
+  border-color: var(--accent-red);
+}
+
+.diplomacy-panel__action-icon{
+  font-size: 24px;
+}
+
+.diplomacy-panel__action-info{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diplomacy-panel__action-name{
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.diplomacy-panel__action-cost{
+  font-size: 11px;
+  color: var(--accent-gold);
+  font-family: var(--font-mono);
+}
+
+.diplomacy-panel__action-effect{
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* === Painel de Guerra === */
+.war-panel{
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 500px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.war-panel__header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.war-panel__header h2{
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.war-panel__close{
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.war-panel__close:hover{
+  color: var(--accent-red);
+}
+
+.war-panel__empty{
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.war-panel__empty p{
+  font-size: 16px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.war-panel__empty-subtitle{
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.war-panel__wars{
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.war-panel__war-card{
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.war-panel__war-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.war-panel__war-countries{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.war-panel__country{
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.war-panel__vs{
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-red);
+}
+
+.war-panel__war-date{
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.war-panel__war-score{
+  margin-bottom: 16px;
+}
+
+.war-panel__score-header{
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.war-panel__score-label{
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.war-panel__score-value{
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.war-panel__score-value--positive{
+  color: var(--accent-green);
+}
+
+.war-panel__score-value--negative{
+  color: var(--accent-red);
+}
+
+.war-panel__score-bar{
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.war-panel__score-fill{
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.war-panel__score-marker{
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 12px;
+  background: var(--text-primary);
+  transform: translateX(-50%);
+}
+
+.war-panel__score-labels{
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.war-panel__casualties{
+  margin-bottom: 16px;
+}
+
+.war-panel__casualty-row{
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.war-panel__casualty-label{
+  color: var(--text-secondary);
+}
+
+.war-panel__casualty-value{
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.war-panel__occupied{
+  margin-bottom: 16px;
+  padding: 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.war-panel__occupied-row{
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 11px;
+}
+
+.war-panel__occupied-label{
+  color: var(--text-secondary);
+}
+
+.war-panel__occupied-count{
+  color: var(--accent-gold);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.war-panel__peace-btn{
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: linear-gradient(180deg, var(--accent-blue) 0%, #2980b9 100%);
+  border: 1px solid var(--accent-blue);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.war-panel__peace-btn:hover:not(:disabled){
+  background: linear-gradient(180deg, #3498db 0%, var(--accent-blue) 100%);
+  box-shadow: 0 0 12px rgba(52, 152, 219, 0.4);
+}
+
+.war-panel__peace-btn:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* === Botão de Guerras na Barra Inferior === */
+.game__bottom-war-btn{
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-mono);
+}
+
+.game__bottom-war-btn:hover{
+  background: var(--bg-hover);
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}

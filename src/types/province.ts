@@ -52,6 +52,8 @@ export interface Province {
   neighbors: string[];
   /** População atual da província */
   population: ProvincePopulation;
+  /** Local market state. Optional only at the legacy-save boundary. */
+  market?: ProvinceMarket;
   /** População máxima suportada */
   maxPopulation: number;
   /** Nível de desenvolvimento base (1-10) */
@@ -126,4 +128,21 @@ export interface ProvincePopulation {
   unemployed: number;
   /** Population satisfaction, clamped to 0..100. */
   satisfaction: number;
+}
+
+export type GoodId = 'food' | 'wood' | 'iron' | 'tools';
+
+export interface GoodMarketState {
+  stock: number;
+  production: number;
+  demand: number;
+  consumption: number;
+  price: number;
+  shortage: number;
+}
+
+export interface ProvinceMarket {
+  goods: Record<GoodId, GoodMarketState>;
+  /** Aggregate index clamped to 0..100. */
+  purchasingPower: number;
 }

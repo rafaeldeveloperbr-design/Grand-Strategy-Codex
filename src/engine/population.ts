@@ -44,7 +44,7 @@ export function recalculateEmployment(province: Province, population = normalize
 export function calculateSatisfaction(
   province: Province,
   taxationId: string,
-  options: { atWar?: boolean; economicMultiplier?: number } = {}
+  options: { atWar?: boolean; economicMultiplier?: number; marketAdjustment?: number } = {}
 ): number {
   const population = recalculateEmployment(province);
   const workforce = population.employed + population.unemployed;
@@ -52,7 +52,7 @@ export function calculateSatisfaction(
   const taxEffect = taxationId === 'taxation_high' ? -12 : taxationId === 'taxation_low' ? 8 : 0;
   const economyEffect = (clamp(options.economicMultiplier ?? 1, 0, 1.5) - 1) * 20;
   const warEffect = options.atWar ? -5 : 0;
-  return clamp(65 - unemploymentRate * 55 + taxEffect + economyEffect + warEffect, 0, 100);
+  return clamp(65 - unemploymentRate * 55 + taxEffect + economyEffect + warEffect + (options.marketAdjustment ?? 0), 0, 100);
 }
 
 export function processProvincePopulation(

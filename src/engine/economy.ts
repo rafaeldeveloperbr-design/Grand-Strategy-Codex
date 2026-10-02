@@ -16,7 +16,8 @@ import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { LAWS } from '../constants/laws';
 import { getStabilityModifiers, processDailyStabilityRecovery } from './stability';
 import { calculateUnrestEconomicImpact } from './unrest';
-import { getWorkerAvailability, normalizePopulation, processProvincePopulation } from './population';
+import { calculateSatisfaction, getWorkerAvailability, normalizePopulation, processProvincePopulation } from './population';
+import { calculateMarketSatisfactionAdjustment, processProvinceMarket } from './market';
 
 /**
  * Constantes de balanceamento do jogo
@@ -200,14 +201,6 @@ export function processDailyTick(
     const provinceManpowerMultiplier = manpowerMultiplier * unrestImpact.manpowerMultiplier;
     const provinceGrowthMultiplier = lawPopGrowthMultiplier * unrestImpact.growthMultiplier;
     
-    // Renda desta província (com multiplicadores de tecnologia, leis e unrest)
-    const goldIncome = calculateProvinceGoldIncome(province, provinceGoldMultiplier);
-    totalGoldIncome += goldIncome;
-
-    // Manpower desta província (com multiplicadores de tecnologia, leis e unrest)
-    const manpowerGain = calculateProvinceManpowerGain(province) * provinceManpowerMultiplier;
-    totalManpowerGain += manpowerGain;
-
     // Crescimento populacional (com multiplicador de leis e unrest)
     const basePopGrowth = calculatePopulationGrowth(province, country.resources.stability);
     const popGrowth = basePopGrowth * provinceGrowthMultiplier;
@@ -224,10 +217,23 @@ export function processDailyTick(
       country.activeLaws?.taxation || 'taxation_normal',
       { atWar, economicMultiplier: provinceGoldMultiplier, growthAmount: popGrowth }
     );
+    const market = processProvinceMarket(populationProvince);
+    const population = {
+      ...populationProvince.population,
+      satisfaction: calculateSatisfaction(
+        populationProvince,
+        country.activeLaws?.taxation || 'taxation_normal',
+        { atWar, economicMultiplier: provinceGoldMultiplier, marketAdjustment: calculateMarketSatisfactionAdjustment(market) }
+      ),
+    };
+    const economicallyUpdatedProvince = { ...populationProvince, population, market };
+
+    // Production and tax income use the newly recalculated workforce.
+    totalGoldIncome += calculateProvinceGoldIncome(economicallyUpdatedProvince, provinceGoldMultiplier);
+    totalManpowerGain += calculateProvinceManpowerGain(economicallyUpdatedProvince) * provinceManpowerMultiplier;
 
     return {
-      ...province,
-      population: populationProvince.population,
+      ...economicallyUpdatedProvince,
       buildings: updatedBuildings,
     };
   });

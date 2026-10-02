@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { saveGame, loadGame, listSaves } from '../saveSystem';
 import type { Army, GameDate, Province } from '../../types';
 import type { CountryTechState } from '../../types/technology';
+import { createDefaultMarket, GOOD_IDS, GOODS } from '../market';
 
 type SaveGameRefs = Parameters<typeof saveGame>[0];
 
@@ -132,6 +133,23 @@ describe('SAVE/LOAD', () => {
     expect(loadGame('population')?.world.provinces[0].population).toEqual(population);
   });
 
+  it('preserva estoques, preços e poder de compra do mercado', () => {
+    const market = createDefaultMarket();
+    market.goods[GOOD_IDS.FOOD].stock = 42;
+    market.goods[GOOD_IDS.FOOD].price = 1.7;
+    market.purchasingPower = 63;
+    const refs = {
+      dateRef: { current: { day: 1, month: 1, year: 1836 } },
+      provincesRef: { current: [{ id: 'p1', population: { total: 1000, growthRate: 0.002, employed: 500, unemployed: 100, satisfaction: 60 }, market } as Province] },
+      countriesRef: { current: [] }, armiesRef: { current: [] }, warsRef: { current: [] }, diplomaticRelationsRef: { current: [] },
+      recruitmentsRef: { current: [] }, buildingConstructionsRef: { current: [] },
+      playerTechStateRef: { current: { countryTag: 'BRA', activeFocusId: null, activeResearchId: null, completedFocuses: [], completedTechnologies: [], focusProgressDays: 0, researchProgressDays: 0 } },
+      botTechStatesRef: { current: new Map() }, activeBattlesRef: { current: [] },
+    } as SaveGameRefs;
+    saveGame(refs, 'market');
+    expect(loadGame('market')?.world.provinces[0].market).toEqual(market);
+  });
+
   it('migra população numérica de save antigo com padrões seguros', () => {
     localStorage.setItem('imperium_save_legacy', JSON.stringify({
       id: 'legacy', name: 'Legacy', timestamp: 1, date: { day: 1, month: 1, year: 1 },
@@ -142,6 +160,10 @@ describe('SAVE/LOAD', () => {
     expect(loadGame('legacy')?.world.provinces[0].population).toEqual({
       total: 5000, growthRate: 0.002, employed: 2500, unemployed: 500, satisfaction: 60,
     });
+    const migratedMarket = loadGame('legacy')?.world.provinces[0].market;
+    expect(migratedMarket?.goods[GOOD_IDS.FOOD].price).toBe(GOODS[GOOD_IDS.FOOD].basePrice);
+    expect(migratedMarket?.goods[GOOD_IDS.FOOD].stock).toBe(0);
+    expect(migratedMarket?.purchasingPower).toBe(50);
   });
 
 

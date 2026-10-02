@@ -3,6 +3,7 @@ import { Province, Country, Army } from '../../types';
 import { calculateArmySize } from '../../engine/combat';
 import { getUnrestDescription, getUnrestColor, isProvincePacified } from '../../engine/unrest';
 import { normalizePopulation } from '../../engine/population';
+import { ProvinceMarketSection } from './ProvinceMarketSection';
 
 interface ProvinceInfoTabProps {
   province: Province;
@@ -73,6 +74,8 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
         <div className="province-panel__info-row"><span className="province-panel__label">Crescimento:</span><span className="province-panel__value">{(population.growthRate * 100).toFixed(2)}%/dia</span></div>
         <div className="province-panel__info-row"><span className="province-panel__label">Satisfação:</span><span className="province-panel__value">{Math.round(population.satisfaction)}%</span></div>
       </div>
+
+      <ProvinceMarketSection province={province} />
 
       {/* Agitação Provincial */}
       <div className="province-panel__section">

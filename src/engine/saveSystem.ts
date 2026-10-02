@@ -3,6 +3,7 @@ import type { Province, Country, GameDate, Army, Recruitment, BuildingConstructi
 import type { CountryTechState } from '../types/technology';
 import type { DiplomaticRelation, War } from '../types/diplomacy';
 import { normalizePopulation } from './population';
+import { normalizeMarket } from './market';
 
 // ============ META ============
 export type SaveMeta = {
@@ -100,7 +101,11 @@ function deserializeV2(raw: SerializedSaveGameV2): SaveGameV2 {
   };
 }
 function normalizeSavedProvince(province: Province): Province {
-  return { ...province, population: normalizePopulation(province.population as Province['population'] | number) };
+  return {
+    ...province,
+    population: normalizePopulation(province.population as Province['population'] | number),
+    market: normalizeMarket(province.market),
+  };
 }
 function migrateV1ToV2(v1: SaveGameV1): SaveGameV2 {
   const botTechsMap = v1.botTechs instanceof Map ? v1.botTechs : new Map(Object.entries(v1.botTechs as Record<string, CountryTechState>));

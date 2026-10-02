@@ -51,7 +51,9 @@ export interface Province {
   /** Lista de IDs de províncias vizinhas (conexões de fronteira) */
   neighbors: string[];
   /** População atual da província */
-  population: number;
+  population: ProvincePopulation;
+  /** Local market state. Optional only at the legacy-save boundary. */
+  market?: ProvinceMarket;
   /** População máxima suportada */
   maxPopulation: number;
   /** Nível de desenvolvimento base (1-10) */
@@ -115,4 +117,35 @@ export interface BuildingBonus {
   stabilityBonus?: number;
   /** Bônus de velocidade de pesquisa (%) */
   researchSpeedBonus?: number;
+}
+
+/** Canonical demographic state for a province. */
+export interface ProvincePopulation {
+  total: number;
+  /** Daily fractional growth rate (0.002 = 0.2%). */
+  growthRate: number;
+  employed: number;
+  unemployed: number;
+  /** Population satisfaction, clamped to 0..100. */
+  satisfaction: number;
+}
+
+export type GoodId = 'food' | 'wood' | 'iron' | 'tools';
+
+export interface GoodMarketState {
+  stock: number;
+  production: number;
+  demand: number;
+  consumption: number;
+  price: number;
+  shortage: number;
+  /** Transient flow metrics for the latest economic tick. */
+  imported: number;
+  exported: number;
+}
+
+export interface ProvinceMarket {
+  goods: Record<GoodId, GoodMarketState>;
+  /** Aggregate index clamped to 0..100. */
+  purchasingPower: number;
 }

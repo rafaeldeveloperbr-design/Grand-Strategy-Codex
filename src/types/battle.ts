@@ -13,8 +13,13 @@ export interface ActiveBattle {
   attackerArmyId: string;
   /** ID do exército defensor */
   defenderArmyId: string;
+  /** Stable identities of both sides, independent of representative armies. */
+  attackerCountryId: string;
+  defenderCountryId: string;
   /** Lista completa de IDs de todos os exércitos participantes (incluindo reforços) */
   participantArmyIds: string[];
+  /** Side membership survives army removal and supports allied participants. */
+  participantSides: Record<string, 'attacker' | 'defender'>;
   /** Duração total da batalha em dias */
   daysTotal: number;
   /** Dias restantes para o fim da batalha */
@@ -41,6 +46,5 @@ export interface ActiveBattle {
   shouldRetreatAttacker?: boolean
   shouldRetreatDefender?: boolean
 }
-
 
 

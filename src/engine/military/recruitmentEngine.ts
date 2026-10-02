@@ -40,7 +40,7 @@ export function processRecruitments(
     if (newDays <= 0) {
       const regiments: Regiment[] = [];
       for (let i = 0; i < rec.count; i++) {
-        regiments.push(createRegiment(rec.unitType));
+        regiments.push(createRegiment(rec.unitType, rec.provinceId));
       }
 
       const existingArmy = updatedArmies.find(

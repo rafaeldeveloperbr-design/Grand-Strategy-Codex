@@ -14,7 +14,9 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'jsdom',
+    // Engine tests are pure state transitions; using a browser environment
+    // unnecessarily couples them to jsdom/undici versions in CI.
+    environment: 'node',
     globals: true,
     include: ['src/engine/__tests__/**/*.test.ts'],
   }

@@ -11,11 +11,12 @@ export function generateRecruitmentId(): string {
   return `rec_${++recruitmentIdCounter}`;
 }
 
-export function createRegiment(type: UnitType): Regiment {
+export function createRegiment(type: UnitType, originProvinceId?: string): Regiment {
   return {
     type,
     strength: 1000,
     morale: 100,
+    originProvinceId,
   };
 }
 

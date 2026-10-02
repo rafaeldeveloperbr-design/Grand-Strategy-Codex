@@ -147,7 +147,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
       <div className="province-panel__footer">
         <div className="province-panel__color-swatch" style={{ backgroundColor: province.color }} />
         <span className="province-panel__footer-text">
-          {province.id} | Pop: {province.population.toLocaleString()}
+          {province.id} | Pop: {province.population.total.toLocaleString()}
         </span>
       </div>
     </div>

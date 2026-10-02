@@ -42,7 +42,7 @@ describe('MOVIMENTO', () => {
     owner: 'BRA',
     color: '#00ff00',
     neighbors: [],
-    population: 10000,
+    population: { total: 10000, growthRate: 0.002, employed: 5000, unemployed: 1000, satisfaction: 60 },
     maxPopulation: 50000,
     development: 1,
     buildings: [],

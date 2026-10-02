@@ -21,7 +21,7 @@ const baseProvince: Province = {
   owner: 'BRA',
   color: '#00ff00',
   neighbors: [],
-  population: 10000,
+  population: { total: 10000, growthRate: 0.002, employed: 5000, unemployed: 1000, satisfaction: 60 },
   maxPopulation: 50000,
   development: 1,
   buildings: [],
@@ -46,8 +46,8 @@ const baseCountry = {
 
 describe('ECONOMIA', () => {
   it('renda - população maior gera mais ouro', () => {
-    const small = calculateProvinceGoldIncome({ ...baseProvince, population: 1000 });
-    const big = calculateProvinceGoldIncome({ ...baseProvince, population: 10000 });
+    const small = calculateProvinceGoldIncome({ ...baseProvince, population: { total: 1000, growthRate: 0.002, employed: 500, unemployed: 100, satisfaction: 60 } });
+    const big = calculateProvinceGoldIncome({ ...baseProvince, population: { total: 10000, growthRate: 0.002, employed: 5000, unemployed: 1000, satisfaction: 60 } });
     expect(big).toBeGreaterThan(small);
     expect(big).toBeGreaterThan(0);
   });
@@ -65,9 +65,9 @@ describe('ECONOMIA', () => {
   });
 
   it('crescimento - trava no maxPopulation', () => {
-    const almostFull = { ...baseProvince, population: 49900, maxPopulation: 50000 };
+    const almostFull = { ...baseProvince, population: { total: 49900, growthRate: 0.002, employed: 24950, unemployed: 4990, satisfaction: 60 }, maxPopulation: 50000 };
     const growth = calculatePopulationGrowth(almostFull, 60);
-    expect(almostFull.population + growth).toBeLessThanOrEqual(50000);
+    expect(almostFull.population.total + growth).toBeLessThanOrEqual(50000);
   });
 
   it('manpower - província gera manpower', () => {
@@ -78,7 +78,7 @@ describe('ECONOMIA', () => {
   it('processDailyTick - tick completo não quebra e gera renda', () => {
     const result = processDailyTick(baseCountry, [baseProvince]);
     expect(result.country.resources.gold).toBeDefined();
-    expect(result.provinces[0].population).toBeGreaterThanOrEqual(baseProvince.population);
+    expect(result.provinces[0].population.total).toBeGreaterThanOrEqual(baseProvince.population.total);
     expect(result.country.economy.goldIncome).toBeGreaterThan(0);
   });
 

@@ -2,8 +2,7 @@
  * battleArrivalTick.ts - 230 linhas - PASSO 4.3
  * Chegada de exércitos + detecção automática de combate
  */
-import { checkAllProvinceCombats, startContinuousBattle, calculateArmySize } from '../../engine/combat';
-import { applyConquestUnrest } from '../../engine/unrest';
+import { checkAllProvinceCombats } from '../../engine/combat';
 import type { Army, Province, Country, War, ActiveBattle } from '../../types';
 import type { GameDate } from '../../types/date';
 import type { Recruitment, BuildingConstruction } from '../../types';
@@ -48,7 +47,7 @@ type Params = {
 
 export function processBattleArrival(p: Params) {
   let { arrivedArmies, armies, provinces, countries, wars, recruitments, buildingConstructions, currentActiveBattles } = p;
-  const { snapshot, playerCountryTag, allCountries, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities } = p;
+  const { snapshot, playerCountryTag, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities } = p;
 
   // 1. Primeiro move todo mundo que chegou pra lista principal
   for (const arrived of arrivedArmies) {

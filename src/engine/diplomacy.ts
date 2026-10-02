@@ -6,7 +6,6 @@
  */
 
 import { DiplomaticRelation, War, DiplomaticActionCost } from '../types/diplomacy';
-import { Country } from '../types';
 
 /**
  * Custos das ações diplomáticas

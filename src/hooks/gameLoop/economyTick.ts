@@ -41,7 +41,7 @@ type Params = {
 
 export function processEconomyTick(p: Params) {
   let { recruitments, armies, countries, provinces, buildingConstructions } = p;
-  const { playerCountryTag, date, allCountries, addToast, addAILog, addLog, formatGameDate } = p;
+  const { playerCountryTag, date, addToast, addAILog, formatGameDate } = p;
 
   // PASSO A: RECRUTAMENTO
   const recruitResult = processRecruitments(recruitments, armies, countries, provinces);

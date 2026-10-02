@@ -63,15 +63,6 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
   // Elevação visual: selected > hovered > normal
   const isElevated = isSelected || isHovered;
 
-  // Formata número de tropas garantindo 1 casa decimal (Ex: 8385 -> 8.4k, 15000 -> 15.0k)
-  const formatSize = (n: number): string => {
-    if (n >= 1000) {
-      const val = (n / 1000).toFixed(1);
-      return val.endsWith('.0') ? `${Math.floor(n / 1000)}k` : `${val}k`;
-    }
-    return n.toString();
-  };
-
   return (
     <g
       className={`army-marker ${isSelected ? 'army-marker--selected' : ''} ${isHovered ? 'army-marker--hovered' : ''}`}

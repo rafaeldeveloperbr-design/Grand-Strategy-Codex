@@ -1,4 +1,4 @@
-import { Army, Regiment } from '../../types/army';
+import { Army } from '../../types/army';
 import { Province } from '../../types/province';
 
 

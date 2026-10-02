@@ -68,7 +68,7 @@ type Params = {
 };
 
 export function useArmyActions(params: Params) {
-  const { selectedArmy, setSelectedArmy, setSelectedProvince, setIsPanelOpen, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection, setSplitSelection, setShowSplitModal } = params;
+  const { selectedArmy, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection, setSplitSelection, setShowSplitModal } = params;
 
   const handleProvinceRightClick = useCallback((provinceId: string) => {
     if (!selectedArmy) return;

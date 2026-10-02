@@ -69,7 +69,6 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
   const fortLevel = prov?.fortLevel ?? 0;
   const terrain = prov?.terrain ?? 'plains';
   const totalBonus = Math.min(50, 5 + fortLevel * 5 + (terrain === 'mountain' ? 15 : terrain === 'hill' ? 10 : terrain === 'forest' ? 5 : 0));
-  const perDayLoss = Math.floor((totalDefenderInitial * (1 + totalBonus / 100)) / Math.max(1, duration));
 
  
     console.log('📊 BattleReportModal - CORRIGIDO:');

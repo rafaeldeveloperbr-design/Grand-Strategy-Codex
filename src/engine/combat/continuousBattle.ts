@@ -62,28 +62,44 @@ export function checkAllProvinceCombats(
 
   for (const province of provinces) {
     const existingBattleIndex = updatedBattles.findIndex(b => b.provinceId === province.id);
-    const existingBattle = existingBattleIndex!== -1? updatedBattles[existingBattleIndex] : null;
+    let existingBattle = existingBattleIndex!== -1? updatedBattles[existingBattleIndex] : null;
     const armiesInProvince = updatedArmies.filter(a => a.location === province.id &&!a.inCombat);
     if (armiesInProvince.length === 0) continue;
 
     if (existingBattle) {
-      const attackerArmy = updatedArmies.find(a => a.id === existingBattle.attackerArmyId);
-      const defenderArmy = updatedArmies.find(a => a.id === existingBattle.defenderArmyId);
-      if (!attackerArmy ||!defenderArmy) {
-        updatedBattles.splice(existingBattleIndex, 1);
+      const currentBattle = existingBattle;
+      const attackerOwner = currentBattle.attackerOwner
+        ?? updatedArmies.find(a => a.id === currentBattle.attackerArmyId)?.owner
+        ?? currentBattle.attackerInitialSnapshot?.owner;
+      const defenderOwner = currentBattle.defenderOwner
+        ?? updatedArmies.find(a => a.id === currentBattle.defenderArmyId)?.owner
+        ?? currentBattle.defenderInitialSnapshot?.owner;
+      if (!attackerOwner || !defenderOwner) {
         continue;
       }
-      const attackerCountry = attackerArmy.owner;
-      const defenderCountry = defenderArmy.owner;
+
+      const validParticipants = currentBattle.participantArmyIds
+        .map(id => updatedArmies.find(a => a.id === id))
+        .filter((a): a is ArmyWithMovement => Boolean(a) && calculateArmySize(a!) > 0);
+      const replacementAttacker = validParticipants.find(a => a.owner === attackerOwner);
+      const replacementDefender = validParticipants.find(a => a.owner === defenderOwner);
+      existingBattle = {
+        ...currentBattle,
+        attackerOwner,
+        defenderOwner,
+        attackerArmyId: replacementAttacker?.id ?? currentBattle.attackerArmyId,
+        defenderArmyId: replacementDefender?.id ?? currentBattle.defenderArmyId,
+      };
+      updatedBattles[existingBattleIndex] = existingBattle;
 
       for (const army of armiesInProvince) {
         let side: 'attacker' | 'defender' | null = null;
-        if (army.owner === attackerCountry) side = 'attacker';
-        else if (army.owner === defenderCountry) side = 'defender';
+        if (army.owner === attackerOwner) side = 'attacker';
+        else if (army.owner === defenderOwner) side = 'defender';
         else {
           const isAtWarWithDefender = wars.some(
-            w => (w.attacker === army.owner && w.defender === defenderCountry) ||
-                 (w.defender === army.owner && w.attacker === defenderCountry)
+            w => (w.attacker === army.owner && w.defender === defenderOwner) ||
+                 (w.defender === army.owner && w.attacker === defenderOwner)
           );
           if (isAtWarWithDefender) side = 'attacker';
         }
@@ -177,6 +193,8 @@ export function startContinuousBattle(
     provinceId: province.id,
     attackerArmyId: attackerArmies[0].id,
     defenderArmyId: defenderArmies[0].id,
+    attackerOwner: attackerArmies[0].owner,
+    defenderOwner: defenderArmies[0].owner,
     participantArmyIds,
     daysTotal: battleDays,
     daysRemaining: battleDays,
@@ -202,6 +220,7 @@ export function addReinforcementsToBattle(
   side: 'attacker' | 'defender',
   province: Province
 ): BattleExtended {
+  void province;
   const reinforcementTroops = calculateArmySize(reinforcementArmy);
   const updatedBattle: BattleExtended = {
    ...battle,
@@ -235,12 +254,12 @@ function getDefenseBonus(province: ProvinceExtras): number {
   return Math.min(0.5, bonus);
 }
 
-function findRetreatProvince(
-  currentProvince: ProvinceExtras,
+export function findAutomaticRetreatProvince(
+  currentProvince: Province,
   loserOwner: string,
   allProvinces: Province[]
 ): Province | null {
-  const neighbors = currentProvince.neighbors?? currentProvince.adjacentProvinces?? currentProvince.adjacent?? [];
+  const neighbors = currentProvince.neighbors;
 
   console.log(`🔍 Buscando recuo pra ${loserOwner} a partir de ${currentProvince.name}. Vizinhos:`, neighbors);
 
@@ -262,9 +281,11 @@ export function processDailyBattle(
   attacker: Army,
   defender: Army,
   province: Province,
-  allProvinces: Province[] = [],
-  wars: Array<{ attacker: string; defender: string }> = []
+  _allProvinces: Province[] = [],
+  _wars: Array<{ attacker: string; defender: string }> = []
 ) {
+  void _allProvinces;
+  void _wars;
   const daysRemaining = battle.daysRemaining - 1;
   const bonus = getDefenseBonus(province as ProvinceExtras);
   const daysTotal = Math.max(1, battle.daysTotal);
@@ -279,48 +300,14 @@ export function processDailyBattle(
     Math.floor((defInitial / daysTotal) * 0.95)
   );
 
-  let updatedAttacker: ArmyWithMovement = applyTroopLoss(attacker, attackerLoss) as ArmyWithMovement;
-  let updatedDefender: ArmyWithMovement = applyTroopLoss(defender, defenderLoss) as ArmyWithMovement;
+  const updatedAttacker: ArmyWithMovement = applyTroopLoss(attacker, attackerLoss) as ArmyWithMovement;
+  const updatedDefender: ArmyWithMovement = applyTroopLoss(defender, defenderLoss) as ArmyWithMovement;
 
-  let newAttackerTroops = Math.max(0, battle.attackerCurrentTroops - attackerLoss);
-  let newDefenderTroops = Math.max(0, battle.defenderCurrentTroops - defenderLoss);
+  const newAttackerTroops = Math.max(0, battle.attackerCurrentTroops - attackerLoss);
+  const newDefenderTroops = Math.max(0, battle.defenderCurrentTroops - defenderLoss);
 
-  let finished = daysRemaining <= 0 || newAttackerTroops <= 50 || newDefenderTroops <= 50;
-  let retreatInfo: RetreatInfo | null = null;
-
-  if (finished) {
-    const isAttackerLoser = newAttackerTroops <= newDefenderTroops;
-    const loserTroops = isAttackerLoser? newAttackerTroops : newDefenderTroops;
-    const loserOwner = isAttackerLoser? updatedAttacker.owner : updatedDefender.owner;
-
-    if (loserTroops > 0 && loserTroops <= 1500) {
-      const retreatProv = findRetreatProvince(province as ProvinceExtras, loserOwner, allProvinces);
-      if (retreatProv) {
-        console.log(`🏃 RECUO: ${loserOwner} com ${loserTroops} recuando de ${province.name} para ${retreatProv.name}`);
-
-        if (isAttackerLoser) {
-          updatedAttacker = {...updatedAttacker, location: retreatProv.id, inCombat: false, destination: null, path: [], movementProgress: 0 };
-        } else {
-          updatedDefender = {...updatedDefender, location: retreatProv.id, inCombat: false, destination: null, path: [], movementProgress: 0 };
-        }
-
-        retreatInfo = { retreated: true, to: retreatProv.id, toName: retreatProv.name, troops: loserTroops, owner: loserOwner };
-      } else {
-        console.log(`💀 Sem rota de ${loserOwner} - aniquilado em ${province.name}`);
-        if (isAttackerLoser) {
-          updatedAttacker = applyTroopLoss(updatedAttacker, calculateArmySize(updatedAttacker)) as ArmyWithMovement;
-          newAttackerTroops = 0;
-        } else {
-          updatedDefender = applyTroopLoss(updatedDefender, calculateArmySize(updatedDefender)) as ArmyWithMovement;
-          newDefenderTroops = 0;
-        }
-      }
-    }
-  }
-
-  if (retreatInfo?.retreated) {
-    console.log(`📤 Enviando retreatInfo para modal: ${retreatInfo.troops} para ${retreatInfo.toName}`);
-  }
+  const finished = daysRemaining <= 0 || newAttackerTroops <= 50 || newDefenderTroops <= 50;
+  const retreatInfo: RetreatInfo | null = null;
 
   const nextBattle: BattleExtended = {
    ...battle,

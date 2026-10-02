@@ -13,6 +13,9 @@ export interface ActiveBattle {
   attackerArmyId: string;
   /** ID do exército defensor */
   defenderArmyId: string;
+  /** Países que definem os lados; permitem substituir um representante perdido. */
+  attackerOwner?: string;
+  defenderOwner?: string;
   /** Lista completa de IDs de todos os exércitos participantes (incluindo reforços) */
   participantArmyIds: string[];
   /** Duração total da batalha em dias */
@@ -41,6 +44,5 @@ export interface ActiveBattle {
   shouldRetreatAttacker?: boolean
   shouldRetreatDefender?: boolean
 }
-
 
 

@@ -135,38 +135,6 @@ export function useGameLoop(props: Props) {
     addLog, addToast, addAILog, formatGameDate,
   } = props;
 
-  const cancelProvinceActivities = useCallback((
-    provinceId: string,
-    oldOwner: string,
-    _newOwner: string,
-    rec: Recruitment[],
-    cons: BuildingConstruction[],
-    provs: Province[]
-  ): {
-    recruitments: Recruitment[];
-    constructions: BuildingConstruction[];
-    provinces: Province[];
-  } => {
-    return {
-      recruitments: rec.filter(
-        r => r.provinceId !== provinceId
-      ),
-
-      constructions: cons.filter(
-        c => c.provinceId !== provinceId
-      ),
-
-      provinces: provs.map(p =>
-        p.id === provinceId
-          ? {
-            ...p,
-            originalOwner: p.originalOwner || oldOwner,
-          }
-          : p
-      ),
-    };
-  }, []);
-
   const advanceDate = useCallback((d: GameDate): GameDate => {
     let { day, month, year } = d; day++; if (day > 30) { day = 1; month++; } if (month > 12) { month = 1; year++; } return { day, month, year };
   }, []);
@@ -207,10 +175,10 @@ export function useGameLoop(props: Props) {
     armies = mov.armies; provinces = mov.provinces; countries = mov.countries; const arrivedArmies = mov.arrivedArmies;
 
     // 9. COMBAT - só depois de mover
-    const arr = processBattleArrival({ arrivedArmies, armies, provinces, countries, wars, recruitments, buildingConstructions, currentActiveBattles, snapshot, playerCountryTag, allCountries, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities });
+    const arr = processBattleArrival({ arrivedArmies, armies, provinces, countries, wars, recruitments, buildingConstructions, currentActiveBattles, snapshot, playerCountryTag, activeBattlesRef, addLog, addToast, setActiveBattles });
     armies = arr.armies; provinces = arr.provinces; countries = arr.countries; currentActiveBattles = arr.currentActiveBattles; recruitments = arr.recruitments; buildingConstructions = arr.buildingConstructions;
 
-    const cont = processBattleContinuous({ armies, provinces, countries, wars, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef, cancelProvinceActivities });
+    const cont = processBattleContinuous({ armies, provinces, countries, wars, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef });
     armies = cont.armies; provinces = cont.provinces; countries = cont.countries; currentActiveBattles = cont.currentActiveBattles; wars = cont.wars; recruitments = cont.recruitments; buildingConstructions = cont.buildingConstructions;
 
     // 10. REBELLION - por último, depende de stability + combat
@@ -236,7 +204,7 @@ export function useGameLoop(props: Props) {
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addLog, playerCountryTag, advanceDate, cancelProvinceActivities, hasTriggeredEndGame]);
+  }, [addLog, playerCountryTag, advanceDate, hasTriggeredEndGame]);
 
   useEffect(() => {
     if (gameLoopRef.current) { clearInterval(gameLoopRef.current); gameLoopRef.current = null; }

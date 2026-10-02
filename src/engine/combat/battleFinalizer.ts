@@ -32,8 +32,8 @@ export function finalizeBattle(
     battle.participantArmyIds.includes(a.id) && a.owner!== defender.owner
   );
 
-  const totalAttacker = attackerParts.reduce((s, a) => s + calculateArmySize(a), 0) || battle.attackerCurrentTroops;
-  const totalDefender = defenderParticipants.reduce((s, a) => s + calculateArmySize(a), 0) || battle.defenderCurrentTroops;
+  const totalAttacker = attackerParts.reduce((s, a) => s + calculateArmySize(a), 0);
+  const totalDefender = defenderParticipants.reduce((s, a) => s + calculateArmySize(a), 0);
 
   const winner: 'attacker' | 'defender' = totalAttacker > totalDefender? 'attacker' : 'defender';
   const loserOwner = winner === 'attacker'? defender.owner : attacker.owner;

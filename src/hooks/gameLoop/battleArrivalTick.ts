@@ -2,8 +2,8 @@
  * battleArrivalTick.ts - 230 linhas - PASSO 4.3
  * Chegada de exércitos + detecção automática de combate
  */
-import { checkAllProvinceCombats, startContinuousBattle, calculateArmySize } from '../../engine/combat';
-import { applyConquestUnrest } from '../../engine/unrest';
+import { checkAllProvinceCombats } from '../../engine/combat';
+import { getArrivalConqueror, transferProvinceControl } from '../../engine/territory';
 import type { Army, Province, Country, War, ActiveBattle } from '../../types';
 import type { GameDate } from '../../types/date';
 import type { Recruitment, BuildingConstruction } from '../../types';
@@ -20,7 +20,6 @@ type Params = {
   currentActiveBattles: ActiveBattle[];
   snapshot: { date: GameDate };
   playerCountryTag: string;
-  allCountries: Country[];
   activeBattlesRef: React.MutableRefObject<ActiveBattle[]>;
   addLog: (msg: string) => void;
   addToast: (
@@ -32,23 +31,11 @@ type Params = {
   setActiveBattles: React.Dispatch<
     React.SetStateAction<ActiveBattle[]>
   >;
-  cancelProvinceActivities: (
-    provinceId: string,
-    oldOwner: string,
-    newOwner: string,
-    rec: Recruitment[],
-    cons: BuildingConstruction[],
-    provs: Province[]
-  ) => {
-    recruitments: Recruitment[];
-    constructions: BuildingConstruction[];
-    provinces: Province[];
-  };
 };
 
 export function processBattleArrival(p: Params) {
   let { arrivedArmies, armies, provinces, countries, wars, recruitments, buildingConstructions, currentActiveBattles } = p;
-  const { snapshot, playerCountryTag, allCountries, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities } = p;
+  const { snapshot, playerCountryTag, activeBattlesRef, addLog, addToast, setActiveBattles } = p;
 
   // 1. Primeiro move todo mundo que chegou pra lista principal
   for (const arrived of arrivedArmies) {
@@ -75,34 +62,33 @@ export function processBattleArrival(p: Params) {
       );
     };
 
-    // Se não tem inimigo e não é guerra, só ocupa
     const enemies = armies.filter(a =>
       a.location === province.id &&
       a.id !== arrived.id &&
       isHostile(arrived.owner, a.owner, arrived.originalOwner, a.originalOwner)
     );
 
-    const shouldBattle = enemies.length > 0 || isInWar;
+    const conquest = enemies.length === 0
+      ? getArrivalConqueror(arrived, province, isInWar)
+      : null;
 
-    if (!shouldBattle && province.owner !== arrived.owner) {
-      // Ocupação pacífica
-      const oldOwner = province.owner;
-      const newOwner = arrived.owner;
-
-      provinces = provinces.map(pr => pr.id === province.id ? { ...pr, owner: newOwner, originalOwner: pr.originalOwner || oldOwner } : pr);
-      countries = countries.map(c => {
-        if (c.tag === newOwner) return { ...c, provinces: [...c.provinces, province.id] };
-        if (c.tag === oldOwner) return { ...c, provinces: c.provinces.filter(pid => pid !== province.id) };
-        return c;
+    if (conquest && province.owner !== conquest.owner) {
+      const transfer = transferProvinceControl({
+        provinceId: province.id,
+        newOwner: conquest.owner,
+        provinces,
+        countries,
+        recruitments,
+        constructions: buildingConstructions,
+        date: snapshot.date,
+        liberation: conquest.liberation,
       });
-
-      const cancelResult = cancelProvinceActivities(province.id, oldOwner, newOwner, recruitments, buildingConstructions, provinces);
-      recruitments = cancelResult.recruitments;
-      buildingConstructions = cancelResult.constructions;
-      provinces = cancelResult.provinces;
-
+      provinces = transfer.provinces;
+      countries = transfer.countries;
+      recruitments = transfer.recruitments;
+      buildingConstructions = transfer.constructions;
       armies = [...armies, { ...arrived, inCombat: false, destination: null, targetDestination: null, path: [] }];
-      addLog(`🏳️ ${arrived.owner} ocupou ${province.name}`);
+      addLog(`🏳️ ${conquest.owner} ocupou ${province.name}`);
       continue;
     }
 

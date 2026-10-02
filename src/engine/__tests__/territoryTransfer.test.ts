@@ -3,7 +3,7 @@ import type { Army, BuildingConstruction, Country, Province, Recruitment, War } 
 import { processBattleArrival } from '../../hooks/gameLoop/battleArrivalTick';
 import { transferProvince } from '../territoryTransfer';
 
-const province = (owner = 'DEF'): Province => ({ id: 'p', name: 'Border', owner, color: '#000', neighbors: [], population: 1, maxPopulation: 1, development: 1, buildings: [], defense: 0, center: { x: 0, y: 0 }, path: '', unrest: 0 });
+const province = (owner = 'DEF'): Province => ({ id: 'p', name: 'Border', owner, color: '#000', neighbors: [], population: { total: 1, growthRate: 0.002, employed: 0, unemployed: 0, satisfaction: 60 }, maxPopulation: 1, development: 1, buildings: [], defense: 0, center: { x: 0, y: 0 }, path: '', unrest: 0 });
 const country = (tag: string, provinces: string[]): Country => ({ tag, name: tag, adjective: tag, color: '#000', colorLight: '#111', provinces, resources: { gold: 0, manpower: 0, maxManpower: 0, stability: 50, prestige: 0 }, economy: { goldIncome: 0, goldExpense: 0, manpowerGain: 0, manpowerExpense: 0 }, flag: '', activeLaws: { conscription: '', taxation: '', governance: '', economy: '', intelligence: '' } });
 const army: Army = { id: 'a', owner: 'ATT', name: 'Army', regiments: [{ type: 'infantry', strength: 1000, morale: 100 }], location: 'p', destination: null, targetDestination: null, movementProgress: 0, movementSpeed: 1, position: null, path: [], inCombat: false };
 const recruitment: Recruitment = { id: 'r', provinceId: 'p', owner: 'DEF', unitType: 'infantry', daysRemaining: 2, count: 1 };

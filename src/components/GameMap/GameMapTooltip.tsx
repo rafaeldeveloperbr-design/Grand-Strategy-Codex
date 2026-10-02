@@ -35,7 +35,7 @@ export const GameMapTooltip: React.FC<GameMapTooltipProps> = ({ tooltip, countri
         {getTooltipCountry(tooltip.province)?.name ?? 'Desconhecido'}
       </div>
       <div className="map__tooltip-pop">
-        👥 {tooltip.province.population.toLocaleString()}
+        👥 {tooltip.province.population.total.toLocaleString()}
       </div>
     </div>
   );

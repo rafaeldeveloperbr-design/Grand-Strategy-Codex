@@ -18,6 +18,7 @@ import type { GameDate } from '../../types/date';
 import type { ToastType } from '../../types/toast';
 import { calculateArmySize } from '../../engine/combat/combatCalculations';
 import { transferProvince } from '../../engine/territoryTransfer';
+import { applyMilitaryCasualties } from '../../engine/population';
 
 
 // ===== TIPOS QUE FALTAVAM =====
@@ -113,8 +114,10 @@ export function processBattleContinuous(p: Params) {
       continue;
     }
     const repaired = synchronizeBattle(battle, armies) || battle;
+    const armiesBeforeCombat = armies;
     const result = processBattleDay(repaired, armies, province, provinces);
     armies = result.armies;
+    provinces = applyMilitaryCasualties(provinces, armiesBeforeCombat, armies);
 
     if (result.finished) {
       finishedBattles.push({ battle: result.battle, retreatInfo: result.retreatInfo });
@@ -138,6 +141,7 @@ export function processBattleContinuous(p: Params) {
 
     let finalResult: Omit<FinalResultEnriched, 'totalAttackerInitial' | 'totalDefenderInitial' | 'attackerReinfInitial' | 'defenderReinfInitial' | 'attackerCurrentTroops' | 'defenderCurrentTroops' | 'participantDetails' | 'reinforcementInitialSize'>;
     let rawUpdatedArmies: Army[];
+    const armiesBeforeFinalization = armies;
 
     if (retreatInfo?.retreated) {
       console.log(`🏃 Processando recuo: ${retreatInfo.owner} com ${retreatInfo.troops} para ${retreatInfo.toName}`);
@@ -193,6 +197,7 @@ export function processBattleContinuous(p: Params) {
       finalResult = res.result as typeof finalResult;
       rawUpdatedArmies = res.updatedArmies;
     }
+    provinces = applyMilitaryCasualties(provinces, armiesBeforeFinalization, rawUpdatedArmies);
 
     const reinfSizes = fb.reinforcementInitialSize || {};
     let attackerReinfInitial = 0;

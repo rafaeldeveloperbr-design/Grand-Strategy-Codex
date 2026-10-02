@@ -19,7 +19,7 @@ const createProvince = (
   owner: 'BRA',
   color: '#009739',
   neighbors: [],
-  population: 10000,
+  population: { total: 10000, growthRate: 0.002, employed: 5000, unemployed: 1000, satisfaction: 60 },
   maxPopulation: 50000,
   development: 1,
   buildings: [],
@@ -86,7 +86,7 @@ describe('UNREST', () => {
 
     expect(
       result.updatedProvinces[0].unrest!
-    ).toBeCloseTo(10.3, 1);
+    ).toBeCloseTo(10.2, 1);
   });
 
   it('pacificação - templo reduz unrest', () => {
@@ -181,13 +181,13 @@ describe('UNREST', () => {
   it('tamanho rebelde - limitado a 3000', () => {
     const small = calculateRebelArmySize(
       createProvince({
-        population: 1000,
+        population: { total: 1000, growthRate: 0.002, employed: 500, unemployed: 100, satisfaction: 60 },
       })
     );
 
     const big = calculateRebelArmySize(
       createProvince({
-        population: 100000,
+        population: { total: 100000, growthRate: 0.002, employed: 50000, unemployed: 10000, satisfaction: 60 },
       })
     );
 

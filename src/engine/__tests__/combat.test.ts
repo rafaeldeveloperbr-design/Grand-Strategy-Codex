@@ -12,7 +12,7 @@ import { calculateArmySize } from '../combat/combatCalculations';
 const date = { day: 1, month: 1, year: 1500 };
 const province = (overrides: Partial<Province> = {}): Province => ({
   id: 'front', name: 'Front', owner: 'DEF', color: '#000', neighbors: ['att-home', 'def-home'],
-  population: 1, maxPopulation: 1, development: 1, buildings: [], defense: 0,
+  population: { total: 1, growthRate: 0.002, employed: 0, unemployed: 0, satisfaction: 60 }, maxPopulation: 1, development: 1, buildings: [], defense: 0,
   center: { x: 0, y: 0 }, path: '', unrest: 0, ...overrides,
 });
 const army = (id: string, owner: string, strength: number, overrides: Partial<Army> = {}): Army => ({

@@ -7,6 +7,7 @@
 
 import { Province, Army } from '../types';
 import { GameDate } from '../types';
+import { normalizePopulation } from './population';
 
 /**
  * Constantes de balanceamento do sistema de agitação
@@ -44,13 +45,13 @@ export const UNREST_BALANCE = {
  * Calcula o tamanho do exército rebelde baseado na população da província
  */
 export function calculateRebelArmySize(province: Province): number {
-  const baseSize = Math.floor(province.population * UNREST_BALANCE.POPULATION_SCALE_FACTOR);
+  const baseSize = Math.floor(normalizePopulation(province.population).total * UNREST_BALANCE.POPULATION_SCALE_FACTOR);
   const size = Math.max(
     UNREST_BALANCE.MIN_REBEL_SIZE,
     Math.min(UNREST_BALANCE.MAX_REBEL_SIZE, baseSize)
   );
   
-  console.log(`🔥 Calculando tamanho do exército rebelde em ${province.name}: ${size} tropas (pop: ${province.population})`);
+  console.log(`🔥 Calculando tamanho do exército rebelde em ${province.name}: ${size} tropas (pop: ${normalizePopulation(province.population).total})`);
   return size;
 }
 
@@ -84,6 +85,8 @@ export function processDailyUnrestDecay(
     
     // Unrest AUMENTA naturalmente por dia
     let change = UNREST_BALANCE.DAILY_GROWTH_RATE;
+    const satisfaction = normalizePopulation(province.population).satisfaction;
+    change += (50 - satisfaction) / 100;
     
     // Calcula bônus de pacificação baseado em edifícios
     // Templo reduz unrest

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { saveGame, loadGame, listSaves } from '../saveSystem';
-import type { Army, GameDate } from '../../types';
+import type { Army, GameDate, Province } from '../../types';
 import type { CountryTechState } from '../../types/technology';
 
 type SaveGameRefs = Parameters<typeof saveGame>[0];
@@ -117,6 +117,31 @@ describe('SAVE/LOAD', () => {
 
     expect(loaded?.technology.bots instanceof Map).toBe(true);
     expect(loaded?.technology.bots.get('ARG')).toBeDefined();
+  });
+
+  it('preserva os dados populacionais completos', () => {
+    const population = { total: 12000, growthRate: 0.0015, employed: 6000, unemployed: 1200, satisfaction: 72 };
+    const refs = {
+      dateRef: { current: { day: 1, month: 1, year: 1836 } },
+      provincesRef: { current: [{ id: 'p1', population } as Province] }, countriesRef: { current: [] }, armiesRef: { current: [] },
+      warsRef: { current: [] }, diplomaticRelationsRef: { current: [] }, recruitmentsRef: { current: [] }, buildingConstructionsRef: { current: [] },
+      playerTechStateRef: { current: { countryTag: 'BRA', activeFocusId: null, activeResearchId: null, completedFocuses: [], completedTechnologies: [], focusProgressDays: 0, researchProgressDays: 0 } },
+      botTechStatesRef: { current: new Map() }, activeBattlesRef: { current: [] },
+    } as SaveGameRefs;
+    saveGame(refs, 'population');
+    expect(loadGame('population')?.world.provinces[0].population).toEqual(population);
+  });
+
+  it('migra população numérica de save antigo com padrões seguros', () => {
+    localStorage.setItem('imperium_save_legacy', JSON.stringify({
+      id: 'legacy', name: 'Legacy', timestamp: 1, date: { day: 1, month: 1, year: 1 },
+      provinces: [{ id: 'p1', population: 5000 }], countries: [], armies: [], wars: [], relations: [], recruitments: [], constructions: [],
+      playerTech: { countryTag: 'BRA', activeFocusId: null, activeResearchId: null, completedFocuses: [], completedTechnologies: [], focusProgressDays: 0, researchProgressDays: 0 },
+      botTechs: {}, activeBattles: [],
+    }));
+    expect(loadGame('legacy')?.world.provinces[0].population).toEqual({
+      total: 5000, growthRate: 0.002, employed: 2500, unemployed: 500, satisfaction: 60,
+    });
   });
 
 

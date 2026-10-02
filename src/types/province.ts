@@ -51,7 +51,7 @@ export interface Province {
   /** Lista de IDs de províncias vizinhas (conexões de fronteira) */
   neighbors: string[];
   /** População atual da província */
-  population: number;
+  population: ProvincePopulation;
   /** População máxima suportada */
   maxPopulation: number;
   /** Nível de desenvolvimento base (1-10) */
@@ -115,4 +115,15 @@ export interface BuildingBonus {
   stabilityBonus?: number;
   /** Bônus de velocidade de pesquisa (%) */
   researchSpeedBonus?: number;
+}
+
+/** Canonical demographic state for a province. */
+export interface ProvincePopulation {
+  total: number;
+  /** Daily fractional growth rate (0.002 = 0.2%). */
+  growthRate: number;
+  employed: number;
+  unemployed: number;
+  /** Population satisfaction, clamped to 0..100. */
+  satisfaction: number;
 }

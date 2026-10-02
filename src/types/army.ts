@@ -42,6 +42,8 @@ export interface Regiment {
   strength: number;
   /** Moral (0-100) */
   morale: number;
+  /** Province where this regiment was raised; used to attribute fatal losses. */
+  originProvinceId?: string;
 }
 
 /**

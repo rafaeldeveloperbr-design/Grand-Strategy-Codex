@@ -4,7 +4,6 @@
  */
 import { processDiplomacyTick } from '../../engine/diplomacy';
 import { processDailyTechProgress } from '../../engine/technology';
-import { calculateArmySize } from '../../engine/combat';
 import type { Country, Province, Army, War } from '../../types';
 import type { CountryTechState } from '../../types/technology';
 import type { DiplomaticRelation } from '../../types/diplomacy';

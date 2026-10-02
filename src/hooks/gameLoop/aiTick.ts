@@ -38,7 +38,7 @@ type Params = {
 
 export function processAiTick(p: Params) {
   let { countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates } = p;
-  const { playerCountryTag, aiDifficultyRef, ceilingLogRef, snapshot, addAILog, formatGameDate } = p;
+  const { playerCountryTag, ceilingLogRef, snapshot, addAILog, formatGameDate } = p;
 
   const activeBots = countries.filter(c => c && c.tag !== playerCountryTag);
   const dateString = formatGameDate(snapshot.date);

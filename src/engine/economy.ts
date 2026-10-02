@@ -11,7 +11,7 @@
  * Este módulo é o coração do loop de tempo do jogo.
  */
 
-import { Province, Country, BuildingType } from '../types';
+import { Province, Country } from '../types';
 import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { LAWS } from '../constants/laws';
 import { getStabilityModifiers, processDailyStabilityRecovery } from './stability';

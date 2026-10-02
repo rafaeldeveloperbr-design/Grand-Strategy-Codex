@@ -63,7 +63,7 @@ type Params = {
 
 export function processRebelTick(p: Params) {
   let { provinces, armies, countries, wars, relations, currentActiveBattles } = p;
-  const { snapshot, playerCountryTag, hasTriggeredEndGame, battleHistory, dateRef, addLog, addToast, setActiveBattles, activeBattlesRef, setEndGameType, setGameStats, setHasTriggeredEndGame, setIsPaused } = p;
+  const { snapshot, playerCountryTag, hasTriggeredEndGame, battleHistory, dateRef, addLog, addToast, setActiveBattles, activeBattlesRef } = p;
 
   for (const prov of provinces) {
     const armiesHere = armies.filter(a => a.location === prov.id && !a.inCombat && !a.destination);

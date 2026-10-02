@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { Country } from '../types';
-import { DiplomaticRelation, War } from '../types/diplomacy';
+import { DiplomaticRelation } from '../types/diplomacy';
 import { DIPLOMATIC_COSTS } from '../engine/diplomacy';
 
 interface DiplomacyPanelProps {

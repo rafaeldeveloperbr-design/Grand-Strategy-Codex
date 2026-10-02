@@ -144,8 +144,3 @@ export function cancelBuilding(
 /**
  * Verifica se uma construção é a ativa (primeira da fila) em sua província
  */
-
-/**
- * Gera um ID único para construções
- */
-let constructionIdCounter = 0;

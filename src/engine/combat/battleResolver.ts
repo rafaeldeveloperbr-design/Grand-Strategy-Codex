@@ -1,4 +1,4 @@
-import { Army, Province, ActiveBattle, GameDate, CombatResult } from '../../types';
+import { Army, Province, GameDate, CombatResult } from '../../types';
 import {
   calculateArmyBasePower,
   calculateArmySize,
@@ -8,7 +8,6 @@ import {
   calculateWinnerLosses,
   distributeLosses,
 } from './combatCalculations';
-import { applySiegeAnnihilation } from './combatRetreats';
 
 
 /**

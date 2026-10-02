@@ -4,8 +4,8 @@
  * ============================================================
  */
 
-import { Country, Province } from '../types';
-import { NationalFocus, Technology, CountryTechState, RewardEffect } from '../types/technology';
+import { Country } from '../types';
+import { CountryTechState, RewardEffect } from '../types/technology';
 import { AIDifficulty, DIFFICULTY_SPEED_MULTIPLIERS } from '../types/difficulty';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../data/technology';
 

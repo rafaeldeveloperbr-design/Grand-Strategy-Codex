@@ -34,11 +34,11 @@ export function findDomesticTradePath(fromId: string, toId: string, provinces: P
   return [];
 }
 
-export function calculateTradeBalance(province: Province, goodId: GoodId) {
+export function calculateTradeBalance(province: Province, goodId: GoodId, efficiencyMultiplier = 1) {
   const good = normalizeMarket(province.market).goods[goodId];
   const reserve =
   goodId === GOOD_IDS.FOOD
-    ? good.demand * RESERVE_DAYS
+    ? good.demand * RESERVE_DAYS / Math.max(1, efficiencyMultiplier)
     : good.demand * 5;
   return {
     reserve: round(reserve),
@@ -48,7 +48,7 @@ export function calculateTradeBalance(province: Province, goodId: GoodId) {
 }
 
 /** Redistributes real stock inside connected components of a single country. */
-export function processInternalTrade(provinces: Province[]): Province[] {
+export function processInternalTrade(provinces: Province[], efficiencyMultiplier = 1): Province[] {
   const result = provinces.map(province => ({
     ...province,
     market: normalizeMarket(province.market),
@@ -62,11 +62,11 @@ export function processInternalTrade(provinces: Province[]): Province[] {
   // FOOD is intentionally first; the order is stable for future route capacity.
   for (const goodId of TRADE_PRIORITY) {
     const consumers = result
-      .map(province => ({ province, ...calculateTradeBalance(province, goodId) }))
+      .map(province => ({ province, ...calculateTradeBalance(province, goodId, efficiencyMultiplier) }))
       .filter(item => item.deficit > 0)
       .sort((a, b) => a.province.id.localeCompare(b.province.id));
     const suppliers = result
-      .map(province => ({ province, ...calculateTradeBalance(province, goodId) }))
+      .map(province => ({ province, ...calculateTradeBalance(province, goodId, efficiencyMultiplier) }))
       .filter(item => item.surplus > 0)
       .sort((a, b) => a.province.id.localeCompare(b.province.id));
 

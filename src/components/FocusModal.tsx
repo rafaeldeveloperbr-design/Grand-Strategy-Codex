@@ -4,6 +4,7 @@ import type {
   NationalFocus,
 } from '../types/technology';
 import { NATIONAL_FOCUSES } from '../data/technology';
+import { formatFocusEffect } from '../engine/technology';
 import '../styles/tech-modal.css'; 
 
 interface Props {
@@ -23,24 +24,10 @@ export const FocusModal: React.FC<Props> = ({ techState, onStartFocus, onCancelF
         return f.prerequisites?.every(p => techState.completedFocuses.includes(p)) ?? true;
     };
 
-    // SEPARA EM 3 COLUNAS - IGUAL PESQUISA
-    const getColumn = (
-  focus: NationalFocus
-): 'military' | 'economy' | 'political' =>{
-        const t = focus.title.toLowerCase();
-        if (t.includes('militar') || t.includes('cavalaria') || t.includes('exército') || t.includes('exercito') || t.includes('fortificação') || t.includes('fortificacao') || t.includes('fronteira')) {
-            return 'military';
-        }
-        if (t.includes('econô') || t.includes('econom') || t.includes('agrária') || t.includes('agraria') || t.includes('industrial') || t.includes('comercial') || t.includes('comercio')) {
-            return 'economy';
-        }
-        return 'political';
-    };
-
     const columns = {
-        military: NATIONAL_FOCUSES.filter(f => getColumn(f) === 'military'),
-        economy: NATIONAL_FOCUSES.filter(f => getColumn(f) === 'economy'),
-        political: NATIONAL_FOCUSES.filter(f => getColumn(f) === 'political'),
+        military: NATIONAL_FOCUSES.filter(f => f.category === 'MILITARY'),
+        economy: NATIONAL_FOCUSES.filter(f => f.category === 'ECONOMY'),
+        political: NATIONAL_FOCUSES.filter(f => f.category === 'POLITICS'),
     };
 
     const renderCard = (focus: NationalFocus) => {
@@ -58,10 +45,12 @@ export const FocusModal: React.FC<Props> = ({ techState, onStartFocus, onCancelF
                 <p className="tree-desc">{focus.description}</p>
 
                 <div className="tree-reward">
-                    {focus.rewardEffect.type === 'COMBAT_POWER' && `+${(focus.rewardEffect.value * 100).toFixed(0)}% ${focus.rewardEffect.unitType}`}
-                    {focus.rewardEffect.type === 'GOLD_INCOME' && `+${(focus.rewardEffect.value * 100).toFixed(0)}% ouro`}
-                    {focus.rewardEffect.type === 'MANPOWER' && `+${(focus.rewardEffect.value * 100).toFixed(0)}% manpower`}
-                    {focus.rewardEffect.type === 'DEFENSE_BONUS' && `+${(focus.rewardEffect.value * 100).toFixed(0)}% defesa`}
+                    {focus.rewardEffects.map(effect => <span key={`${effect.type}-${formatFocusEffect(effect)}`}>{formatFocusEffect(effect)}</span>)}
+                </div>
+                <div className="tree-prerequisites">
+                    Pré-requisito: {(focus.prerequisites ?? []).length
+                        ? focus.prerequisites!.map(id => NATIONAL_FOCUSES.find(item => item.id === id)?.title ?? id).join(', ')
+                        : 'Nenhum'}
                 </div>
 
                 {!isDone && (

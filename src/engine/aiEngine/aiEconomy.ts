@@ -18,7 +18,8 @@ export function processAIEconomicDecisions(
   buildingConstructions: BuildingConstruction[],
   recruitments: Recruitment[],
   dateString: string,
-  canRecruitMilitary: boolean = true
+  canRecruitMilitary: boolean = true,
+  atWar: boolean = false,
 ): {
   techState: CountryTechState;
   buildingConstructions: BuildingConstruction[];
@@ -37,7 +38,6 @@ export function processAIEconomicDecisions(
   // 1. SELEÇÃO DE FOCO NACIONAL
   if (!updatedTechState.activeFocusId) {
     const availableFocuses = NATIONAL_FOCUSES.filter(focus => {
-      if (focus.completed) return false;
       if (updatedTechState.completedFocuses.includes(focus.id)) return false;
 
       if (focus.prerequisites && focus.prerequisites.length > 0) {
@@ -49,7 +49,12 @@ export function processAIEconomicDecisions(
     });
 
     if (availableFocuses.length > 0) {
-      const selectedFocus = availableFocuses[0];
+      const ownedProvinces = provinces.filter(province => province.owner === country.tag);
+      const famine = ownedProvinces.some(province => getFoodShortageStatus(normalizeMarket(province.market).goods.food).ratio > 0);
+      const workforce = ownedProvinces.reduce((sum, province) => sum + calculateWorkforce(normalizePopulation(province.population)), 0);
+      const unemployed = ownedProvinces.reduce((sum, province) => sum + normalizePopulation(province.population).unemployed, 0);
+      const categoryPriority = famine ? 'ECONOMY' : atWar ? 'MILITARY' : country.resources.stability < 40 ? 'POLITICS' : workforce > 0 && unemployed / workforce > .2 ? 'ECONOMY' : 'POLITICS';
+      const selectedFocus = [...availableFocuses].sort((a, b) => Number(b.category === categoryPriority) - Number(a.category === categoryPriority))[0];
       updatedTechState = {
         ...updatedTechState,
         activeFocusId: selectedFocus.id,

@@ -59,7 +59,7 @@ export function processAiTick(p: Params) {
         ceilingLogRef.current.delete(country.tag);
       }
 
-      const economicResult = processAIEconomicDecisions(country, provinces, botTechState, buildingConstructions, recruitments, dateString, canRecruitMilitary);
+      const economicResult = processAIEconomicDecisions(country, provinces, botTechState, buildingConstructions, recruitments, dateString, canRecruitMilitary, botAtWar);
       countries = countries.map(c => c.tag === country.tag ? economicResult.country : c);
       currentBotTechStates.set(country.tag, economicResult.techState);
       buildingConstructions = economicResult.buildingConstructions;

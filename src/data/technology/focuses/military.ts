@@ -1,74 +1,12 @@
-import { NationalFocus } from '../../../types/technology';
+import type { NationalFocus } from '../../../types/technology';
 
 export const MILITARY_FOCUSES: NationalFocus[] = [
-  {
-    id: 'focus_military_modernization',
-    title: 'Modernização Militar',
-    description: 'Investir na modernização das forças armadas, aumentando o poder de combate da infantaria.',
-    icon: '⚔️',
-    durationDays: 70,
-    currentProgressDays: 0,
-    completed: false,
-    rewardEffect: {
-      type: 'COMBAT_POWER',
-      value: 0.15,
-      unitType: 'infantry'
-    }
-  },
-  {
-    id: 'focus_fortification_program',
-    title: 'Programa de Fortificação',
-    description: 'Investir em fortificações para reduzir o custo de construção de defesas.',
-    icon: '🏰',
-    durationDays: 70,
-    currentProgressDays: 0,
-    completed: false,
-    rewardEffect: {
-      type: 'BUILD_COST',
-      value: -0.25
-    }
-  },
-  {
-    id: 'focus_cavalry_traditions',
-    title: 'Tradições de Cavalaria',
-    description: 'Fortalecer as tradições de cavalaria, aumentando sua eficácia em combate.',
-    icon: '🐎',
-    durationDays: 70,
-    currentProgressDays: 0,
-    completed: false,
-    rewardEffect: {
-      type: 'COMBAT_POWER',
-      value: 0.20,
-      unitType: 'cavalry'
-    },
-    prerequisites: ['focus_military_modernization']
-  },
-  {
-    id: 'focus_army_modernization',
-    title: 'Modernização do Exército',
-    description: 'Reforma completa das forças armadas para aumentar a eficiência militar.',
-    icon: '🎖️',
-    durationDays: 80,
-    currentProgressDays: 0,
-    completed: false,
-    rewardEffect: {
-      type: 'MANPOWER',
-      value: 200
-    },
-    prerequisites: ['focus_military_modernization']
-  },
-  {
-    id: 'focus_border_fortification',
-    title: 'Fortalecimento das Fronteiras',
-    description: 'Investimento massivo em defesas de fronteira.',
-    icon: '🏰',
-    durationDays: 75,
-    currentProgressDays: 0,
-    completed: false,
-    rewardEffect: {
-      type: 'BUILD_COST',
-      value: -0.20
-    },
-    prerequisites: ['focus_fortification_program']
-  }
+  { id:'focus_military_modernization', title:'Modernização Militar', description:'Padroniza armas e treinamento da infantaria.', category:'MILITARY', icon:'⚔️', durationDays:60, rewardEffects:[{type:'COMBAT_POWER',unitType:'infantry',value:.15}] },
+  { id:'focus_army_modernization', title:'Exército Profissional', description:'Profissionaliza o recrutamento e amplia a reserva treinada.', category:'MILITARY', icon:'🎖️', durationDays:80, prerequisites:['focus_military_modernization'], rewardEffects:[{type:'RECRUITMENT_TIME',value:-.1},{type:'MANPOWER',value:.05}] },
+  { id:'focus_modern_doctrine', title:'Doutrina Moderna', description:'Integra as armas do exército e eleva sua eficácia.', category:'MILITARY', icon:'📜', durationDays:110, prerequisites:['focus_army_modernization'], rewardEffects:[{type:'COMBAT_POWER',unitType:'infantry',value:.05},{type:'COMBAT_POWER',unitType:'artillery',value:.1},{type:'MILITARY_MAINTENANCE',value:-.05}] },
+  { id:'focus_fortification_program', title:'Programa de Fortificação', description:'Acelera a construção das defesas nacionais.', category:'MILITARY', icon:'🏰', durationDays:60, rewardEffects:[{type:'BUILD_TIME',value:.05},{type:'DEFENSE_BONUS',value:.1}] },
+  { id:'focus_border_fortification', title:'Fortalecimento das Fronteiras', description:'Aprimora posições defensivas e fortalezas.', category:'MILITARY', icon:'🧱', durationDays:85, prerequisites:['focus_fortification_program'], rewardEffects:[{type:'DEFENSE_BONUS',value:.15}] },
+  { id:'focus_defense_in_depth', title:'Defesa em Profundidade', description:'Organiza linhas defensivas sucessivas.', category:'MILITARY', icon:'🛡️', durationDays:110, prerequisites:['focus_border_fortification'], rewardEffects:[{type:'DEFENSE_BONUS',value:.15},{type:'MILITARY_MAINTENANCE',value:-.05}] },
+  { id:'focus_cavalry_traditions', title:'Tradições de Cavalaria', description:'Preserva e sistematiza a experiência da cavalaria.', category:'MILITARY', icon:'🐎', durationDays:70, prerequisites:['focus_military_modernization'], rewardEffects:[{type:'COMBAT_POWER',unitType:'cavalry',value:.1}] },
+  { id:'focus_professional_cavalry', title:'Cavalaria Profissional', description:'Cria corpos permanentes de cavalaria.', category:'MILITARY', icon:'🏇', durationDays:90, prerequisites:['focus_cavalry_traditions'], rewardEffects:[{type:'COMBAT_POWER',unitType:'cavalry',value:.1},{type:'RECRUITMENT_TIME',value:-.05}] },
 ];

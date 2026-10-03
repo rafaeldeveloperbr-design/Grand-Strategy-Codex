@@ -17,6 +17,10 @@ export interface TechnologyBonuses {
   populationGrowthMultiplier: number;
   populationCapacityMultiplier: number;
   researchSpeedMultiplier: number;
+  satisfactionModifier: number;
+  migrationAttractionMultiplier: number;
+  internalTradeMultiplier: number;
+  stabilityModifier: number;
 }
 
 export interface TechnologyModifierEntry { label: string; percent: number }
@@ -35,6 +39,10 @@ const createNeutralBonuses = (): TechnologyBonuses => ({
   populationGrowthMultiplier: 1,
   populationCapacityMultiplier: 1,
   researchSpeedMultiplier: 1,
+  satisfactionModifier: 0,
+  migrationAttractionMultiplier: 1,
+  internalTradeMultiplier: 1,
+  stabilityModifier: 0,
 });
 
 export function normalizeTechState(value: Partial<CountryTechState> | undefined, countryTag = 'UNKNOWN'): CountryTechState {
@@ -43,9 +51,9 @@ export function normalizeTechState(value: Partial<CountryTechState> | undefined,
     : null;
   return {
     countryTag: value?.countryTag ?? countryTag,
-    activeFocusId: value?.activeFocusId ?? null,
+    activeFocusId: NATIONAL_FOCUSES.some(focus => focus.id === value?.activeFocusId) ? value?.activeFocusId ?? null : null,
     activeResearchId,
-    completedFocuses: [...(value?.completedFocuses ?? [])],
+    completedFocuses: [...new Set((value?.completedFocuses ?? []).filter(id => NATIONAL_FOCUSES.some(focus => focus.id === id)))],
     completedTechnologies: [...new Set((value?.completedTechnologies ?? []).filter(id => TECHNOLOGIES.some(technology => technology.id === id)))],
     focusProgressDays: Number.isFinite(value?.focusProgressDays) ? value?.focusProgressDays ?? 0 : 0,
     researchProgressDays: activeResearchId && Number.isFinite(value?.researchProgressDays) ? Math.max(0, value?.researchProgressDays ?? 0) : 0,
@@ -124,13 +132,22 @@ function applyTechnologyEffect(effect: TechnologyEffect, bonuses: TechnologyBonu
 
 function applyFocusEffect(effect: RewardEffect, bonuses: TechnologyBonuses) {
   switch (effect.type) {
-    case 'COMBAT_POWER': if (effect.unitType) bonuses.combatPowerBonus[effect.unitType] += effect.value; break;
+    case 'COMBAT_POWER': bonuses.combatPowerBonus[effect.unitType] += effect.value; break;
+    case 'GOOD_PRODUCTION': bonuses.productionMultipliers[effect.good] += effect.value; break;
     case 'GOLD_INCOME': bonuses.goldIncomeMultiplier += effect.value; break;
     case 'BUILD_COST': bonuses.buildCostMultiplier += effect.value; break;
     case 'BUILD_TIME': bonuses.buildTimeMultiplier += effect.value; break;
     case 'MANPOWER': bonuses.manpowerMultiplier += effect.value; break;
     case 'RESEARCH_SPEED': bonuses.researchSpeedMultiplier += effect.value; break;
-    default: break;
+    case 'DEFENSE_BONUS': bonuses.fortificationMultiplier += effect.value; break;
+    case 'RECRUITMENT_TIME': bonuses.recruitmentTimeMultiplier += effect.value; break;
+    case 'MILITARY_MAINTENANCE': bonuses.militaryMaintenanceMultiplier += effect.value; break;
+    case 'POPULATION_GROWTH': bonuses.populationGrowthMultiplier += effect.value; break;
+    case 'POPULATION_CAPACITY': bonuses.populationCapacityMultiplier += effect.value; break;
+    case 'SATISFACTION': bonuses.satisfactionModifier += effect.value; break;
+    case 'MIGRATION_ATTRACTION': bonuses.migrationAttractionMultiplier += effect.value; break;
+    case 'INTERNAL_TRADE': bonuses.internalTradeMultiplier += effect.value; break;
+    case 'STABILITY': bonuses.stabilityModifier += effect.value; break;
   }
 }
 
@@ -144,7 +161,7 @@ export function calculateTechBonuses(state: CountryTechState): TechnologyBonuses
   const bonuses = calculateTechnologyBonuses(state);
   for (const id of state.completedFocuses) {
     const focus = NATIONAL_FOCUSES.find(item => item.id === id);
-    if (focus) applyFocusEffect(focus.rewardEffect, bonuses);
+    if (focus) focus.rewardEffects.forEach(effect => applyFocusEffect(effect, bonuses));
   }
   return bonuses;
 }
@@ -168,6 +185,28 @@ export function formatTechnologyEffect(effect: TechnologyEffect): string {
     case 'POPULATION_CAPACITY': return `Capacidade populacional: ${amount}`;
     case 'GOLD_INCOME': return `Renda: ${amount}`;
     case 'RESEARCH_SPEED': return `Velocidade de pesquisa: ${amount}`;
+  }
+}
+
+export function formatFocusEffect(effect: RewardEffect): string {
+  const percent = `${effect.value >= 0 ? '+' : ''}${signedPercent(effect.value)}%`;
+  switch (effect.type) {
+    case 'COMBAT_POWER': return `Poder de ${effect.unitType}: ${percent}`;
+    case 'GOOD_PRODUCTION': return `Produção de ${effect.good.toUpperCase()}: ${percent}`;
+    case 'GOLD_INCOME': return `Renda nacional: ${percent}`;
+    case 'BUILD_COST': return `Custo de construção: ${percent}`;
+    case 'BUILD_TIME': return `Velocidade de construção: ${percent}`;
+    case 'MANPOWER': return `Manpower: ${percent}`;
+    case 'STABILITY': return `Estabilidade administrativa: ${percent}`;
+    case 'RESEARCH_SPEED': return `Velocidade de pesquisa: ${percent}`;
+    case 'DEFENSE_BONUS': return `Defesa por fortificações: ${percent}`;
+    case 'RECRUITMENT_TIME': return `Tempo de recrutamento: ${percent}`;
+    case 'MILITARY_MAINTENANCE': return `Manutenção militar: ${percent}`;
+    case 'POPULATION_GROWTH': return `Crescimento populacional: ${percent}`;
+    case 'POPULATION_CAPACITY': return `Capacidade populacional: ${percent}`;
+    case 'SATISFACTION': return `Satisfação: +${effect.value} pontos`;
+    case 'MIGRATION_ATTRACTION': return `Atração migratória: ${percent}`;
+    case 'INTERNAL_TRADE': return `Eficiência do comércio interno: ${percent}`;
   }
 }
 

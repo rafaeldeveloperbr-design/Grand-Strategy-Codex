@@ -1,149 +1,64 @@
-/**
- * ============================================================
- * MÓDULO 2 - Definições de Edifícios
- * ============================================================
- * Define os templates de todos os edifícios disponíveis no jogo.
- * Cada edifício tem custo, tempo de construção, nível máximo e bônus.
- */
+import type { BuildingCost, BuildingDefinition, BuildingType, GoodId, Province } from '../types';
 
-import { BuildingDefinition, BuildingType } from '../types';
+const definition = (
+  type: BuildingType, name: string, description: string, icon: string,
+  baseCost: number, baseBuildTime: number, resourceCost: Partial<Record<GoodId, number>>,
+  bonusPerLevel: BuildingDefinition['bonusPerLevel'],
+): BuildingDefinition => ({ type, name, description, icon, baseCost, costMultiplier: 1.5, baseBuildTime, maxLevel: 5, resourceCost, bonusPerLevel });
 
-/**
- * Definições de todos os edifícios disponíveis.
- * Usado como referência para custos e bônus.
- */
+/** The single balance table for prices, inputs, duration, and per-level effects. */
 export const BUILDING_DEFINITIONS: Record<BuildingType, BuildingDefinition> = {
-  farm: {
-    type: 'farm',
-    name: 'Fazenda',
-    description: '+Crescimento Populacional e +Renda de Ouro. Aumenta a produção de alimentos da província.',
-    icon: '🌾',
-    baseCost: 250,
-    costMultiplier: 1.5,
-    baseBuildTime: 30,
-    maxLevel: 5,
-    bonusPerLevel: {
-      goldIncome: 3.5,
-      growthBonus: 0.5,
-    },
-  },
-  market: {
-    type: 'market',
-    name: 'Mercado',
-    description: '+Renda Diária de Ouro. Aumenta significativamente o comércio e impostos da província.',
-    icon: '🏪',
-    baseCost: 350,
-    costMultiplier: 1.6,
-    baseBuildTime: 45,
-    maxLevel: 5,
-    bonusPerLevel: {
-      goldIncome: 6.0,
-    },
-  },
-  barracks: {
-    type: 'barracks',
-    name: 'Acampamento',
-    description: '-15% Tempo de Recrutamento e +Manpower. Treina tropas mais rapidamente e aumenta o limite de recrutamento.',
-    icon: '⚔️',
-    baseCost: 450,
-    costMultiplier: 1.5,
-    baseBuildTime: 40,
-    maxLevel: 5,
-    bonusPerLevel: {
-      manpowerGain: 50,
-      recruitmentSpeedBonus: 15,
-    },
-  },
-  fortification: {
-    type: 'fortification',
-    name: 'Fortificação',
-    description: '+Defesa da Província. Aumenta a resistência a cercos e dificulta conquistas inimigas.',
-    icon: '🏰',
-    baseCost: 700,
-    costMultiplier: 1.8,
-    baseBuildTime: 60,
-    maxLevel: 5,
-    bonusPerLevel: {
-      defense: 3,
-    },
-  },
-  workshop: {
-    type: 'workshop',
-    name: 'Oficina',
-    description: '+15% Velocidade de Construção. Acelera a construção de todos os edifícios na província.',
-    icon: '🔨',
-    baseCost: 400,
-    costMultiplier: 1.6,
-    baseBuildTime: 45,
-    maxLevel: 5,
-    bonusPerLevel: {
-      buildSpeedBonus: 15,
-    },
-  },
-  temple: {
-    type: 'temple',
-    name: 'Templo',
-    description: '+0.05 Estabilidade/mês. Aumenta a estabilidade do país e a lealdade da população.',
-    icon: '⛪',
-    baseCost: 350,
-    costMultiplier: 1.5,
-    baseBuildTime: 40,
-    maxLevel: 5,
-    bonusPerLevel: {
-      stabilityBonus: 0.05,
-    },
-  },
-  port: {
-    type: 'port',
-    name: 'Porto',
-    description: '+15 Renda de Ouro. Aumenta o comércio marítimo e a renda da província (apenas litoral).',
-    icon: '⚓',
-    baseCost: 500,
-    costMultiplier: 1.7,
-    baseBuildTime: 60,
-    maxLevel: 5,
-    bonusPerLevel: {
-      goldIncome: 15,
-    },
-  },
-  university: {
-    type: 'university',
-    name: 'Universidade',
-    description: '+20% Velocidade de Pesquisa. Acelera o desenvolvimento de novas tecnologias.',
-    icon: '📚',
-    baseCost: 600,
-    costMultiplier: 1.8,
-    baseBuildTime: 75,
-    maxLevel: 5,
-    bonusPerLevel: {
-      researchSpeedBonus: 20,
-    },
-  },
+  farm: definition('farm', 'Fazenda', 'Produz FOOD usando trabalhadores.', '🌾', 220, 30, { wood: 12, tools: 2 }, {}),
+  lumber_mill: definition('lumber_mill', 'Serraria', 'Produz WOOD usando trabalhadores.', '🪵', 260, 32, { wood: 8, iron: 2, tools: 3 }, {}),
+  iron_mine: definition('iron_mine', 'Mina de Ferro', 'Produz IRON usando trabalhadores.', '⛏️', 340, 40, { wood: 14, iron: 2, tools: 4 }, {}),
+  workshop: definition('workshop', 'Oficina', 'Transforma WOOD + IRON em TOOLS.', '🔨', 400, 45, { wood: 18, iron: 10, tools: 5 }, {}),
+  market: definition('market', 'Mercado', 'Melhora moderadamente a eficiência produtiva.', '🏪', 350, 45, { wood: 12, iron: 4, tools: 4 }, { productivityBonus: 5 }),
+  warehouse: definition('warehouse', 'Armazém', 'Aumenta a capacidade de estoque em 50%.', '📦', 300, 35, { wood: 24, iron: 4, tools: 3 }, { storageBonus: 50 }),
+  housing: definition('housing', 'Habitação', 'Aumenta a capacidade populacional em 5.000.', '🏘️', 280, 35, { wood: 20, iron: 3, tools: 2 }, { populationCapacity: 5000 }),
+  barracks: definition('barracks', 'Quartel', 'Acelera o recrutamento existente.', '⚔️', 450, 40, { wood: 16, iron: 12, tools: 8 }, { recruitmentSpeedBonus: 15 }),
+  fortress: definition('fortress', 'Fortaleza', 'Adiciona +2 à defesa provincial.', '🏰', 700, 60, { wood: 20, iron: 24, tools: 12 }, { defense: 2 }),
+  infrastructure: definition('infrastructure', 'Infraestrutura', 'Melhora produtividade e integração econômica.', '🛣️', 520, 55, { wood: 20, iron: 14, tools: 10 }, { productivityBonus: 4 }),
 };
 
-/**
- * Calcula o custo de construção de um edifício em um determinado nível
- */
+export const BUILDING_COST_GROWTH = 1.5;
+export const BUILDING_TIME_GROWTH = 1.25;
+
+export function getBuildingCosts(type: BuildingType, currentLevel: number): BuildingCost {
+  const def = BUILDING_DEFINITIONS[type];
+  const factor = Math.pow(BUILDING_COST_GROWTH, currentLevel);
+  return {
+    gold: Math.floor(def.baseCost * factor),
+    wood: Math.ceil((def.resourceCost.wood ?? 0) * factor),
+    iron: Math.ceil((def.resourceCost.iron ?? 0) * factor),
+    tools: Math.ceil((def.resourceCost.tools ?? 0) * factor),
+  };
+}
+
+/** Kept as the gold-only accessor for callers that render legacy totals. */
 export function getBuildingCost(type: BuildingType, currentLevel: number): number {
-  const def = BUILDING_DEFINITIONS[type];
-  return Math.floor(def.baseCost * Math.pow(def.costMultiplier, currentLevel));
+  return getBuildingCosts(type, currentLevel).gold;
 }
-
-/**
- * Calcula o tempo de construção em dias para um determinado nível
- */
 export function getBuildingTime(type: BuildingType, currentLevel: number): number {
-  const def = BUILDING_DEFINITIONS[type];
-  return Math.floor(def.baseBuildTime * (1 + currentLevel * 0.3));
+  return Math.ceil(BUILDING_DEFINITIONS[type].baseBuildTime * Math.pow(BUILDING_TIME_GROWTH, currentLevel));
 }
-
-/**
- * Verifica se é possível construir um edifício (nível máximo não atingido)
- */
-export function canBuildBuilding(
-  type: BuildingType,
-  currentLevel: number
-): boolean {
-  const def = BUILDING_DEFINITIONS[type];
-  return currentLevel < def.maxLevel;
+export function canBuildBuilding(type: BuildingType, currentLevel: number): boolean {
+  return currentLevel < BUILDING_DEFINITIONS[type].maxLevel;
+}
+export function getBuildingLevel(province: Province, type: BuildingType): number {
+  return province.buildings.find(building => building.type === type && building.daysRemaining <= 0)?.level ?? 0;
+}
+export function getBuildingEffect(type: BuildingType, level: number): string {
+  if (!level) return 'Nenhum';
+  switch (type) {
+    case 'farm': return `Produção FOOD nível ${level}`;
+    case 'lumber_mill': return `Produção WOOD nível ${level}`;
+    case 'iron_mine': return `Produção IRON nível ${level}`;
+    case 'workshop': return `Conversão TOOLS nível ${level}`;
+    case 'warehouse': return `+${level * 50}% capacidade de estoque`;
+    case 'housing': return `+${level * 5000} capacidade populacional`;
+    case 'barracks': return `+${level * 15}% velocidade de recrutamento`;
+    case 'fortress': return `+${level * 2} defesa`;
+    case 'market': return `+${level * 5}% eficiência produtiva`;
+    case 'infrastructure': return `+${level * 4}% produtividade`;
+  }
 }

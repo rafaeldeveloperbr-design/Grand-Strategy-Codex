@@ -90,7 +90,7 @@ export function processDailyUnrestDecay(
     
     // Calcula bônus de pacificação baseado em edifícios
     // Templo reduz unrest
-    const temple = province.buildings.find(b => b.type === 'temple');
+    const temple = province.buildings.find(b => b.type === 'housing');
     if (temple) {
       change -= UNREST_BALANCE.TEMPLE_PACIFICATION_BONUS * temple.level;
     }

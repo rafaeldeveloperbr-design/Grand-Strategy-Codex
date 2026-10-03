@@ -113,6 +113,10 @@ export function processEconomyTick(p: Params) {
   }
 
   // PASSO D: ECONOMIA/POPULAÇÃO
+  provinces = provinces.map(province => ({
+    ...province,
+    stationedTroops: armies.filter(army => army.location === province.id).flatMap(army => army.regiments).reduce((sum, regiment) => sum + regiment.strength, 0),
+  }));
   countries = countries.map(country => {
     const countryProvinces = provinces.filter(pr => pr.owner === country.tag);
     const atWar = p.wars.some(war => war.attacker === country.tag || war.defender === country.tag);

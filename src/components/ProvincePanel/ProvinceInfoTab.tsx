@@ -111,7 +111,7 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
             </span>
           </div>
         )}
-        {province.buildings.some((b) => b.type === 'temple') && (
+        {province.buildings.some((b) => b.type === 'housing') && (
           <div className="province-panel__info-row" style={{ marginTop: '4px' }}>
             <span className="province-panel__label" style={{ fontSize: '10px', color: '#2ecc71' }}>
               ⛪ Templo ativo: pacificação acelerada

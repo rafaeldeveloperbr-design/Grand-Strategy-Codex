@@ -28,8 +28,8 @@ export function calculateEmploymentCapacity(province: Province): number {
   let capacityRatio = 0.2 + clamp(province.development, 0, 10) * 0.04;
   for (const building of province.buildings) {
     if (building.daysRemaining > 0) continue;
-    const jobsPerLevel = building.type === 'market' || building.type === 'workshop' || building.type === 'port'
-      ? 0.035 : building.type === 'farm' || building.type === 'university' ? 0.025 : 0.01;
+    const jobsPerLevel = building.type === 'market' || building.type === 'workshop' || building.type === 'infrastructure'
+      ? 0.035 : building.type === 'farm' || building.type === 'lumber_mill' || building.type === 'iron_mine' ? 0.025 : 0.01;
     capacityRatio += jobsPerLevel * building.level;
   }
   return Math.floor(population.total * clamp(capacityRatio, 0, POPULATION_DEFAULTS.WORKFORCE_SHARE));
@@ -55,6 +55,11 @@ export function calculateSatisfaction(
   return clamp(65 - unemploymentRate * 55 + taxEffect + economyEffect + warEffect + (options.marketAdjustment ?? 0), 0, 100);
 }
 
+export function getPopulationCapacity(province: Province): number {
+  const housing = province.buildings.find(building => building.type === 'housing' && building.daysRemaining <= 0)?.level ?? 0;
+  return Math.max(0, province.maxPopulation + housing * 5000);
+}
+
 export function processProvincePopulation(
   province: Province,
   growthMultiplier: number,
@@ -63,7 +68,7 @@ export function processProvincePopulation(
 ): Province {
   const current = normalizePopulation(province.population);
   const requestedGrowth = options.growthAmount ?? current.total * current.growthRate * Math.max(0, growthMultiplier);
-  const total = clamp(Math.floor(current.total + requestedGrowth), 0, Math.max(0, province.maxPopulation));
+  const total = clamp(Math.floor(current.total + requestedGrowth), 0, getPopulationCapacity(province));
   let population = recalculateEmployment({ ...province, population: { ...current, total } }, { ...current, total });
   population = { ...population, satisfaction: calculateSatisfaction({ ...province, population }, taxationId, options) };
   return { ...province, population };

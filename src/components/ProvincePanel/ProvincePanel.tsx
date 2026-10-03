@@ -109,6 +109,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
               <ProvinceBuildingsTab
                 province={province}
                 playerCountry={playerCountry}
+                constructions={buildingConstructions}
                 onBuild={onBuild}
               />
             )}

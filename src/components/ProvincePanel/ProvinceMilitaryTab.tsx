@@ -2,6 +2,7 @@ import React from 'react';
 import { Province, Country, Army, UnitType } from '../../types';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { calculateArmySize } from '../../engine/combat';
+import { normalizeMarket } from '../../engine/market';
 
 interface ProvinceMilitaryTabProps {
   province: Province;
@@ -58,12 +59,13 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
             const def = UNIT_DEFINITIONS[type];
             const canAffordGold = playerCountry.resources.gold >= def.cost;
             const canAffordManpower = playerCountry.resources.manpower >= def.manpowerCost;
-            const canRecruit = canAffordGold && canAffordManpower;
+            const market = normalizeMarket(province.market);
+            const hasIron = market.goods.iron.stock >= def.ironCost;
+            const hasTools = market.goods.tools.stock >= def.toolsCost;
+            const canRecruit = canAffordGold && canAffordManpower && hasIron && hasTools;
             const cantRecruitReason = !canAffordGold
               ? 'Ouro insuficiente'
-              : !canAffordManpower
-              ? 'Manpower insuficiente'
-              : null;
+              : !canAffordManpower ? 'Manpower insuficiente' : !hasIron ? 'IRON insuficiente' : !hasTools ? 'TOOLS insuficiente' : null;
 
             return (
               <div
@@ -84,6 +86,8 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
                 <div className="province-panel__build-costs">
                   <span className="province-panel__build-cost">💰 {def.cost}</span>
                   <span className="province-panel__build-cost">👥 {def.manpowerCost}</span>
+                  <span className="province-panel__build-cost">⛓️ {def.ironCost}</span>
+                  <span className="province-panel__build-cost">🔧 {def.toolsCost}</span>
                   <span className="province-panel__build-cost">📅 {def.trainingTime}d</span>
                 </div>
                 <button

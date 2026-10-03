@@ -1,9 +1,14 @@
 import { Country, Province, BuildingType, UnitType, Recruitment, BuildingConstruction } from '../../types';
 import { CountryTechState } from '../../types/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
-import { BUILDING_DEFINITIONS, getBuildingCost, getBuildingTime } from '../../data/buildings';
+
+import { startBuilding } from '../buildings';
+import { getPopulationCapacity } from '../population';
+import { getStorageCapacity, normalizeMarket } from '../market';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
+
+const ALL_FINITE = (market: ReturnType<typeof normalizeMarket>) => Object.values(market.goods).every(g => Number.isFinite(g.stock));
 
 export function processAIEconomicDecisions(
   country: Country,
@@ -93,55 +98,28 @@ export function processAIEconomicDecisions(
     }
   }
 
-  // 3. CONSTRUÇÃO EM PROVÍNCIAS
-  if (updatedCountry.resources.gold >= 300) {
-    const aiProvinces = provinces.filter(p => p.owner === country.tag);
-    
-    if (aiProvinces.length > 0) {
-      const targetProvince = aiProvinces[Math.floor(Math.random() * aiProvinces.length)];
-      const hasConstruction = updatedConstructions.some(c => c.provinceId === targetProvince.id);
-      
-      if (!hasConstruction) {
-        const buildingTypes = Object.keys(BUILDING_DEFINITIONS) as BuildingType[];
-        const chosenBuilding = buildingTypes[Math.floor(Math.random() * buildingTypes.length)];
-        const def = BUILDING_DEFINITIONS[chosenBuilding];
-        
-        const existingBuilding = targetProvince.buildings.find(b => b.type === chosenBuilding);
-        const currentLevel = existingBuilding?.level ?? 0;
-        
-        if (currentLevel < def.maxLevel) {
-          const buildingCost = getBuildingCost(chosenBuilding, currentLevel);
-          const buildTime = getBuildingTime(chosenBuilding, currentLevel);
-          
-          if (updatedCountry.resources.gold >= buildingCost) {
-            updatedCountry = {
-              ...updatedCountry,
-              resources: {
-                ...updatedCountry.resources,
-                gold: updatedCountry.resources.gold - buildingCost,
-              },
-            };
-
-            const newConstruction: BuildingConstruction = {
-              id: `const_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-              provinceId: targetProvince.id,
-              owner: country.tag,
-              buildingType: chosenBuilding,
-              daysRemaining: buildTime,
-              totalDays: buildTime,
-              cost: buildingCost,
-            };
-
-            updatedConstructions = [...updatedConstructions, newConstruction];
-
-            const translatedName = getBuildingName(chosenBuilding);
-            logs.push({
-              actionType: 'building',
-              message: `Iniciou obra de ${translatedName} em ${targetProvince.name} (💰 ${buildingCost})`,
-            });
-          }
-        }
-      }
+  // 3. CONSTRUÇÃO EM PROVÍNCIAS: shortages and real capacity drive the choice.
+  const aiProvinces = provinces.filter(p => p.owner === country.tag);
+  const targetProvince = aiProvinces.find(p => !updatedConstructions.some(c => c.provinceId === p.id));
+  if (targetProvince) {
+    const market = normalizeMarket(targetProvince.market);
+    const populationTotal = typeof targetProvince.population === 'number' ? targetProvince.population : targetProvince.population.total;
+    const priorities: BuildingType[] = [];
+    if (market.goods.food.shortage > 0 || market.goods.food.stock < market.goods.food.demand) priorities.push('farm');
+    if (market.goods.wood.stock < market.goods.wood.demand * 2) priorities.push('lumber_mill');
+    if (market.goods.iron.stock < market.goods.iron.demand * 2) priorities.push('iron_mine');
+    if (market.goods.tools.stock < market.goods.tools.demand * 2) priorities.push('workshop');
+    if (ALL_FINITE(market) && Object.values(market.goods).some(g => g.stock >= getStorageCapacity(targetProvince) * .9)) priorities.push('warehouse');
+    if (populationTotal >= getPopulationCapacity(targetProvince) * .9) priorities.push('housing');
+    priorities.push('infrastructure', 'market', 'barracks', 'fortress');
+    for (const chosenBuilding of priorities) {
+      const result = startBuilding(targetProvince, country.tag, chosenBuilding, updatedCountry.resources.gold, updatedConstructions);
+      if (!result.success) continue;
+      targetProvince.market = result.province.market;
+      updatedConstructions = result.constructions;
+      updatedCountry = { ...updatedCountry, resources: { ...updatedCountry.resources, gold: result.gold } };
+      logs.push({ actionType: 'building', message: `Iniciou obra de ${getBuildingName(chosenBuilding)} em ${targetProvince.name}` });
+      break;
     }
   }
 
@@ -155,8 +133,12 @@ export function processAIEconomicDecisions(
         const unitTypes = Object.keys(UNIT_DEFINITIONS) as UnitType[];
         const chosenUnit = unitTypes[Math.floor(Math.random() * unitTypes.length)];
         const def = UNIT_DEFINITIONS[chosenUnit];
-        
-        if (updatedCountry.resources.gold >= def.cost && updatedCountry.resources.manpower >= def.manpowerCost) {
+        const recruitmentMarket = normalizeMarket(targetProvince.market);
+        if (updatedCountry.resources.gold >= def.cost && updatedCountry.resources.manpower >= def.manpowerCost
+          && recruitmentMarket.goods.iron.stock >= def.ironCost && recruitmentMarket.goods.tools.stock >= def.toolsCost) {
+          recruitmentMarket.goods.iron.stock -= def.ironCost;
+          recruitmentMarket.goods.tools.stock -= def.toolsCost;
+          targetProvince.market = recruitmentMarket;
           updatedCountry = {
             ...updatedCountry,
             resources: {

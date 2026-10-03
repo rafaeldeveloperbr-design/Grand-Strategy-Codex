@@ -23,6 +23,7 @@ export function processAIEconomicDecisions(
   buildingConstructions: BuildingConstruction[];
   recruitments: Recruitment[];
   country: Country;
+  provinces: Province[],
   logs: Array<{ actionType: 'building' | 'military' | 'tech' | 'focus'; message: string }>;
 } {
   const logs: Array<{ actionType: 'building' | 'military' | 'tech' | 'focus'; message: string }> = [];
@@ -30,15 +31,16 @@ export function processAIEconomicDecisions(
   let updatedConstructions = [...buildingConstructions];
   let updatedRecruitments = [...recruitments];
   let updatedCountry = { ...country };
+  let updatedProvinces = [...provinces];
 
   // 1. SELEÇÃO DE FOCO NACIONAL
   if (!updatedTechState.activeFocusId) {
     const availableFocuses = NATIONAL_FOCUSES.filter(focus => {
       if (focus.completed) return false;
       if (updatedTechState.completedFocuses.includes(focus.id)) return false;
-      
+
       if (focus.prerequisites && focus.prerequisites.length > 0) {
-        return focus.prerequisites.every(prereqId => 
+        return focus.prerequisites.every(prereqId =>
           updatedTechState.completedFocuses.includes(prereqId)
         );
       }
@@ -65,9 +67,9 @@ export function processAIEconomicDecisions(
     const availableTechs = TECHNOLOGIES.filter(tech => {
       if (tech.researched) return false;
       if (updatedTechState.completedTechnologies.includes(tech.id)) return false;
-      
+
       if (tech.prerequisites && tech.prerequisites.length > 0) {
-        return tech.prerequisites.every(prereqId => 
+        return tech.prerequisites.every(prereqId =>
           updatedTechState.completedTechnologies.includes(prereqId)
         );
       }
@@ -75,7 +77,7 @@ export function processAIEconomicDecisions(
     });
 
     const affordableTech = availableTechs.find(t => updatedCountry.resources.gold >= t.costGold);
-    
+
     if (affordableTech) {
       updatedCountry = {
         ...updatedCountry,
@@ -113,12 +115,33 @@ export function processAIEconomicDecisions(
     if (populationTotal >= getPopulationCapacity(targetProvince) * .9) priorities.push('housing');
     priorities.push('infrastructure', 'market', 'barracks', 'fortress');
     for (const chosenBuilding of priorities) {
-      const result = startBuilding(targetProvince, country.tag, chosenBuilding, updatedCountry.resources.gold, updatedConstructions);
+      const result = startBuilding(
+        targetProvince,
+        updatedProvinces,
+        country.tag,
+        chosenBuilding,
+        updatedCountry.resources.gold,
+        updatedConstructions
+      );
+
       if (!result.success) continue;
-      targetProvince.market = result.province.market;
+
+      updatedProvinces = result.provinces;
       updatedConstructions = result.constructions;
-      updatedCountry = { ...updatedCountry, resources: { ...updatedCountry.resources, gold: result.gold } };
-      logs.push({ actionType: 'building', message: `Iniciou obra de ${getBuildingName(chosenBuilding)} em ${targetProvince.name}` });
+
+      updatedCountry = {
+        ...updatedCountry,
+        resources: {
+          ...updatedCountry.resources,
+          gold: result.gold,
+        },
+      };
+
+      logs.push({
+        actionType: 'building',
+        message: `Iniciou obra de ${getBuildingName(chosenBuilding)} em ${targetProvince.name}`,
+      });
+
       break;
     }
   }
@@ -127,7 +150,7 @@ export function processAIEconomicDecisions(
   if (updatedCountry.resources.gold >= 250 && updatedCountry.resources.manpower >= 1000) {
     if (canRecruitMilitary) {
       const aiProvinces = provinces.filter(p => p.owner === country.tag);
-      
+
       if (aiProvinces.length > 0) {
         const targetProvince = aiProvinces[Math.floor(Math.random() * aiProvinces.length)];
         const unitTypes = Object.keys(UNIT_DEFINITIONS) as UnitType[];
@@ -150,9 +173,9 @@ export function processAIEconomicDecisions(
 
           const existingRecruitment = updatedRecruitments.find(
             r => r.owner === country.tag &&
-                 r.provinceId === targetProvince.id &&
-                 r.unitType === chosenUnit &&
-                 r.daysRemaining === def.trainingTime
+              r.provinceId === targetProvince.id &&
+              r.unitType === chosenUnit &&
+              r.daysRemaining === def.trainingTime
           );
 
           if (existingRecruitment) {
@@ -186,6 +209,7 @@ export function processAIEconomicDecisions(
     buildingConstructions: updatedConstructions,
     recruitments: updatedRecruitments,
     country: updatedCountry,
+    provinces: updatedProvinces,
     logs,
   };
 }

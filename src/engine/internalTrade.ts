@@ -1,9 +1,12 @@
 import type { GoodId, Province } from '../types';
 import { ALL_GOODS, GOOD_IDS, calculateLocalPrice, calculatePurchasingPower, normalizeMarket } from './market';
 
+
 const RESERVE_DAYS = 1.5;
 const round = (value: number) => Math.round(value * 100) / 100;
-export const TRADE_PRIORITY: GoodId[] = [GOOD_IDS.FOOD, ...ALL_GOODS.filter(id => id !== GOOD_IDS.FOOD)];
+export const TRADE_PRIORITY: GoodId[] = [
+  GOOD_IDS.FOOD
+];
 
 export function findDomesticTradePath(fromId: string, toId: string, provinces: Province[]): string[] {
   const from = provinces.find(province => province.id === fromId);
@@ -33,7 +36,10 @@ export function findDomesticTradePath(fromId: string, toId: string, provinces: P
 
 export function calculateTradeBalance(province: Province, goodId: GoodId) {
   const good = normalizeMarket(province.market).goods[goodId];
-  const reserve = good.demand * RESERVE_DAYS;
+  const reserve =
+  goodId === GOOD_IDS.FOOD
+    ? good.demand * RESERVE_DAYS
+    : good.demand * 5;
   return {
     reserve: round(reserve),
     surplus: round(Math.max(0, good.stock - reserve)),
@@ -103,4 +109,144 @@ export function processInternalTrade(provinces: Province[]): Province[] {
     market.purchasingPower = calculatePurchasingPower(province, market.goods);
     return province;
   });
+}
+
+/**
+ * Retorna quanto de um bem está disponível para uma província,
+ * considerando o estoque local + províncias do mesmo país
+ * conectadas por uma rota doméstica válida.
+ */
+export function getAvailableDomesticStock(
+  province: Province,
+  goodId: GoodId,
+  provinces: Province[],
+): number {
+  let total = 0;
+
+  for (const candidate of provinces) {
+    if (candidate.owner !== province.owner) continue;
+
+    const isLocal = candidate.id === province.id;
+    const isConnected =
+      isLocal ||
+      findDomesticTradePath(candidate.id, province.id, provinces).length > 0;
+
+    if (!isConnected) continue;
+
+    const market = normalizeMarket(candidate.market);
+    total += market.goods[goodId].stock;
+  }
+
+  return round(total);
+}
+
+/**
+ * Consome estoque real de um bem da rede doméstica.
+ *
+ * Ordem:
+ * 1. estoque da própria província;
+ * 2. demais províncias conectadas do mesmo país;
+ * 3. ordem por ID para manter determinismo.
+ *
+ * Se a rede inteira não possuir estoque suficiente,
+ * nenhuma alteração é realizada.
+ */
+export function consumeDomesticStock(
+  provinceId: string,
+  goodId: GoodId,
+  amount: number,
+  provinces: Province[],
+): {
+  success: boolean;
+  provinces: Province[];
+  consumed: number;
+} {
+  if (amount <= 0) {
+    return {
+      success: true,
+      provinces,
+      consumed: 0,
+    };
+  }
+
+  const target = provinces.find(province => province.id === provinceId);
+
+  if (!target) {
+    return {
+      success: false,
+      provinces,
+      consumed: 0,
+    };
+  }
+
+  const available = getAvailableDomesticStock(
+    target,
+    goodId,
+    provinces,
+  );
+
+  // Operação atômica:
+  // se não houver recurso suficiente, não consome nada.
+  if (available < amount) {
+    return {
+      success: false,
+      provinces,
+      consumed: 0,
+    };
+  }
+
+  const reachable = provinces
+    .filter(candidate => {
+      if (candidate.owner !== target.owner) return false;
+
+      return (
+        candidate.id === target.id ||
+        findDomesticTradePath(
+          candidate.id,
+          target.id,
+          provinces,
+        ).length > 0
+      );
+    })
+    .sort((a, b) => {
+      // Estoque local sempre primeiro.
+      if (a.id === target.id) return -1;
+      if (b.id === target.id) return 1;
+
+      // Depois ordem estável/determinística.
+      return a.id.localeCompare(b.id);
+    });
+
+  let remaining = amount;
+
+  const updated = provinces.map(province => ({
+    ...province,
+    market: normalizeMarket(province.market),
+  }));
+
+  for (const source of reachable) {
+    if (remaining <= 0) break;
+
+    const updatedSource = updated.find(
+      province => province.id === source.id,
+    );
+
+    if (!updatedSource?.market) continue;
+
+    const good = updatedSource.market.goods[goodId];
+
+    const consumed = Math.min(
+      good.stock,
+      remaining,
+    );
+
+    good.stock = round(good.stock - consumed);
+    remaining = round(remaining - consumed);
+  }
+
+  return {
+    success: remaining <= 0,
+    provinces: updated,
+    consumed: round(amount - remaining),
+  };
 }

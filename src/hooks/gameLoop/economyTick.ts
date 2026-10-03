@@ -131,6 +131,44 @@ export function processEconomyTick(p: Params) {
     }
     return updatedCountry;
   });
+ // DEBUG TEMPORÁRIO
+  console.log(`[ECONOMY END] ${formatGameDate(date)}`);
+
+  console.table(
+    provinces
+      .filter(province => province.owner === playerCountryTag)
+      .map(province => ({
+        provincia: province.name,
+
+        food: province.market?.goods.food.stock ?? 0,
+        foodProd: province.market?.goods.food.production ?? 0,
+        foodDemand: province.market?.goods.food.demand ?? 0,
+        foodCons: province.market?.goods.food.consumption ?? 0,
+        foodImp: province.market?.goods.food.imported ?? 0,
+        foodExp: province.market?.goods.food.exported ?? 0,
+
+        wood: province.market?.goods.wood.stock ?? 0,
+        woodProd: province.market?.goods.wood.production ?? 0,
+        woodDemand: province.market?.goods.wood.demand ?? 0,
+        woodCons: province.market?.goods.wood.consumption ?? 0,
+        woodImp: province.market?.goods.wood.imported ?? 0,
+        woodExp: province.market?.goods.wood.exported ?? 0,
+
+        iron: province.market?.goods.iron.stock ?? 0,
+        ironProd: province.market?.goods.iron.production ?? 0,
+        ironCons: province.market?.goods.iron.consumption ?? 0,
+        ironImp: province.market?.goods.iron.imported ?? 0,
+        ironExp: province.market?.goods.iron.exported ?? 0,
+
+        tools: province.market?.goods.tools.stock ?? 0,
+        toolsProd: province.market?.goods.tools.production ?? 0,
+        toolsCons: province.market?.goods.tools.consumption ?? 0,
+        toolsImp: province.market?.goods.tools.imported ?? 0,
+        toolsExp: province.market?.goods.tools.exported ?? 0,
+
+        poderCompra: province.market?.purchasingPower ?? 0,
+      }))
+  );
 
   return { recruitments, armies, provinces, buildingConstructions, countries };
 }

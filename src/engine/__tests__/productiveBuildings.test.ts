@@ -46,24 +46,131 @@ describe('economia produtiva e construções v2', () => {
     expect(getBuildingTime('farm', 2)).toBeGreaterThan(getBuildingTime('farm', 1));
   });
   it('paga dinheiro e bens uma única vez ao iniciar', () => {
-    const province = makeProvince(); const result = startBuilding(province, 'A', 'farm', 1000, []);
-    expect(result.success).toBe(true); if (!result.success) return;
-    const paidWood = result.province.market!.goods.wood.stock;
-    processConstructions(result.constructions, [result.province]);
-    expect(result.province.market!.goods.wood.stock).toBe(paidWood);
+    const province = makeProvince();
+    const result = startBuilding(province, [province], 'A', 'farm', 1000, []);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const updatedProvince = result.provinces.find(p => p.id === province.id)!;
+    const paidWood = updatedProvince.market!.goods.wood.stock;
+
+    processConstructions(result.constructions, result.provinces);
+
+    expect(updatedProvince.market!.goods.wood.stock).toBe(paidWood);
   });
+
   it('bloqueia sem recursos e não altera estado', () => {
-    const province = makeProvince(); province.market!.goods.tools.stock = 0;
-    const result = startBuilding(province, 'A', 'farm', 1000, []);
-    expect(result.success).toBe(false); expect(province.market!.goods.tools.stock).toBe(0);
+    const province = makeProvince();
+    province.market!.goods.tools.stock = 0;
+
+    const result = startBuilding(
+      province,
+      [province],
+      'A',
+      'farm',
+      1000,
+      []
+    );
+
+    expect(result.success).toBe(false);
+    expect(province.market!.goods.tools.stock).toBe(0);
   });
+
   it('upgrade registra o próximo nível e nível 5 bloqueia', () => {
-    const p = makeProvince([built('farm', 1)]); expect(startBuilding(p, 'A', 'farm', 10000, []).success).toBe(true);
-    expect(getBuildingBlockReason(makeProvince([built('farm', 5)]), 'farm', 10000, [])).toBe('Nível máximo');
+    const p = makeProvince([built('farm', 1)]);
+
+    expect(
+      startBuilding(p, [p], 'A', 'farm', 10000, []).success
+    ).toBe(true);
+
+    const maxLevelProvince = makeProvince([built('farm', 5)]);
+
+    expect(
+      getBuildingBlockReason(
+        maxLevelProvince,
+        [maxLevelProvince],
+        'farm',
+        10000,
+        []
+      )
+    ).toBe('Nível máximo');
   });
-  it('obra provincial simultânea é bloqueada', () => {
-    const p = makeProvince(); const first = startBuilding(p, 'A', 'farm', 10000, []); if (!first.success) throw new Error();
-    expect(getBuildingBlockReason(first.province, 'warehouse', first.gold, first.constructions)).toBe('Construção em andamento');
+
+  it('permite enfileirar múltiplas obras na mesma província', () => {
+    const p = makeProvince();
+
+    const first = startBuilding(
+      p,
+      [p],
+      'A',
+      'farm',
+      10000,
+      []
+    );
+
+    expect(first.success).toBe(true);
+    if (!first.success) return;
+
+    const updatedProvince = first.provinces.find(
+      province => province.id === p.id
+    )!;
+
+    const second = startBuilding(
+      updatedProvince,
+      first.provinces,
+      'A',
+      'warehouse',
+      first.gold,
+      first.constructions
+    );
+
+    expect(second.success).toBe(true);
+    if (!second.success) return;
+
+    expect(second.constructions).toHaveLength(2);
+  });
+
+  it('somente a primeira obra da fila avança por dia', () => {
+    const p = makeProvince();
+
+    const first = startBuilding(
+      p,
+      [p],
+      'A',
+      'farm',
+      10000,
+      []
+    );
+
+    if (!first.success) throw new Error();
+
+    const p1 = first.provinces.find(province => province.id === p.id)!;
+
+    const second = startBuilding(
+      p1,
+      first.provinces,
+      'A',
+      'warehouse',
+      first.gold,
+      first.constructions
+    );
+
+    if (!second.success) throw new Error();
+
+    const firstBefore = second.constructions[0].daysRemaining;
+    const secondBefore = second.constructions[1].daysRemaining;
+
+    const processed = processConstructions(
+      second.constructions,
+      second.provinces
+    );
+
+    expect(processed.updatedConstructions[0].daysRemaining)
+      .toBe(firstBefore - 1);
+
+    expect(processed.updatedConstructions[1].daysRemaining)
+      .toBe(secondBefore);
   });
   it('tropas estacionadas elevam demanda FOOD proporcionalmente', () => {
     const small = calculateDemand({ ...makeProvince(), stationedTroops: 1000 }).food;

@@ -8,17 +8,39 @@ export const GOODS: Record<GoodId, { id: GoodId; name: string; basePrice: number
   iron: { id: 'iron', name: 'Ferro', basePrice: 4 }, tools: { id: 'tools', name: 'Ferramentas', basePrice: 8 },
 };
 export const ALL_GOODS = Object.values(GOOD_IDS);
+const INITIAL_STOCK: Partial<Record<GoodId, number>> = {
+  wood: 30,
+  iron: 20,
+  tools: 15,
+};
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const round = (v: number) => Math.round(v * 100) / 100;
 const emptyGood = (id: GoodId): GoodMarketState => ({ stock: 0, production: 0, demand: 0, consumption: 0, price: GOODS[id].basePrice, shortage: 0, imported: 0, exported: 0 });
-export function createDefaultMarket(): ProvinceMarket { return { goods: Object.fromEntries(ALL_GOODS.map(id => [id, emptyGood(id)])) as Record<GoodId, GoodMarketState>, purchasingPower: 50 }; }
+export function createDefaultMarket(): ProvinceMarket {
+  return {
+    goods: Object.fromEntries(
+      ALL_GOODS.map(id => [
+        id,
+        {
+          ...emptyGood(id),
+          stock: INITIAL_STOCK[id] ?? 0,
+        },
+      ])
+    ) as Record<GoodId, GoodMarketState>,
+    purchasingPower: 50,
+  };
+}
+
+
 export function normalizeMarket(market?: Partial<ProvinceMarket>): ProvinceMarket {
   const defaults = createDefaultMarket();
-  return { goods: Object.fromEntries(ALL_GOODS.map(id => { const g = market?.goods?.[id]; return [id, { stock: Math.max(0, g?.stock ?? 0), production: Math.max(0, g?.production ?? 0), demand: Math.max(0, g?.demand ?? 0), consumption: Math.max(0, g?.consumption ?? 0), price: clamp(g?.price ?? GOODS[id].basePrice, GOODS[id].basePrice * .5, GOODS[id].basePrice * 3), shortage: Math.max(0, g?.shortage ?? 0), imported: Math.max(0, g?.imported ?? 0), exported: Math.max(0, g?.exported ?? 0) }]; })) as Record<GoodId, GoodMarketState>, purchasingPower: clamp(market?.purchasingPower ?? defaults.purchasingPower, 0, 100) };
+  return {
+    goods: Object.fromEntries(ALL_GOODS.map(id => { const g = market?.goods?.[id]; return [id, { stock: Math.max(0, g?.stock ?? defaults.goods[id].stock), production: Math.max(0, g?.production ?? 0), demand: Math.max(0, g?.demand ?? 0), consumption: Math.max(0, g?.consumption ?? 0), price: clamp(g?.price ?? GOODS[id].basePrice, GOODS[id].basePrice * .5, GOODS[id].basePrice * 3), shortage: Math.max(0, g?.shortage ?? 0), imported: Math.max(0, g?.imported ?? 0), exported: Math.max(0, g?.exported ?? 0) }]; })) as Record<GoodId, GoodMarketState>, purchasingPower: clamp(market?.purchasingPower ?? defaults.purchasingPower, 0, 100)
+  };
 }
 
 export const WORKERS_PER_PRODUCTIVE_LEVEL = 1000;
-type ProductiveWorkerAllocation = Record<'farm'|'lumber_mill'|'iron_mine'|'workshop', number>;
+type ProductiveWorkerAllocation = Record<'farm' | 'lumber_mill' | 'iron_mine' | 'workshop', number>;
 export function allocateProductiveWorkers(province: Province): ProductiveWorkerAllocation {
   const levels = { farm: getBuildingLevel(province, 'farm'), lumber_mill: getBuildingLevel(province, 'lumber_mill'), iron_mine: getBuildingLevel(province, 'iron_mine'), workshop: getBuildingLevel(province, 'workshop') };
   const required = Object.values(levels).reduce((sum, level) => sum + level * WORKERS_PER_PRODUCTIVE_LEVEL, 0);
@@ -32,7 +54,10 @@ export function calculateProduction(province: Province): Record<GoodId, number> 
   const development = .5 + clamp(province.development, 0, 10) * .1;
   const efficiency = 1 + getBuildingLevel(province, 'market') * .05 + getBuildingLevel(province, 'infrastructure') * .04;
   return {
-    food: round(population.total / 1000 * .25 + workers.farm / 1000 * 3 * development * efficiency),
+    food: round(
+  population.total / 1000 * .75 +
+  workers.farm / 1000 * 3 * development * efficiency
+),
     wood: round(workers.lumber_mill / 1000 * 2 * development * efficiency),
     iron: round(workers.iron_mine / 1000 * 1.25 * development * efficiency),
     tools: round(workers.workshop / 1000 * 1 * development * efficiency),
@@ -61,8 +86,57 @@ export function processProvinceMarket(province: Province): ProvinceMarket {
   const goods = Object.fromEntries(ALL_GOODS.map(id => {
     const input = id === 'wood' ? inputUse.wood : id === 'iron' ? inputUse.iron : 0;
     const available = Math.max(0, previous.goods[id].stock - input) + production[id];
-    const consumption = Math.min(available, demand[id]); const shortage = Math.max(0, demand[id] - consumption);
+    const consumption =
+      id === 'food'
+        ? Math.min(available, demand[id])
+        : 0; const shortage = Math.max(0, demand[id] - consumption);
     return [id, { stock: round(Math.min(capacity, Math.max(0, available - consumption))), production: production[id], demand: demand[id], consumption: round(consumption), price: calculateLocalPrice(id, available, demand[id]), shortage: round(shortage), imported: 0, exported: 0 }];
   })) as Record<GoodId, GoodMarketState>;
-  const market = { goods, purchasingPower: 50 }; market.purchasingPower = calculatePurchasingPower(province, goods); return market;
+  const market = { goods, purchasingPower: 50 };
+market.purchasingPower = calculatePurchasingPower(province, goods);
+
+if (province.name === 'Mons Ferrum') {
+  console.log(`[MARKET] ${province.name}`, {
+    population: normalizePopulation(province.population).total,
+    purchasingPower: market.purchasingPower,
+
+    food: {
+      stock: goods.food.stock,
+      production: goods.food.production,
+      demand: goods.food.demand,
+      consumption: goods.food.consumption,
+      shortage: goods.food.shortage,
+      price: goods.food.price,
+    },
+
+    wood: {
+      stock: goods.wood.stock,
+      production: goods.wood.production,
+      demand: goods.wood.demand,
+      consumption: goods.wood.consumption,
+      shortage: goods.wood.shortage,
+      price: goods.wood.price,
+    },
+
+    iron: {
+      stock: goods.iron.stock,
+      production: goods.iron.production,
+      demand: goods.iron.demand,
+      consumption: goods.iron.consumption,
+      shortage: goods.iron.shortage,
+      price: goods.iron.price,
+    },
+
+    tools: {
+      stock: goods.tools.stock,
+      production: goods.tools.production,
+      demand: goods.tools.demand,
+      consumption: goods.tools.consumption,
+      shortage: goods.tools.shortage,
+      price: goods.tools.price,
+    },
+  });
+}
+
+return market;
 }

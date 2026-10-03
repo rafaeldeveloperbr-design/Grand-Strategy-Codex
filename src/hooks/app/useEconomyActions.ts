@@ -39,12 +39,33 @@ export function useEconomyActions(params: {
   const handleBuild = useCallback((provinceId: string, buildingType: BuildingType) => {
     const province = provinces.find((p) => p.id === provinceId);
     if (!province || province.owner !== playerCountryTag) return;
-    const result = startBuilding(province, playerCountryTag, buildingType, playerCountry.resources.gold, buildingConstructions);
-    if (result.success) {
-      setBuildingConstructions(result.constructions);
-      setProvinces(prev => prev.map(item => item.id === provinceId ? result.province : item));
-      setAllCountries((prev) => prev.map((c) => c.tag === playerCountryTag ? { ...c, resources: { ...c.resources, gold: result.gold } } : c));
-    } else {
+    const result = startBuilding(
+  province,
+  provinces,
+  playerCountryTag,
+  buildingType,
+  playerCountry.resources.gold,
+  buildingConstructions
+);
+
+if (result.success) {
+  setBuildingConstructions(result.constructions);
+  setProvinces(result.provinces);
+
+  setAllCountries(prev =>
+    prev.map(c =>
+      c.tag === playerCountryTag
+        ? {
+            ...c,
+            resources: {
+              ...c.resources,
+              gold: result.gold,
+            },
+          }
+        : c
+    )
+  );
+} else {
       addToast(result.reason, 'error', 'Construção bloqueada');
     }
   }, [provinces, playerCountryTag, playerCountry.resources.gold, buildingConstructions, addToast, setAllCountries, setBuildingConstructions, setProvinces]);

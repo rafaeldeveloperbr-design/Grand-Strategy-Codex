@@ -9,6 +9,7 @@ import { ProvinceSidebar } from './ProvinceSidebar';
 
 export interface ProvincePanelProps {
   province: Province;
+  provinces: Province[];
   countries: Country[];
   playerCountry: Country;
   armies: Army[];
@@ -26,6 +27,7 @@ type PanelTab = 'info' | 'buildings' | 'military';
 
 export const ProvincePanel: React.FC<ProvincePanelProps> = ({
   province,
+  provinces,
   countries,
   playerCountry,
   armies,
@@ -108,6 +110,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
             {activeTab === 'buildings' && isPlayerOwned && (
               <ProvinceBuildingsTab
                 province={province}
+                provinces={provinces}
                 playerCountry={playerCountry}
                 constructions={buildingConstructions}
                 onBuild={onBuild}

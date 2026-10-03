@@ -40,6 +40,24 @@ export function normalizeMarket(market?: Partial<ProvinceMarket>): ProvinceMarke
 }
 
 export const WORKERS_PER_PRODUCTIVE_LEVEL = 1000;
+/**
+ * Subsistence keeps small settlements viable but deliberately scales below
+ * population demand. Farms, trade, and technology must support large cities.
+ */
+export const FOOD_PRODUCTION_BALANCE = {
+  SUBSISTENCE_REFERENCE_POPULATION: 10_000,
+  SUBSISTENCE_AT_REFERENCE: 7.5,
+  SUBSISTENCE_POPULATION_EXPONENT: 0.65,
+  FARM_OUTPUT_PER_1000_WORKERS: 3,
+} as const;
+
+export function calculateSubsistenceFoodProduction(populationTotal: number): number {
+  if (!Number.isFinite(populationTotal) || populationTotal <= 0) return 0;
+  const populationScale = populationTotal / FOOD_PRODUCTION_BALANCE.SUBSISTENCE_REFERENCE_POPULATION;
+  return round(FOOD_PRODUCTION_BALANCE.SUBSISTENCE_AT_REFERENCE
+    * Math.pow(populationScale, FOOD_PRODUCTION_BALANCE.SUBSISTENCE_POPULATION_EXPONENT));
+}
+
 type ProductiveWorkerAllocation = Record<'farm' | 'lumber_mill' | 'iron_mine' | 'workshop', number>;
 export function allocateProductiveWorkers(province: Province): ProductiveWorkerAllocation {
   const levels = { farm: getBuildingLevel(province, 'farm'), lumber_mill: getBuildingLevel(province, 'lumber_mill'), iron_mine: getBuildingLevel(province, 'iron_mine'), workshop: getBuildingLevel(province, 'workshop') };
@@ -54,11 +72,13 @@ export function calculateProduction(province: Province, multipliers: Partial<Rec
   const development = .5 + clamp(province.development, 0, 10) * .1;
   const satisfactionEfficiency = clamp(0.9 + population.satisfaction / 100 * 0.15, 0.9, 1.05);
   const efficiency = (1 + getBuildingLevel(province, 'market') * .05 + getBuildingLevel(province, 'infrastructure') * .04) * satisfactionEfficiency;
+  const subsistenceFood = calculateSubsistenceFoodProduction(population.total);
+  const farmFood = workers.farm / WORKERS_PER_PRODUCTIVE_LEVEL
+    * FOOD_PRODUCTION_BALANCE.FARM_OUTPUT_PER_1000_WORKERS
+    * development
+    * efficiency;
   return {
-    food: round((
-  population.total / 1000 * .75 +
-  workers.farm / 1000 * 3 * development * efficiency
-) * (multipliers.food ?? 1)),
+    food: round((subsistenceFood + farmFood) * (multipliers.food ?? 1)),
     wood: round(workers.lumber_mill / 1000 * 2 * development * efficiency * (multipliers.wood ?? 1)),
     iron: round(workers.iron_mine / 1000 * 1.25 * development * efficiency * (multipliers.iron ?? 1)),
     tools: round(workers.workshop / 1000 * 1 * development * efficiency * (multipliers.tools ?? 1)),

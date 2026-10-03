@@ -3,7 +3,7 @@ import { CountryTechState } from '../../types/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
 
 import { startBuilding } from '../buildings';
-import { calculateWorkforce, getPopulationCapacity, normalizePopulation } from '../population';
+import { calculateWorkforce, getFoodShortageStatus, getPopulationCapacity, normalizePopulation } from '../population';
 import { getStorageCapacity, normalizeMarket } from '../market';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
@@ -111,11 +111,15 @@ export function processAIEconomicDecisions(
     const market = normalizeMarket(targetProvince.market);
     const populationTotal = typeof targetProvince.population === 'number' ? targetProvince.population : targetProvince.population.total;
     const priorities: BuildingType[] = [];
-    const foodShortageRatio = market.goods.food.demand > 0 ? market.goods.food.shortage / market.goods.food.demand : 0;
-    if (foodShortageRatio >= 0.5) priorities.push('farm');
+    const foodStatus = getFoodShortageStatus(market.goods.food, normalizePopulation(targetProvince.population).foodShortageDays);
+    // Severe hunger always outranks infrastructure and other productive projects.
+    if (foodStatus.severity === 'severe') priorities.push('farm');
     if (market.goods.wood.stock < market.goods.wood.demand * 2) priorities.push('lumber_mill');
     if (market.goods.iron.stock < market.goods.iron.demand * 2) priorities.push('iron_mine');
     if (market.goods.tools.stock < market.goods.tools.demand * 2) priorities.push('workshop');
+    // Moderate and emerging shortages still trigger a farm, after immediate
+    // input shortages but before generic development projects.
+    if (foodStatus.severity !== 'severe' && foodStatus.ratio > 0) priorities.push('farm');
     if (ALL_FINITE(market) && Object.values(market.goods).some(g => g.stock >= getStorageCapacity(targetProvince) * .9)) priorities.push('warehouse');
     const capacityMultiplier = calculateTechBonuses(updatedTechState).populationCapacityMultiplier;
     if (populationTotal >= getPopulationCapacity(targetProvince, capacityMultiplier) * .9) priorities.push('housing');

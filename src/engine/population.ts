@@ -1,4 +1,4 @@
-import type { Army, Province, ProvincePopulation } from '../types';
+import type { Army, GoodMarketState, Province, ProvincePopulation } from '../types';
 import { BUILDING_DEFINITIONS } from '../data/buildings';
 
 export const POPULATION_BALANCE = {
@@ -24,7 +24,27 @@ export const POPULATION_DEFAULTS = {
   WORKFORCE_SHARE: POPULATION_BALANCE.WORKFORCE_SHARE,
 } as const;
 
+export type FoodShortageSeverity = 'healthy' | 'moderate' | 'severe';
+export interface FoodShortageStatus {
+  ratio: number;
+  percent: number;
+  severity: FoodShortageSeverity;
+  consecutiveDays: number;
+}
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+/** Shared interpretation of the market shortage used by population, AI, and UI. */
+export function getFoodShortageStatus(food: GoodMarketState | undefined, consecutiveDays = 0): FoodShortageStatus {
+  const ratio = food && food.demand > 0 ? clamp(food.shortage / food.demand, 0, 1) : 0;
+  return {
+    ratio,
+    percent: Math.round(ratio * 100),
+    severity: ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE ? 'severe'
+      : ratio >= POPULATION_BALANCE.MODERATE_SHORTAGE ? 'moderate' : 'healthy',
+    consecutiveDays: Math.max(0, Math.floor(consecutiveDays)),
+  };
+}
 
 /** Normalizes both current and legacy numeric population values at load boundaries. */
 export function normalizePopulation(value: ProvincePopulation | number): ProvincePopulation {
@@ -97,7 +117,7 @@ export function calculateSatisfactionBreakdown(
   const unemploymentRate = workforce > 0 ? population.unemployed / workforce : 0;
   const market = province.market;
   const food = market?.goods.food;
-  const foodShortageRatio = food && food.demand > 0 ? clamp(food.shortage / food.demand, 0, 1) : 0;
+  const foodShortageRatio = getFoodShortageStatus(food).ratio;
   const parts = {
     base: 65,
     unemployment: -unemploymentRate * 45,
@@ -149,7 +169,7 @@ export function calculatePopulationGrowthBreakdown(
   const capacityRatio = capacity > 0 ? population.total / capacity : 1;
   const market = province.market;
   const food = market?.goods.food;
-  const shortageRatio = food && food.demand > 0 ? clamp(food.shortage / food.demand, 0, 1) : 0;
+  const shortageRatio = getFoodShortageStatus(food, population.foodShortageDays).ratio;
   let foodRate = 0;
   if (shortageRatio >= POPULATION_BALANCE.MODERATE_SHORTAGE) {
     foodRate = -0.0015 * Math.min(1, shortageRatio / POPULATION_BALANCE.SEVERE_SHORTAGE);
@@ -197,7 +217,7 @@ export function processProvincePopulation(
   });
   const total = clamp(Math.floor(current.total + requestedGrowth), 0, getPopulationCapacity(province, options.capacityMultiplier));
   const food = province.market?.goods.food;
-  const shortageRatio = food && food.demand > 0 ? food.shortage / food.demand : 0;
+  const shortageRatio = getFoodShortageStatus(food, current.foodShortageDays).ratio;
   const foodShortageDays = shortageRatio >= POPULATION_BALANCE.MODERATE_SHORTAGE ? (current.foodShortageDays ?? 0) + 1 : 0;
   let population = recalculateEmployment({ ...province, population: { ...current, total } }, { ...current, total, foodShortageDays, migrationNet: 0 });
   population = { ...population, satisfaction: calculateSatisfaction({ ...province, population }, taxationId, options) };
@@ -217,7 +237,7 @@ export function calculateMigrationAttractiveness(province: Province, capacityMul
   const capacity = getPopulationCapacity(province, capacityMultiplier);
   const freeCapacity = capacity ? clamp(1 - population.total / capacity, 0, 1) : 0;
   const food = province.market?.goods.food;
-  const shortage = food && food.demand ? clamp(food.shortage / food.demand, 0, 1) : 0;
+  const shortage = getFoodShortageStatus(food, population.foodShortageDays).ratio;
   return employmentRate * 35 + population.satisfaction * 0.35 + freeCapacity * 20 - shortage * 30 - (atWar ? 10 : 0);
 }
 

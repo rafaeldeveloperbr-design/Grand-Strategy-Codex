@@ -12,12 +12,13 @@ type CheatAPI = {
   instantRecruit: () => void;
   instantBuild: () => void;
   spawnArmy: (provinceId?: string) => void;
+  setPopulation: (amount: number, provinceId?: string) => void;
   killAllEnemiesInProvince: () => void;
   winBattles: () => void;
   fastForward: (days?: number) => void;
   godMode: () => void;
   togglePanel?: () => void;
-}
+};
 
 declare global {
   interface Window {
@@ -37,6 +38,7 @@ type Params = {
     React.SetStateAction<BuildingConstruction[]>
   >; 
   setArmies: React.Dispatch<React.SetStateAction<Army[]>>;
+  setProvinces: React.Dispatch<React.SetStateAction<Province[]>>;
   provincesRef: React.MutableRefObject<Province[]>;
   armiesRef: React.MutableRefObject<Army[]>;
   addLog: (msg: string) => void;
@@ -47,9 +49,19 @@ type Params = {
 
 export function useCheats(params: Params) {
   const {
-    playerCountryTag, setAllCountries, setRecruitments, setBuildingConstructions,
-    setArmies, provincesRef, addLog, addToast, setGameSpeed, setDate,
-    selectedProvince
+  playerCountryTag,
+  setAllCountries,
+  setRecruitments,
+  setBuildingConstructions,
+  setArmies,
+  setProvinces,
+  provincesRef,
+
+  addLog,
+  addToast,
+  setGameSpeed,
+  setDate,
+  selectedProvince,
   } = params;
 
   const addGold = useCallback((amount: number) => {
@@ -103,6 +115,41 @@ export function useCheats(params: Params) {
     setArmies((prev) => [...prev, newArmy]);
     addToast(`🪖 Exército spawnado em ${provincesRef.current.find((p) => p.id === targetProvince)?.name} (CHEAT)`, 'success', 'Cheat');
   }, [playerCountryTag, selectedProvince, provincesRef, setArmies, addToast]);
+
+  const setPopulation = useCallback((amount: number, provinceId?: string) => {
+  const targetProvince = provinceId || selectedProvince;
+
+  if (!targetProvince) {
+    addToast('Selecione uma província primeiro.', 'warning', 'Cheat');
+    return;
+  }
+
+  const newPopulation = Math.max(0, Math.floor(amount));
+
+  setProvinces(prev =>
+    prev.map(province =>
+      province.id === targetProvince
+        ? {
+            ...province,
+            population: {
+              ...province.population,
+              total: newPopulation,
+            },
+          }
+        : province
+    )
+  );
+
+  const provinceName =
+    provincesRef.current.find(p => p.id === targetProvince)?.name ??
+    targetProvince;
+
+  addToast(
+    `👥 População de ${provinceName}: ${newPopulation.toLocaleString()} (CHEAT)`,
+    'success',
+    'Cheat'
+  );
+}, [selectedProvince, setProvinces, provincesRef, addToast]);
 
   const killAllEnemiesInProvince = useCallback(() => {
     if (!selectedProvince) return;
@@ -161,13 +208,13 @@ export function useCheats(params: Params) {
   useEffect(() => {
     window.cheats = {
       addGold, addManpower, addAllResources, instantRecruit, instantBuild,
-      spawnArmy, killAllEnemiesInProvince, fastForward, godMode, winBattles
+      spawnArmy,setPopulation,  killAllEnemiesInProvince, fastForward, godMode, winBattles
     };
     console.log('🎮 CHEATS ATIVADOS! Digite: cheats.addGold(10000), cheats.godMode() | Ctrl+Shift+C');
-  }, [addGold, addManpower, addAllResources, instantRecruit, instantBuild, spawnArmy, killAllEnemiesInProvince, fastForward, godMode, winBattles]);
+  }, [addGold, addManpower, addAllResources, instantRecruit, instantBuild, spawnArmy,setPopulation,  killAllEnemiesInProvince, fastForward, godMode, winBattles]);
 
   return {
     addGold, addManpower, addAllResources, instantRecruit, instantBuild,
-    spawnArmy, killAllEnemiesInProvince, winBattles, fastForward, godMode
+    spawnArmy,setPopulation,  killAllEnemiesInProvince, winBattles, fastForward, godMode
   };
 }

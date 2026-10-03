@@ -7,12 +7,14 @@ export const POPULATION_BALANCE = {
   WORKFORCE_SHARE: 0.6,
   BASE_JOB_SHARE: 0.2,
   DEVELOPMENT_JOB_SHARE: 0.04,
-  CAPACITY_PRESSURE_START: 0.8,
+  CAPACITY_PRESSURE_START: 0.90,
   CAPACITY_RATE_PENALTY: 0.01,
   MODERATE_SHORTAGE: 0.15,
+  FOOD_CRISIS_SHORTAGE: 0.30,
   SEVERE_SHORTAGE: 0.5,
-  SEVERE_SHORTAGE_RECOVERY: 0.45,
+  SEVERE_SHORTAGE_RECOVERY: 0.15,
   SEVERE_SHORTAGE_GRACE_DAYS: 3,
+  PROLONGED_FOOD_CRISIS_DAYS: 30,
   MAX_FOOD_RATE_PENALTY: 0.004,
   SEVERE_SHORTAGE_SATISFACTION_PENALTY: 10,
   MIGRATION_FOOD_SHORTAGE_WEIGHT: 45,
@@ -28,7 +30,11 @@ export const POPULATION_DEFAULTS = {
   WORKFORCE_SHARE: POPULATION_BALANCE.WORKFORCE_SHARE,
 } as const;
 
-export type FoodShortageSeverity = 'healthy' | 'moderate' | 'severe';
+export type FoodShortageSeverity =
+  | 'healthy'
+  | 'moderate'
+  | 'crisis'
+  | 'severe';
 export interface FoodShortageStatus {
   ratio: number;
   percent: number;
@@ -45,13 +51,40 @@ export function getFoodShortageStatus(
   consecutiveDays = 0,
   severeConsecutiveDays = 0,
 ): FoodShortageStatus {
-  const ratio = food && food.demand > 0 ? clamp(food.shortage / food.demand, 0, 1) : 0;
-  const establishedFamine = severeConsecutiveDays >= POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS;
+  const ratio =
+    food && food.demand > 0
+      ? clamp(food.shortage / food.demand, 0, 1)
+      : 0;
+
+  const establishedBySevereShortage =
+    severeConsecutiveDays >= POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS;
+
+  const establishedByProlongedCrisis =
+    ratio >= POPULATION_BALANCE.FOOD_CRISIS_SHORTAGE &&
+    consecutiveDays >= POPULATION_BALANCE.PROLONGED_FOOD_CRISIS_DAYS;
+
+  const establishedFamine =
+    establishedBySevereShortage || establishedByProlongedCrisis;
+
+  let severity: FoodShortageSeverity;
+
+  if (
+    establishedFamine &&
+    ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE_RECOVERY
+  ) {
+    severity = 'severe';
+  } else if (ratio >= POPULATION_BALANCE.FOOD_CRISIS_SHORTAGE) {
+    severity = 'crisis';
+  } else if (ratio >= POPULATION_BALANCE.MODERATE_SHORTAGE) {
+    severity = 'moderate';
+  } else {
+    severity = 'healthy';
+  }
+
   return {
     ratio,
     percent: Math.round(ratio * 100),
-    severity: establishedFamine && ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE_RECOVERY ? 'severe'
-      : ratio >= POPULATION_BALANCE.MODERATE_SHORTAGE ? 'moderate' : 'healthy',
+    severity,
     consecutiveDays: Math.max(0, Math.floor(consecutiveDays)),
     severeConsecutiveDays: Math.max(0, Math.floor(severeConsecutiveDays)),
   };
@@ -61,16 +94,57 @@ export function calculateFoodShortagePersistence(
   food: GoodMarketState | undefined,
   population: ProvincePopulation,
 ): Pick<ProvincePopulation, 'foodShortageDays' | 'severeFoodShortageDays'> {
-  const current = getFoodShortageStatus(food, population.foodShortageDays, population.severeFoodShortageDays);
+  const ratio =
+    food && food.demand > 0
+      ? clamp(food.shortage / food.demand, 0, 1)
+      : 0;
+
+  const priorFoodDays = population.foodShortageDays ?? 0;
   const priorSevereDays = population.severeFoodShortageDays ?? 0;
-  const foodShortageDays = current.ratio >= POPULATION_BALANCE.MODERATE_SHORTAGE
-    ? (population.foodShortageDays ?? 0) + 1 : 0;
-  const remainsEstablished = priorSevereDays >= POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS
-    && current.ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE_RECOVERY;
-  const severeFoodShortageDays = current.ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE || remainsEstablished
-    ? priorSevereDays + 1 : 0;
-  return { foodShortageDays, severeFoodShortageDays };
+
+  // Qualquer escassez >= 15% mantém o contador geral.
+  const foodShortageDays =
+    ratio >= POPULATION_BALANCE.MODERATE_SHORTAGE
+      ? priorFoodDays + 1
+      : 0;
+
+  const famineAlreadyEstablished =
+    priorSevereDays >= POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS;
+
+  // Entrada rápida: >= 50% por 3 dias.
+  const severeThreshold =
+    ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE;
+
+  // Entrada lenta: >= 30% por 30 dias.
+  const prolongedCrisis =
+    ratio >= POPULATION_BALANCE.FOOD_CRISIS_SHORTAGE &&
+    foodShortageDays >= POPULATION_BALANCE.PROLONGED_FOOD_CRISIS_DAYS;
+
+  // Depois de estabelecida, só recupera abaixo de 15%.
+  const remainsInFamine =
+    famineAlreadyEstablished &&
+    ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE_RECOVERY;
+
+  let severeFoodShortageDays = 0;
+
+  if (remainsInFamine) {
+    severeFoodShortageDays = priorSevereDays + 1;
+  } else if (severeThreshold) {
+    severeFoodShortageDays = priorSevereDays + 1;
+  } else if (prolongedCrisis) {
+    // Marca imediatamente como fome estabelecida.
+    severeFoodShortageDays = Math.max(
+      POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS,
+      priorSevereDays + 1,
+    );
+  }
+
+  return {
+    foodShortageDays,
+    severeFoodShortageDays,
+  };
 }
+
 
 /** Normalizes both current and legacy numeric population values at load boundaries. */
 export function normalizePopulation(value: ProvincePopulation | number): ProvincePopulation {
@@ -232,8 +306,10 @@ export function calculatePopulationGrowthBreakdown(
   const finalRate = (baseRate + foodRate + capacityRate + satisfactionRate + stabilityRate + warRate) * multiplier;
   const requestedGrowth = population.total * finalRate;
   const nextTotal = clamp(population.total + requestedGrowth, 0, capacity);
-  return { baseRate, foodRate, capacityRate, satisfactionRate, stabilityRate, warRate,
-    technologyAndLawMultiplier: multiplier, finalRate, capacity, finalGrowth: nextTotal - population.total };
+  return {
+    baseRate, foodRate, capacityRate, satisfactionRate, stabilityRate, warRate,
+    technologyAndLawMultiplier: multiplier, finalRate, capacity, finalGrowth: nextTotal - population.total
+  };
 }
 
 export function calculateProvincePopulationGrowth(province: Province, countryStability: number, options: PopulationGrowthOptions = {}): number {

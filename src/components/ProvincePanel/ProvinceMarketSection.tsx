@@ -1,6 +1,7 @@
 import type { Province } from '../../types';
 import { ALL_GOODS, GOODS, normalizeMarket } from '../../engine/market';
 import { getFoodShortageStatus, normalizePopulation } from '../../engine/population';
+import { POPULATION_BALANCE } from '../../engine/population';
 
 export function ProvinceMarketSection({ province }: { province: Province }) {
   const market = normalizeMarket(province.market);
@@ -21,6 +22,27 @@ export function ProvinceMarketSection({ province }: { province: Province }) {
           : undefined;
         const displayedDays = foodStatus?.severity === 'severe'
           ? foodStatus.severeConsecutiveDays : foodStatus?.consecutiveDays ?? 0;
+
+        const moderatePercent =
+          Math.round(POPULATION_BALANCE.MODERATE_SHORTAGE * 100);
+
+        const recoveryPercent =
+          Math.round(POPULATION_BALANCE.SEVERE_SHORTAGE_RECOVERY * 100);
+
+        const foodTooltip = foodStatus
+          ? [
+            `Situação alimentar`,
+            `Déficit atual: ${foodStatus.percent}%`,
+            '',
+            `Escassez começa em ${moderatePercent}% de déficit.`,
+            `Fome severa exige uma crise persistente.`,
+            `Após estabelecida, a fome continua até o déficit cair abaixo de ${recoveryPercent}%.`,
+            '',
+            `A fome reduz crescimento, satisfação e atratividade migratória.`,
+            '',
+            `Aumente a produção de FOOD, construa Fazendas ou melhore o abastecimento para recuperar a província.`,
+          ].join('\n')
+          : undefined;
         const shortageLabel = foodStatus?.severity === 'severe'
           ? ` 🔴 Fome severa ${foodStatus.percent}%${displayedDays > 0 ? ` · ${displayedDays} dias` : ''}`
           : foodStatus?.severity === 'moderate'
@@ -29,10 +51,26 @@ export function ProvinceMarketSection({ province }: { province: Province }) {
         return (
           <div className="province-panel__info-row" key={id} style={{ fontSize: '11px' }}>
             <span className="province-panel__label">{good.name}</span>
-            <span className="province-panel__value">
+
+            <span
+              className="province-panel__value"
+              title={id === 'food' ? foodTooltip : undefined}
+              style={{ cursor: id === 'food' ? 'help' : undefined }}
+            >
               {state.stock.toFixed(1)} | +{state.production.toFixed(1)} | {state.demand.toFixed(1)} | {state.imported.toFixed(1)} | {state.exported.toFixed(1)} | {state.price.toFixed(2)}¤
               {shortageLabel}
-              {source ? ` · ${sourceType === 'farm' ? 'Fazenda' : sourceType === 'lumber_mill' ? 'Serraria' : sourceType === 'iron_mine' ? 'Mina de Ferro' : 'Oficina'} Nv.${source.level}` : id === 'food' ? ' · Subsistência' : ''}
+              {source
+                ? ` · ${sourceType === 'farm'
+                  ? 'Fazenda'
+                  : sourceType === 'lumber_mill'
+                    ? 'Serraria'
+                    : sourceType === 'iron_mine'
+                      ? 'Mina de Ferro'
+                      : 'Oficina'
+                } Nv.${source.level}`
+                : id === 'food'
+                  ? ' · Subsistência'
+                  : ''}
             </span>
           </div>
         );

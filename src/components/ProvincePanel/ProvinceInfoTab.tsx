@@ -2,8 +2,8 @@ import React from 'react';
 import { Province, Country, Army } from '../../types';
 import { calculateArmySize } from '../../engine/combat';
 import { getUnrestDescription, getUnrestColor, isProvincePacified } from '../../engine/unrest';
-import { getPopulationCapacity, normalizePopulation } from '../../engine/population';
-import { calculateDailyPopulationGrowth } from '../../engine/economy';
+import { calculateSatisfactionBreakdown, getPopulationCapacity, normalizePopulation } from '../../engine/population';
+import { calculateDailyPopulationGrowthBreakdown } from '../../engine/economy';
 import { calculateTechnologyBonuses, calculateTechBonuses } from '../../engine/technology';
 import type { CountryTechState } from '../../types/technology';
 import { ProvinceMarketSection } from './ProvinceMarketSection';
@@ -37,7 +37,11 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
   const technologyBonuses = techState ? calculateTechnologyBonuses(techState) : undefined;
   const baseCapacity = getPopulationCapacity(province);
   const effectiveCapacity = getPopulationCapacity(province, combinedBonuses?.populationCapacityMultiplier);
-  const dailyGrowth = ownerCountry ? calculateDailyPopulationGrowth(province, ownerCountry, combinedBonuses) : 0;
+  const growth = ownerCountry ? calculateDailyPopulationGrowthBreakdown(province, ownerCountry, combinedBonuses) : undefined;
+  const dailyGrowth = growth?.finalGrowth ?? 0;
+  const satisfaction = calculateSatisfactionBreakdown(province, ownerCountry?.activeLaws?.taxation || 'taxation_normal', {
+    countryStability: ownerCountry?.resources.stability,
+  });
   const growthTechPercent = ((technologyBonuses?.populationGrowthMultiplier ?? 1) - 1) * 100;
   const capacityTechPercent = ((technologyBonuses?.populationCapacityMultiplier ?? 1) - 1) * 100;
 
@@ -83,11 +87,12 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
         </div>
         <div className="province-panel__info-row"><span className="province-panel__label">Empregados:</span><span className="province-panel__value">{population.employed.toLocaleString()}</span></div>
         <div className="province-panel__info-row"><span className="province-panel__label">Desempregados:</span><span className="province-panel__value">{population.unemployed.toLocaleString()} ({unemploymentRate.toFixed(1)}%)</span></div>
-        <div className="province-panel__info-row"><span className="province-panel__label">📈 Crescimento:</span><span className="province-panel__value">{dailyGrowth >= 0 ? '+' : ''}{Math.floor(dailyGrowth).toLocaleString()} / dia</span></div>
+        <div className="province-panel__info-row" title={growth ? `Base: ${(growth.baseRate * 100).toFixed(3)}% • FOOD: ${(growth.foodRate * 100).toFixed(3)}% • Capacidade: ${(growth.capacityRate * 100).toFixed(3)}% • Satisfação: ${(growth.satisfactionRate * 100).toFixed(3)}% • Estabilidade: ${(growth.stabilityRate * 100).toFixed(3)}% • Guerra: ${(growth.warRate * 100).toFixed(3)}% • Leis/Tecnologia: ×${growth.technologyAndLawMultiplier.toFixed(2)}` : undefined}><span className="province-panel__label">📈 Crescimento:</span><span className="province-panel__value">{dailyGrowth >= 0 ? '+' : ''}{Math.floor(dailyGrowth).toLocaleString()} / dia</span></div>
         {growthTechPercent !== 0 && <div className="province-panel__info-row"><span className="province-panel__label">Tecnologia:</span><span className="province-panel__value">+{Math.round(growthTechPercent)}%</span></div>}
         <div className="province-panel__info-row" title={`Base: ${baseCapacity.toLocaleString()} • Final: ${effectiveCapacity.toLocaleString()}`}><span className="province-panel__label">🏠 Capacidade:</span><span className="province-panel__value">{effectiveCapacity.toLocaleString()}</span></div>
         {capacityTechPercent !== 0 && <div className="province-panel__info-row"><span className="province-panel__label">Tecnologia:</span><span className="province-panel__value">+{Math.round(capacityTechPercent)}%</span></div>}
-        <div className="province-panel__info-row"><span className="province-panel__label">Satisfação:</span><span className="province-panel__value">{Math.round(population.satisfaction)}%</span></div>
+        <div className="province-panel__info-row" title={`Emprego: ${satisfaction.unemployment.toFixed(1)} • FOOD: ${satisfaction.food.toFixed(1)} • Impostos: ${satisfaction.taxation.toFixed(1)} • Economia: ${satisfaction.economy.toFixed(1)} • Estabilidade: ${satisfaction.stability.toFixed(1)} • Guerra: ${satisfaction.war.toFixed(1)}`}><span className="province-panel__label">Satisfação:</span><span className="province-panel__value">{Math.round(population.satisfaction)}%</span></div>
+        {!!population.migrationNet && <div className="province-panel__info-row"><span className="province-panel__label">Migração:</span><span className="province-panel__value">{population.migrationNet > 0 ? '+' : ''}{population.migrationNet.toLocaleString()}</span></div>}
       </div>
 
       <ProvinceMarketSection province={province} />

@@ -121,7 +121,7 @@ describe('SAVE/LOAD', () => {
   });
 
   it('preserva os dados populacionais completos', () => {
-    const population = { total: 12000, growthRate: 0.0015, employed: 6000, unemployed: 1200, satisfaction: 72 };
+    const population = { total: 12000, growthRate: 0.0015, employed: 6000, unemployed: 1200, satisfaction: 72, foodShortageDays: 1800, severeFoodShortageDays: 1700, migrationNet: -2 };
     const refs = {
       dateRef: { current: { day: 1, month: 1, year: 1836 } },
       provincesRef: { current: [{ id: 'p1', population } as Province] }, countriesRef: { current: [] }, armiesRef: { current: [] },
@@ -158,7 +158,7 @@ describe('SAVE/LOAD', () => {
       botTechs: {}, activeBattles: [],
     }));
     expect(loadGame('legacy')?.world.provinces[0].population).toEqual({
-      total: 5000, growthRate: 0.002, employed: 2500, unemployed: 500, satisfaction: 60,
+      total: 5000, growthRate: 0.002, employed: 2500, unemployed: 500, satisfaction: 60, foodShortageDays: 0, severeFoodShortageDays: 0, migrationNet: 0,
     });
     const migratedMarket = loadGame('legacy')?.world.provinces[0].market;
     expect(migratedMarket?.goods[GOOD_IDS.FOOD].price).toBe(GOODS[GOOD_IDS.FOOD].basePrice);

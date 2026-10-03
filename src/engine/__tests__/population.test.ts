@@ -32,7 +32,7 @@ describe('Population V1', () => {
 
   it('normaliza população negativa sem permitir totais ou trabalhadores negativos', () => {
     const population = normalizePopulation({ total: -10, growthRate: -3, employed: -4, unemployed: -2, satisfaction: -30 });
-    expect(population).toEqual({ total: 0, growthRate: -0.99, employed: 0, unemployed: 0, satisfaction: 0 });
+    expect(population).toEqual({ total: 0, growthRate: -0.99, employed: 0, unemployed: 0, satisfaction: 0, foodShortageDays: 0, severeFoodShortageDays: 0, migrationNet: 0 });
   });
 
   it('calcula empregos a partir do desenvolvimento e construções', () => {

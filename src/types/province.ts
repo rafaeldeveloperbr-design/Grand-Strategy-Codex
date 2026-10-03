@@ -136,6 +136,12 @@ export interface ProvincePopulation {
   unemployed: number;
   /** Population satisfaction, clamped to 0..100. */
   satisfaction: number;
+  /** Consecutive days with a meaningful food shortage. */
+  foodShortageDays?: number;
+  /** Consecutive severe-food days; required for famine entry and hysteresis. */
+  severeFoodShortageDays?: number;
+  /** Net internal migration during the latest daily tick. */
+  migrationNet?: number;
 }
 
 export type GoodId = 'food' | 'wood' | 'iron' | 'tools';

@@ -16,7 +16,7 @@ export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onSta
 
     const canStart = (id: string) => {
         const t = TECHNOLOGIES.find(x => x.id === id);
-        if (!t || t.researched) return false;
+        if (!t || techState.completedTechnologies.includes(id)) return false;
         if (techState.activeResearchId) return false;
         if (t.prerequisites.some(p => !techState.completedTechnologies.includes(p))) return false;
         return playerCountry.resources.gold >= t.costGold;
@@ -26,7 +26,7 @@ export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onSta
     const categories = [
         { id: 'MILITARY', name: 'MILITAR', icon: '⚔️', color: '#ef4444' },
         { id: 'ECONOMY', name: 'ECONOMIA', icon: '💰', color: '#22c55e' },
-        { id: 'INFRASTRUCTURE', name: 'INFRA', icon: '🔧', color: '#3b82f6' },
+        { id: 'SOCIETY', name: 'SOCIEDADE', icon: '🏛️', color: '#3b82f6' },
     ] as const;
 
     return (
@@ -58,6 +58,8 @@ export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onSta
                                     const progressDays = isActive ? techState.researchProgressDays : 0;
                                     const remaining = tech.durationDays - progressDays;
                                     const progress = (progressDays / tech.durationDays) * 100;
+                                    const missing = tech.prerequisites.filter(id => !techState.completedTechnologies.includes(id)).map(id => TECHNOLOGIES.find(t => t.id === id)?.title ?? id);
+                                    const effects = tech.effects.map(effect => `${effect.type}: ${effect.value > 0 ? '+' : ''}${Math.round(effect.value * 100)}%`).join(' • ');
 
                                     return (
                                         <div key={tech.id} className="tree-node-wrapper">
@@ -66,6 +68,8 @@ export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onSta
                                                 <h4>{tech.title}</h4>
                                                 <p className="tree-desc">{tech.description}</p>
                                                 <div className="tree-cost">💰 {tech.costGold} | ⏱ {tech.durationDays}d</div>
+                                                <div className="tree-cost">{effects}</div>
+                                                {missing.length > 0 && <div className="tree-desc">🔒 Requer: {missing.join(', ')}</div>}
 
                                                 {!isDone && (
                                                     <div className="tree-progress-wrap">
@@ -81,7 +85,7 @@ export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onSta
                                                     disabled={!isActive && !canStart(tech.id)}
                                                     onClick={() => isActive ? onCancelResearch() : onStartResearch(tech.id)}
                                                 >
-                                                    {isDone ? '✓ Pesquisado' : isActive ? '✕ Cancelar' : 'Pesquisar'}
+                                                    {isDone ? '✅ Concluída' : isActive ? '⏳ Pesquisando' : canStart(tech.id) ? '🔬 Disponível' : '🔒 Bloqueada'}
                                                 </button>
                                             </div>
                                         </div>

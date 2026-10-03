@@ -19,6 +19,7 @@ import { calculateUnrestEconomicImpact } from './unrest';
 import { calculateSatisfaction, getPopulationCapacity, getWorkerAvailability, normalizePopulation, processProvincePopulation } from './population';
 import { calculateMarketSatisfactionAdjustment, processProvinceMarket } from './market';
 import { processInternalTrade } from './internalTrade';
+import type { TechnologyBonuses } from './technology';
 
 /**
  * Constantes de balanceamento do jogo
@@ -166,12 +167,7 @@ export function calculateCountryExpenses(country: Country, provinces: Province[]
 export function processDailyTick(
   country: Country,
   provinces: Province[],
-  techBonuses?: {
-    goldIncomeMultiplier: number;
-    manpowerMultiplier: number;
-    buildCostMultiplier: number;
-    buildTimeMultiplier: number;
-  },
+  techBonuses?: TechnologyBonuses,
   atWar: boolean = false
 ): { country: Country; provinces: Province[] } {
   // Calcula economia total do país
@@ -205,7 +201,7 @@ export function processDailyTick(
     // Aplica multiplicadores de unrest na economia da província
     const provinceGoldMultiplier = goldIncomeMultiplier * unrestImpact.goldMultiplier;
     const provinceManpowerMultiplier = manpowerMultiplier * unrestImpact.manpowerMultiplier;
-    const provinceGrowthMultiplier = lawPopGrowthMultiplier * unrestImpact.growthMultiplier;
+    const provinceGrowthMultiplier = lawPopGrowthMultiplier * unrestImpact.growthMultiplier * (techBonuses?.populationGrowthMultiplier ?? 1);
     
     // Crescimento populacional (com multiplicador de leis e unrest)
     const basePopGrowth = calculatePopulationGrowth(province, country.resources.stability);
@@ -221,9 +217,9 @@ export function processDailyTick(
       province,
       provinceGrowthMultiplier,
       country.activeLaws?.taxation || 'taxation_normal',
-      { atWar, economicMultiplier: provinceGoldMultiplier, growthAmount: popGrowth }
+      { atWar, economicMultiplier: provinceGoldMultiplier, growthAmount: popGrowth, capacityMultiplier: techBonuses?.populationCapacityMultiplier }
     );
-    const market = processProvinceMarket(populationProvince);
+    const market = processProvinceMarket(populationProvince, techBonuses?.productionMultipliers);
     const population = {
       ...populationProvince.population,
       satisfaction: calculateSatisfaction(

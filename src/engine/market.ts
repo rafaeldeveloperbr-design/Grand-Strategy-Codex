@@ -48,19 +48,19 @@ export function allocateProductiveWorkers(province: Province): ProductiveWorkerA
   const ratio = required ? Math.min(1, available / required) : 0;
   return Object.fromEntries(Object.entries(levels).map(([key, level]) => [key, level * WORKERS_PER_PRODUCTIVE_LEVEL * ratio])) as ProductiveWorkerAllocation;
 }
-export function calculateProduction(province: Province): Record<GoodId, number> {
+export function calculateProduction(province: Province, multipliers: Partial<Record<GoodId, number>> = {}): Record<GoodId, number> {
   const population = normalizePopulation(province.population);
   const workers = allocateProductiveWorkers(province);
   const development = .5 + clamp(province.development, 0, 10) * .1;
   const efficiency = 1 + getBuildingLevel(province, 'market') * .05 + getBuildingLevel(province, 'infrastructure') * .04;
   return {
-    food: round(
+    food: round((
   population.total / 1000 * .75 +
   workers.farm / 1000 * 3 * development * efficiency
-),
-    wood: round(workers.lumber_mill / 1000 * 2 * development * efficiency),
-    iron: round(workers.iron_mine / 1000 * 1.25 * development * efficiency),
-    tools: round(workers.workshop / 1000 * 1 * development * efficiency),
+) * (multipliers.food ?? 1)),
+    wood: round(workers.lumber_mill / 1000 * 2 * development * efficiency * (multipliers.wood ?? 1)),
+    iron: round(workers.iron_mine / 1000 * 1.25 * development * efficiency * (multipliers.iron ?? 1)),
+    tools: round(workers.workshop / 1000 * 1 * development * efficiency * (multipliers.tools ?? 1)),
   };
 }
 export function calculateDemand(province: Province): Record<GoodId, number> {
@@ -75,8 +75,8 @@ export function getStorageCapacity(province: Province): number {
 export function calculateLocalPrice(id: GoodId, supply: number, demand: number): number { const base = GOODS[id].basePrice; if (demand <= 0) return base * .5; return round(base * clamp(Math.sqrt(demand / Math.max(.01, supply)), .5, 3)); }
 export function calculatePurchasingPower(province: Province, goods: Record<GoodId, GoodMarketState>): number { const p = recalculateEmployment(province); const workforce = p.employed + p.unemployed; const employment = workforce ? p.employed / workforce : 0; const food = goods.food; return round(clamp(45 + employment * 35 + province.development * 1.5 - (food.price - 1) * 18 - (food.demand ? food.shortage / food.demand : 0) * 35, 0, 100)); }
 export function calculateMarketSatisfactionAdjustment(market: ProvinceMarket): number { const food = market.goods.food; return clamp((1 - food.price) * 8 + (market.purchasingPower - 50) * .16 - (food.demand ? food.shortage / food.demand : 0) * 18, -30, 8); }
-export function processProvinceMarket(province: Province): ProvinceMarket {
-  const previous = normalizeMarket(province.market); const production = calculateProduction(province); const demand = calculateDemand(province);
+export function processProvinceMarket(province: Province, multipliers: Partial<Record<GoodId, number>> = {}): ProvinceMarket {
+  const previous = normalizeMarket(province.market); const production = calculateProduction(province, multipliers); const demand = calculateDemand(province);
   // Workshops use conserved provincial stocks; output scales proportionally with either missing input.
   const plannedTools = production.tools;
   const toolRatio = plannedTools ? Math.min(1, previous.goods.wood.stock / plannedTools, previous.goods.iron.stock / (plannedTools * .75)) : 0;

@@ -7,6 +7,7 @@ import { getPopulationCapacity } from '../population';
 import { getStorageCapacity, normalizeMarket } from '../market';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
+import { startTechnologyResearch } from '../technology';
 
 const ALL_FINITE = (market: ReturnType<typeof normalizeMarket>) => Object.values(market.goods).every(g => Number.isFinite(g.stock));
 
@@ -65,7 +66,6 @@ export function processAIEconomicDecisions(
   // 2. PESQUISA TECNOLÓGICA
   if (!updatedTechState.activeResearchId) {
     const availableTechs = TECHNOLOGIES.filter(tech => {
-      if (tech.researched) return false;
       if (updatedTechState.completedTechnologies.includes(tech.id)) return false;
 
       if (tech.prerequisites && tech.prerequisites.length > 0) {
@@ -76,9 +76,17 @@ export function processAIEconomicDecisions(
       return true;
     });
 
-    const affordableTech = availableTechs.find(t => updatedCountry.resources.gold >= t.costGold);
+    const hasShortage = provinces.filter(p => p.owner === country.tag).some(p => Object.values(normalizeMarket(p.market).goods).some(g => g.shortage > 0));
+    const prioritizedTechs = [...availableTechs].sort((a, b) => {
+      const rank = (category: typeof a.category) => hasShortage
+        ? (category === 'ECONOMY' ? 0 : category === 'MILITARY' ? 1 : 2)
+        : (category === 'SOCIETY' ? 0 : category === 'ECONOMY' ? 1 : 2);
+      return rank(a.category) - rank(b.category);
+    });
+    const affordableTech = prioritizedTechs.find(t => updatedCountry.resources.gold >= t.costGold);
 
     if (affordableTech) {
+      const research = startTechnologyResearch(updatedTechState, affordableTech.id, updatedCountry);
       updatedCountry = {
         ...updatedCountry,
         resources: {
@@ -87,11 +95,7 @@ export function processAIEconomicDecisions(
         },
       };
 
-      updatedTechState = {
-        ...updatedTechState,
-        activeResearchId: affordableTech.id,
-        researchProgressDays: 0,
-      };
+      if (research.techState) updatedTechState = research.techState;
 
       logs.push({
         actionType: 'tech',

@@ -136,7 +136,7 @@ export function addReinforcementsToBattle(battle: BattleExtended, army: Army, si
 }
 
 /** Processes every participant, including collective retreat/annihilation. */
-export function processBattleDay(battle: BattleExtended, armies: Army[], province: Province, allProvinces: Province[]) {
+export function processBattleDay(battle: BattleExtended, armies: Army[], province: Province, allProvinces: Province[], combatMultipliers: ReadonlyMap<string, number> = new Map()) {
   const synced = synchronizeBattle(battle, armies);
   if (!synced) {
     const attackerAlive = sideTotal(battle, armies, 'attacker') > 0;
@@ -146,8 +146,12 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
   const daysRemaining = synced.daysRemaining - 1;
   const attackerBefore = synced.attackerCurrentTroops;
   const defenderBefore = synced.defenderCurrentTroops;
-  const attackerLoss = Math.min(attackerBefore, Math.floor(defenderBefore / Math.max(1, synced.daysTotal)));
-  const defenderLoss = Math.min(defenderBefore, Math.floor((defenderBefore / Math.max(1, synced.daysTotal)) * 0.95));
+  const attackerOwner = participants(synced, armies, 'attacker')[0]?.owner ?? '';
+  const defenderOwner = participants(synced, armies, 'defender')[0]?.owner ?? '';
+  const attackerPower = combatMultipliers.get(attackerOwner) ?? 1;
+  const defenderPower = combatMultipliers.get(defenderOwner) ?? 1;
+  const attackerLoss = Math.min(attackerBefore, Math.floor(defenderBefore / Math.max(1, synced.daysTotal) * defenderPower));
+  const defenderLoss = Math.min(defenderBefore, Math.floor((defenderBefore / Math.max(1, synced.daysTotal)) * 0.95 * attackerPower));
   let updatedArmies = applySideLoss(armies, participants(synced, armies, 'attacker'), attackerLoss);
   updatedArmies = applySideLoss(updatedArmies, participants(synced, updatedArmies, 'defender'), defenderLoss);
   let next = synchronizeBattle(synced, updatedArmies);

@@ -55,20 +55,20 @@ export function calculateSatisfaction(
   return clamp(65 - unemploymentRate * 55 + taxEffect + economyEffect + warEffect + (options.marketAdjustment ?? 0), 0, 100);
 }
 
-export function getPopulationCapacity(province: Province): number {
+export function getPopulationCapacity(province: Province, multiplier = 1): number {
   const housing = province.buildings.find(building => building.type === 'housing' && building.daysRemaining <= 0)?.level ?? 0;
-  return Math.max(0, province.maxPopulation + housing * 5000);
+  return Math.max(0, (province.maxPopulation + housing * 5000) * multiplier);
 }
 
 export function processProvincePopulation(
   province: Province,
   growthMultiplier: number,
   taxationId: string,
-  options: { atWar?: boolean; economicMultiplier?: number; growthAmount?: number } = {}
+  options: { atWar?: boolean; economicMultiplier?: number; growthAmount?: number; capacityMultiplier?: number } = {}
 ): Province {
   const current = normalizePopulation(province.population);
   const requestedGrowth = options.growthAmount ?? current.total * current.growthRate * Math.max(0, growthMultiplier);
-  const total = clamp(Math.floor(current.total + requestedGrowth), 0, getPopulationCapacity(province));
+  const total = clamp(Math.floor(current.total + requestedGrowth), 0, getPopulationCapacity(province, options.capacityMultiplier));
   let population = recalculateEmployment({ ...province, population: { ...current, total } }, { ...current, total });
   population = { ...population, satisfaction: calculateSatisfaction({ ...province, population }, taxationId, options) };
   return { ...province, population };

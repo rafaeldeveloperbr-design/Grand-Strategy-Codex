@@ -2,6 +2,7 @@ import type { Army, GoodId, GoodMarketState, Province, ProvinceMarket } from '..
 import { normalizePopulation, recalculateEmployment } from './population';
 import { getBuildingLevel } from '../data/buildings';
 import { calculateArmySize } from './combat/combatCalculations';
+import type { TechnologyModifiers } from '../types/technology';
 
 export const GOOD_IDS = {
   FOOD: 'food',
@@ -59,7 +60,7 @@ export function normalizeMarket(market?: Partial<ProvinceMarket>): ProvinceMarke
   return { goods, purchasingPower: clamp(market?.purchasingPower ?? 50, 0, 100) };
 }
 
-export function calculateProduction(province: Province): Record<GoodId, number> {
+export function calculateProduction(province: Province, technology?: TechnologyModifiers): Record<GoodId, number> {
   const population = recalculateEmployment(province);
   const workerNeeds: Record<GoodId, number> = {
     food: getBuildingLevel(province, 'farm') * 700,
@@ -71,7 +72,7 @@ export function calculateProduction(province: Province): Record<GoodId, number> 
   const laborRatio = requiredWorkers > 0 ? Math.min(1, population.employed / requiredWorkers) : 0;
   const developmentFactor = 0.8 + clamp(province.development, 0, 10) * 0.04;
   const productivity = developmentFactor
-    * (1 + getBuildingLevel(province, 'infrastructure') * 0.05)
+    * (1 + getBuildingLevel(province, 'infrastructure') * (0.05 + (technology?.infrastructureProductivity ?? 0)))
     * (1 + getBuildingLevel(province, 'market') * 0.03);
   const output: Record<GoodId, number> = {
     [GOOD_IDS.FOOD]: normalizePopulation(province.population).total / 1000 * 0.25
@@ -80,6 +81,10 @@ export function calculateProduction(province: Province): Record<GoodId, number> 
     [GOOD_IDS.IRON]: getBuildingLevel(province, 'iron_mine') * 3 * laborRatio * productivity,
     [GOOD_IDS.TOOLS]: getBuildingLevel(province, 'workshop') * 2 * laborRatio * productivity,
   };
+  output.food *= 1 + (technology?.foodProduction ?? 0);
+  output.wood *= 1 + (technology?.woodProduction ?? 0);
+  output.iron *= 1 + (technology?.ironProduction ?? 0);
+  output.tools *= 1 + (technology?.toolProduction ?? 0);
   return Object.fromEntries(ALL_GOODS.map(id => [id, round(Math.max(0, output[id]))])) as Record<GoodId, number>;
 }
 
@@ -121,9 +126,9 @@ export function calculateMarketSatisfactionAdjustment(market: ProvinceMarket): n
   return clamp(affordability * 8 + purchasingPowerEffect - shortageRate * 18, -30, 8);
 }
 
-export function processProvinceMarket(province: Province, armies: Army[] = []): ProvinceMarket {
+export function processProvinceMarket(province: Province, armies: Army[] = [], technology?: TechnologyModifiers): ProvinceMarket {
   const previous = normalizeMarket(province.market);
-  const production = calculateProduction(province);
+  const production = calculateProduction(province, technology);
   const demand = calculateDemand(province, armies);
   const workshopPotential = production[GOOD_IDS.TOOLS];
   const workshopOutput = Math.min(workshopPotential, previous.goods.wood.stock, previous.goods.iron.stock / 0.75);
@@ -135,7 +140,7 @@ export function processProvinceMarket(province: Province, armies: Army[] = []): 
     const consumption = Math.min(available, demand[id]);
     const shortage = Math.max(0, demand[id] - consumption);
     const storageCapacity = Math.max(10, normalizePopulation(province.population).total / 1000 * 20 + province.development * 10)
-      * (1 + getBuildingLevel(province, 'warehouse') * 0.5 + getBuildingLevel(province, 'market') * 0.05);
+      * (1 + getBuildingLevel(province, 'warehouse') * (0.5 + (technology?.warehouseCapacity ?? 0)) + getBuildingLevel(province, 'market') * 0.05);
     const stock = Math.min(storageCapacity, Math.max(0, available - consumption));
     return [id, {
       stock: round(stock), production: production[id], demand: demand[id], consumption: round(consumption),

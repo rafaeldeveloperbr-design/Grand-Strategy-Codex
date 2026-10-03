@@ -48,8 +48,8 @@ export function useTechActions(params: {
     const tech = TECHNOLOGIES.find(t => t.id === techId);
     if (!tech) return;
 
-    if (playerCountry.resources.gold < tech.costGold) {
-      addLog(`❌ Ouro insuficiente para pesquisar ${tech.title}`);
+    if (playerCountry.resources.gold < tech.goldCost) {
+      addLog(`❌ Ouro insuficiente para pesquisar ${tech.name}`);
       return;
     }
 
@@ -77,7 +77,7 @@ export function useTechActions(params: {
       setPlayerTechState(updated);
       playerTechStateRef.current = updated;
 
-      addLog(`🔬 Pesquisa iniciada: ${tech.title} (💰 ${cost})`);
+      addLog(`🔬 Pesquisa iniciada: ${tech.name} (💰 ${cost})`);
     }
   }, [
     playerTechState,

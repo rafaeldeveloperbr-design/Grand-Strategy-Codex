@@ -28,30 +28,6 @@ export const UNIT_NAMES: Record<string, string> = {
   siege_engine: 'Armas de Cerco',
 };
 
-export const TECH_NAMES: Record<string, string> = {
-  // Tecnologias existentes
-  tech_improved_weapons: 'Armas Melhoradas',
-  tech_cavalry_tactics: 'Táticas de Cavalaria',
-  tech_artillery_development: 'Desenvolvimento de Artilharia',
-  tech_banking_system: 'Sistema Bancário',
-  tech_trade_routes: 'Rotas Comerciais',
-  tech_tax_reform: 'Reforma Tributária',
-  tech_construction_techniques: 'Técnicas de Construção',
-  tech_engineering_corps: 'Corpo de Engenheiros',
-  tech_fortification_design: 'Design de Fortificações',
-  // Novas tecnologias militares
-  tech_siege_artillery: 'Artilharia de Cerco Avançada',
-  tech_line_infantry_doctrine: 'Doutrina de Infantaria em Linha',
-  tech_heavy_cavalry_tactics: 'Táticas de Cavalaria Pesada',
-  tech_military_logistics: 'Logística Militar',
-  // Novas tecnologias econômicas
-  tech_mercantilism: 'Mercantilismo',
-  tech_pre_industrial_manufacturing: 'Manufatura Pré-Industrial',
-  // Novas tecnologias políticas
-  tech_centralized_admin: 'Administração Centralizada',
-  tech_science_academy: 'Academia de Ciências',
-};
-
 export const FOCUS_NAMES: Record<string, string> = {
   // Focos existentes
   focus_military_modernization: 'Modernização Militar',

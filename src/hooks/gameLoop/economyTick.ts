@@ -11,6 +11,8 @@ import type { Province, Country, Army, Recruitment, BuildingConstruction, War } 
 import type { GameDate } from '../../types/date';
 import type { ToastType } from '../../types/toast';
 import type { AIActionType } from '../../types/aiLog';
+import type { CountryTechState } from '../../types/technology';
+import { getTechnologyModifiers } from '../../engine/technology';
 
 type Params = {
   recruitments: Recruitment[];
@@ -19,6 +21,8 @@ type Params = {
   provinces: Province[];
   buildingConstructions: BuildingConstruction[];
   wars: War[];
+  playerTechState: CountryTechState;
+  botTechStates: Map<string, CountryTechState>;
   playerCountryTag: string;
   date: GameDate;
   allCountries: Country[];
@@ -72,7 +76,9 @@ export function processEconomyTick(p: Params) {
   }
 
   // PASSO A.5: CONSTRUÇÕES
-  const constructionResult = processConstructions(buildingConstructions, provinces);
+  const techStateFor = (tag: string) => tag === playerCountryTag ? p.playerTechState : p.botTechStates.get(tag);
+  const constructionSpeeds = new Map(countries.map(country => [country.tag, getTechnologyModifiers(techStateFor(country.tag)).constructionSpeed]));
+  const constructionResult = processConstructions(buildingConstructions, provinces, constructionSpeeds);
   buildingConstructions = constructionResult.updatedConstructions;
 
   for (const completed of constructionResult.completedConstructions) {
@@ -116,7 +122,8 @@ export function processEconomyTick(p: Params) {
   countries = countries.map(country => {
     const countryProvinces = provinces.filter(pr => pr.owner === country.tag);
     const atWar = p.wars.some(war => war.attacker === country.tag || war.defender === country.tag);
-    const { country: updatedCountry, provinces: updatedProvs } = processDailyTick(country, countryProvinces, undefined, atWar, armies);
+    const modifiers = getTechnologyModifiers(techStateFor(country.tag));
+    const { country: updatedCountry, provinces: updatedProvs } = processDailyTick(country, countryProvinces, undefined, atWar, armies, modifiers);
 
     for (const updatedProv of updatedProvs) {
       const idx = provinces.findIndex(pr => pr.id === updatedProv.id);

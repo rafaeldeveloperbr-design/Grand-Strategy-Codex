@@ -7,7 +7,20 @@
 /**
  * Categorias de tecnologia
  */
-export type TechnologyCategory = 'MILITARY' | 'ECONOMY' | 'INFRASTRUCTURE';
+export type TechnologyCategory = 'AGRICULTURE' | 'INDUSTRY' | 'INFRASTRUCTURE' | 'MILITARY';
+
+export type TechnologyEffect =
+  | { type: 'foodProduction'; value: number }
+  | { type: 'woodProduction'; value: number }
+  | { type: 'ironProduction'; value: number }
+  | { type: 'toolProduction'; value: number }
+  | { type: 'warehouseCapacity'; value: number }
+  | { type: 'infrastructureProductivity'; value: number }
+  | { type: 'constructionSpeed'; value: number }
+  | { type: 'internalTradeEfficiency'; value: number }
+  | { type: 'armyAttack'; value: number }
+  | { type: 'armyDefense'; value: number }
+  | { type: 'fortressDefense'; value: number };
 
 /**
  * Tipos de efeitos de recompensa
@@ -51,16 +64,14 @@ export interface NationalFocus {
  */
 export interface Technology {
   id: string;
-  title: string;
+  name: string;
   description: string;
   category: TechnologyCategory;
   icon: string;
-  costGold: number;
-  durationDays: number;
-  currentProgressDays: number;
-  researched: boolean;
-  prerequisites: string[]; // IDs de outras tecnologias necessárias
-  rewardEffect: RewardEffect;
+  researchCost: number;
+  goldCost: number;
+  prerequisites: string[];
+  effects: TechnologyEffect[];
 }
 
 /**
@@ -75,4 +86,19 @@ export interface CountryTechState {
   // Progresso isolado por país (não compartilhado globalmente)
   focusProgressDays: number;
   researchProgressDays: number;
+  researchSpeed?: number;
+}
+
+export interface TechnologyModifiers {
+  foodProduction: number;
+  woodProduction: number;
+  ironProduction: number;
+  toolProduction: number;
+  warehouseCapacity: number;
+  infrastructureProductivity: number;
+  constructionSpeed: number;
+  internalTradeEfficiency: number;
+  armyAttack: number;
+  armyDefense: number;
+  fortressDefense: number;
 }

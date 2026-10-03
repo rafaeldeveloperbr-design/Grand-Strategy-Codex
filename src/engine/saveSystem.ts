@@ -5,6 +5,7 @@ import type { DiplomaticRelation, War } from '../types/diplomacy';
 import { normalizePopulation } from './population';
 import { createStartingMarket, normalizeMarket } from './market';
 import type { BuildingType } from '../types';
+import { migrateTechnologyState } from './technology';
 
 // ============ META ============
 export type SaveMeta = {
@@ -99,7 +100,7 @@ function deserializeV2(raw: SerializedSaveGameV2): SaveGameV2 {
     ...raw,
     world: { ...raw.world, provinces: raw.world.provinces.map(normalizeSavedProvince) },
     economy: { constructions: raw.economy.constructions.map(normalizeConstruction) },
-    technology: { player: raw.technology.player, bots: new Map(raw.technology.bots) },
+    technology: { player: migrateTechnologyState(raw.technology.player), bots: new Map(raw.technology.bots.map(([tag, state]) => [tag, migrateTechnologyState(state)])) },
   };
 }
 function normalizeSavedProvince(province: Province): Province {
@@ -128,7 +129,7 @@ function migrateV1ToV2(v1: SaveGameV1): SaveGameV2 {
     military: { armies: v1.armies, wars: v1.wars, activeBattles: v1.activeBattles, recruitments: v1.recruitments },
     diplomacy: { relations: v1.relations },
     economy: { constructions: v1.constructions.map(normalizeConstruction) },
-    technology: { player: v1.playerTech, bots: botTechsMap },
+    technology: { player: migrateTechnologyState(v1.playerTech), bots: new Map([...botTechsMap].map(([tag, state]) => [tag, migrateTechnologyState(state)])) },
   };
 }
 

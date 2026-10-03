@@ -187,7 +187,7 @@ export function useGameLoop(props: Props) {
     let currentBotTechStates = new Map<string, CountryTechState>(botTechStatesRef.current);
 
     // 2. ECONOMY - primeiro, gera recursos e recrutamentos
-    const eco = processEconomyTick({ recruitments, armies, countries, provinces, buildingConstructions, wars, playerCountryTag, date: snapshot.date, allCountries, addToast, addAILog, addLog, formatGameDate });
+    const eco = processEconomyTick({ recruitments, armies, countries, provinces, buildingConstructions, wars, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, playerCountryTag, date: snapshot.date, allCountries, addToast, addAILog, addLog, formatGameDate });
     recruitments = eco.recruitments; armies = eco.armies; provinces = eco.provinces; buildingConstructions = eco.buildingConstructions; countries = eco.countries;
 
     // 4. STABILITY - depende de economy
@@ -210,7 +210,7 @@ export function useGameLoop(props: Props) {
     const arr = processBattleArrival({ arrivedArmies, armies, provinces, countries, wars, recruitments, buildingConstructions, currentActiveBattles, snapshot, playerCountryTag, allCountries, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities });
     armies = arr.armies; provinces = arr.provinces; countries = arr.countries; currentActiveBattles = arr.currentActiveBattles; recruitments = arr.recruitments; buildingConstructions = arr.buildingConstructions;
 
-    const cont = processBattleContinuous({ armies, provinces, countries, wars, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef, cancelProvinceActivities });
+    const cont = processBattleContinuous({ armies, provinces, countries, wars, currentActiveBattles, recruitments, buildingConstructions, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, snapshot, playerCountryTag, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef, cancelProvinceActivities });
     armies = cont.armies; provinces = cont.provinces; countries = cont.countries; currentActiveBattles = cont.currentActiveBattles; wars = cont.wars; recruitments = cont.recruitments; buildingConstructions = cont.buildingConstructions;
 
     // 10. REBELLION - por último, depende de stability + combat

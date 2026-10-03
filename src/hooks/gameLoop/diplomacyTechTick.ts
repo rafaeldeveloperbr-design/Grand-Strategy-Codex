@@ -53,7 +53,7 @@ export function processDiplomacyTechTick(p: Params) {
   // PASSO E.5: TECNOLOGIAS E FOCOS
   const playerCountry = countries.find(c => c?.tag === playerCountryTag);
   if (currentPlayerTechState && playerCountry) {
-    const playerTechResult = processDailyTechProgress(currentPlayerTechState, playerCountry, aiDifficultyRef.current, true);
+    const playerTechResult = processDailyTechProgress(currentPlayerTechState, playerCountry, aiDifficultyRef.current, true, provinces);
     currentPlayerTechState = playerTechResult.techState;
     playerTechStateRef.current = currentPlayerTechState;
     if (playerTechResult.notifications?.length > 0) {
@@ -70,7 +70,7 @@ export function processDiplomacyTechTick(p: Params) {
     if (country?.tag && country.tag !== playerCountryTag) {
       const botTechState = currentBotTechStates.get(country.tag);
       if (botTechState) {
-        const botTechResult = processDailyTechProgress(botTechState, country, aiDifficultyRef.current, false);
+        const botTechResult = processDailyTechProgress(botTechState, country, aiDifficultyRef.current, false, provinces);
         currentBotTechStates.set(country.tag, botTechResult.techState);
         if (botTechResult.notifications?.length > 0) {
           const dateString = formatGameDate(snapshot.date);

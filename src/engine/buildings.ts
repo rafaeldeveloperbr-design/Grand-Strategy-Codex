@@ -56,7 +56,8 @@ export function startBuildingProject(
  */
 export function processConstructions(
   constructions: BuildingConstruction[],
-  provinces: Province[] = []
+  provinces: Province[] = [],
+  constructionSpeedByCountry: Map<string, number> = new Map()
 ): { updatedConstructions: BuildingConstruction[]; completedConstructions: BuildingConstruction[] } {
   const completedConstructions: BuildingConstruction[] = [];
   
@@ -84,7 +85,7 @@ export function processConstructions(
     // Marca que a obra ativa desta província está sendo processada
     processedProvinces.add(item.provinceId);
 
-    const newDays = item.daysRemaining - 1;
+    const newDays = item.daysRemaining - (1 + (constructionSpeedByCountry.get(item.owner) ?? 0));
 
     if (newDays <= 0) {
       completedConstructions.push(item);

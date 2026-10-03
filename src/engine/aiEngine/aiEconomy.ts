@@ -7,6 +7,7 @@ import { getBuildingName, getUnitName } from '../../utils/translations';
 import { startBuildingProject } from '../buildings';
 import { payRecruitmentCost } from '../military';
 import { GOOD_IDS, normalizeMarket } from '../market';
+import { chooseAITechnology, startTechnologyResearch } from '../technology';
 
 export function processAIEconomicDecisions(
   country: Country,
@@ -15,7 +16,8 @@ export function processAIEconomicDecisions(
   buildingConstructions: BuildingConstruction[],
   recruitments: Recruitment[],
   dateString: string,
-  canRecruitMilitary: boolean = true
+  canRecruitMilitary: boolean = true,
+  atWar: boolean = false
 ): {
   techState: CountryTechState;
   buildingConstructions: BuildingConstruction[];
@@ -62,39 +64,29 @@ export function processAIEconomicDecisions(
 
   // 2. PESQUISA TECNOLÓGICA
   if (!updatedTechState.activeResearchId) {
-    const availableTechs = TECHNOLOGIES.filter(tech => {
-      if (tech.researched) return false;
-      if (updatedTechState.completedTechnologies.includes(tech.id)) return false;
-      
-      if (tech.prerequisites && tech.prerequisites.length > 0) {
-        return tech.prerequisites.every(prereqId => 
-          updatedTechState.completedTechnologies.includes(prereqId)
-        );
-      }
-      return true;
-    });
-
-    const affordableTech = availableTechs.find(t => updatedCountry.resources.gold >= t.costGold);
-    
-    if (affordableTech) {
+    const chosenId = chooseAITechnology(updatedTechState, updatedProvinces, atWar);
+    const chosen = TECHNOLOGIES.find(technology => technology.id === chosenId);
+    if (chosen && updatedCountry.resources.gold >= chosen.goldCost) {
+      const started = startTechnologyResearch(updatedTechState, chosen.id, updatedCountry);
+      if (started.techState) {
       updatedCountry = {
         ...updatedCountry,
         resources: {
           ...updatedCountry.resources,
-          gold: updatedCountry.resources.gold - affordableTech.costGold,
+          gold: updatedCountry.resources.gold - started.cost,
         },
       };
 
       updatedTechState = {
         ...updatedTechState,
-        activeResearchId: affordableTech.id,
-        researchProgressDays: 0,
+        ...started.techState,
       };
 
       logs.push({
         actionType: 'tech',
-        message: `Iniciou a pesquisa tecnológica: ${affordableTech.title} (💰 ${affordableTech.costGold})`,
+        message: `Iniciou a pesquisa tecnológica: ${chosen.name} (💰 ${started.cost})`,
       });
+      }
     }
   }
 

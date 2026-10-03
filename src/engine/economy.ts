@@ -20,6 +20,7 @@ import { calculateMarketSatisfactionAdjustment, processProvinceMarket } from './
 import { processInternalTrade } from './internalTrade';
 import type { Army } from '../types';
 import { getPopulationCapacity } from '../data/buildings';
+import type { TechnologyModifiers } from '../types/technology';
 
 /**
  * Constantes de balanceamento do jogo
@@ -160,7 +161,8 @@ export function processDailyTick(
     buildTimeMultiplier: number;
   },
   atWar: boolean = false,
-  armies: Army[] = []
+  armies: Army[] = [],
+  technology?: TechnologyModifiers
 ): { country: Country; provinces: Province[] } {
   // Calcula economia total do país
   let totalGoldIncome = 0;
@@ -212,7 +214,7 @@ export function processDailyTick(
       { atWar, economicMultiplier: provinceGoldMultiplier, growthAmount: popGrowth }
     );
     populationProvince.maxPopulation = getPopulationCapacity(populationProvince);
-    const market = processProvinceMarket(populationProvince, armies);
+    const market = processProvinceMarket(populationProvince, armies, technology);
     const population = {
       ...populationProvince.population,
       satisfaction: calculateSatisfaction(
@@ -235,7 +237,7 @@ export function processDailyTick(
 
   // Local production/consumption is followed by deterministic domestic
   // redistribution, then market-sensitive satisfaction is finalized.
-  updatedProvinces = processInternalTrade(updatedProvinces).map(province => ({
+  updatedProvinces = processInternalTrade(updatedProvinces, technology?.internalTradeEfficiency ?? 0).map(province => ({
     ...province,
     population: {
       ...province.population,

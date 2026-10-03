@@ -1,6 +1,8 @@
 import type { ActiveBattle, Army, GameDate, Province, RetreatInfo } from '../../types';
 import { applyTroopLoss, calculateArmySize } from './combatCalculations';
 import { findRetreatProvince } from './combatRetreats';
+import type { TechnologyModifiers } from '../../types/technology';
+import { getBuildingLevel } from '../../data/buildings';
 
 export type BattleExtended = ActiveBattle & {
   reinforcementEntryDay?: Record<string, number>;
@@ -136,7 +138,7 @@ export function addReinforcementsToBattle(battle: BattleExtended, army: Army, si
 }
 
 /** Processes every participant, including collective retreat/annihilation. */
-export function processBattleDay(battle: BattleExtended, armies: Army[], province: Province, allProvinces: Province[]) {
+export function processBattleDay(battle: BattleExtended, armies: Army[], province: Province, allProvinces: Province[], technologyByCountry: Map<string, TechnologyModifiers> = new Map()) {
   const synced = synchronizeBattle(battle, armies);
   if (!synced) {
     const attackerAlive = sideTotal(battle, armies, 'attacker') > 0;
@@ -146,8 +148,13 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
   const daysRemaining = synced.daysRemaining - 1;
   const attackerBefore = synced.attackerCurrentTroops;
   const defenderBefore = synced.defenderCurrentTroops;
-  const attackerLoss = Math.min(attackerBefore, Math.floor(defenderBefore / Math.max(1, synced.daysTotal)));
-  const defenderLoss = Math.min(defenderBefore, Math.floor((defenderBefore / Math.max(1, synced.daysTotal)) * 0.95));
+  const attackerTechnology = technologyByCountry.get(synced.attackerCountryId);
+  const defenderTechnology = technologyByCountry.get(synced.defenderCountryId);
+  const fortressDefense = getBuildingLevel(province, 'fortress') * 0.05 * (1 + (defenderTechnology?.fortressDefense ?? 0));
+  const attackerLoss = Math.min(attackerBefore, Math.floor(defenderBefore / Math.max(1, synced.daysTotal)
+    * (1 + (defenderTechnology?.armyAttack ?? 0)) / (1 + (attackerTechnology?.armyDefense ?? 0))));
+  const defenderLoss = Math.min(defenderBefore, Math.floor((defenderBefore / Math.max(1, synced.daysTotal)) * 0.95
+    * (1 + (attackerTechnology?.armyAttack ?? 0)) / (1 + (defenderTechnology?.armyDefense ?? 0) + fortressDefense)));
   let updatedArmies = applySideLoss(armies, participants(synced, armies, 'attacker'), attackerLoss);
   updatedArmies = applySideLoss(updatedArmies, participants(synced, updatedArmies, 'defender'), defenderLoss);
   let next = synchronizeBattle(synced, updatedArmies);

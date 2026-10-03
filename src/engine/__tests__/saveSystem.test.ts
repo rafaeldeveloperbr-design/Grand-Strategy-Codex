@@ -120,6 +120,20 @@ describe('SAVE/LOAD', () => {
     expect(loaded?.technology.bots.get('ARG')).toBeDefined();
   });
 
+  it('preserva pesquisa ativa, progresso e migra IDs tecnológicos antigos', () => {
+    const refs = {
+      dateRef: { current: { day: 1, month: 1, year: 1836 } }, provincesRef: { current: [] }, countriesRef: { current: [] }, armiesRef: { current: [] },
+      warsRef: { current: [] }, diplomaticRelationsRef: { current: [] }, recruitmentsRef: { current: [] }, buildingConstructionsRef: { current: [] },
+      playerTechStateRef: { current: { countryTag: 'BRA', activeFocusId: null, activeResearchId: 'tech_construction_techniques', completedFocuses: [], completedTechnologies: ['tech_improved_weapons'], focusProgressDays: 0, researchProgressDays: 17 } },
+      botTechStatesRef: { current: new Map() }, activeBattlesRef: { current: [] },
+    } as SaveGameRefs;
+    saveGame(refs, 'tech-migration');
+    const technology = loadGame('tech-migration')?.technology.player;
+    expect(technology?.activeResearchId).toBe('civil_engineering');
+    expect(technology?.completedTechnologies).toContain('military_training');
+    expect(technology?.researchProgressDays).toBe(17);
+  });
+
   it('preserva os dados populacionais completos', () => {
     const population = { total: 12000, growthRate: 0.0015, employed: 6000, unemployed: 1200, satisfaction: 72 };
     const refs = {

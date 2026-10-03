@@ -3,7 +3,7 @@ import { CountryTechState } from '../../types/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
 
 import { startBuilding } from '../buildings';
-import { getPopulationCapacity } from '../population';
+import { calculateWorkforce, getPopulationCapacity, normalizePopulation } from '../population';
 import { getStorageCapacity, normalizeMarket } from '../market';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
@@ -111,13 +111,17 @@ export function processAIEconomicDecisions(
     const market = normalizeMarket(targetProvince.market);
     const populationTotal = typeof targetProvince.population === 'number' ? targetProvince.population : targetProvince.population.total;
     const priorities: BuildingType[] = [];
-    if (market.goods.food.shortage > 0 || market.goods.food.stock < market.goods.food.demand) priorities.push('farm');
+    const foodShortageRatio = market.goods.food.demand > 0 ? market.goods.food.shortage / market.goods.food.demand : 0;
+    if (foodShortageRatio >= 0.5) priorities.push('farm');
     if (market.goods.wood.stock < market.goods.wood.demand * 2) priorities.push('lumber_mill');
     if (market.goods.iron.stock < market.goods.iron.demand * 2) priorities.push('iron_mine');
     if (market.goods.tools.stock < market.goods.tools.demand * 2) priorities.push('workshop');
     if (ALL_FINITE(market) && Object.values(market.goods).some(g => g.stock >= getStorageCapacity(targetProvince) * .9)) priorities.push('warehouse');
     const capacityMultiplier = calculateTechBonuses(updatedTechState).populationCapacityMultiplier;
     if (populationTotal >= getPopulationCapacity(targetProvince, capacityMultiplier) * .9) priorities.push('housing');
+    const population = normalizePopulation(targetProvince.population);
+    const workforce = calculateWorkforce(population);
+    if (workforce > 0 && population.unemployed / workforce >= 0.3) priorities.push('workshop', 'market');
     priorities.push('infrastructure', 'market', 'barracks', 'fortress');
     for (const chosenBuilding of priorities) {
       const result = startBuilding(

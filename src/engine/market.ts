@@ -52,7 +52,8 @@ export function calculateProduction(province: Province, multipliers: Partial<Rec
   const population = normalizePopulation(province.population);
   const workers = allocateProductiveWorkers(province);
   const development = .5 + clamp(province.development, 0, 10) * .1;
-  const efficiency = 1 + getBuildingLevel(province, 'market') * .05 + getBuildingLevel(province, 'infrastructure') * .04;
+  const satisfactionEfficiency = clamp(0.9 + population.satisfaction / 100 * 0.15, 0.9, 1.05);
+  const efficiency = (1 + getBuildingLevel(province, 'market') * .05 + getBuildingLevel(province, 'infrastructure') * .04) * satisfactionEfficiency;
   return {
     food: round((
   population.total / 1000 * .75 +

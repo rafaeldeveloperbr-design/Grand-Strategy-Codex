@@ -11,8 +11,12 @@ export const POPULATION_BALANCE = {
   CAPACITY_RATE_PENALTY: 0.01,
   MODERATE_SHORTAGE: 0.15,
   SEVERE_SHORTAGE: 0.5,
+  SEVERE_SHORTAGE_RECOVERY: 0.45,
   SEVERE_SHORTAGE_GRACE_DAYS: 3,
   MAX_FOOD_RATE_PENALTY: 0.004,
+  SEVERE_SHORTAGE_SATISFACTION_PENALTY: 10,
+  MIGRATION_FOOD_SHORTAGE_WEIGHT: 45,
+  MIGRATION_SEVERE_FAMINE_PENALTY: 35,
   MIGRATION_ATTRACTIVENESS_THRESHOLD: 15,
   MIGRATION_DAILY_SHARE: 0.0002,
   MIGRATION_DAILY_LIMIT: 20,
@@ -30,20 +34,42 @@ export interface FoodShortageStatus {
   percent: number;
   severity: FoodShortageSeverity;
   consecutiveDays: number;
+  severeConsecutiveDays: number;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /** Shared interpretation of the market shortage used by population, AI, and UI. */
-export function getFoodShortageStatus(food: GoodMarketState | undefined, consecutiveDays = 0): FoodShortageStatus {
+export function getFoodShortageStatus(
+  food: GoodMarketState | undefined,
+  consecutiveDays = 0,
+  severeConsecutiveDays = 0,
+): FoodShortageStatus {
   const ratio = food && food.demand > 0 ? clamp(food.shortage / food.demand, 0, 1) : 0;
+  const establishedFamine = severeConsecutiveDays >= POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS;
   return {
     ratio,
     percent: Math.round(ratio * 100),
-    severity: ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE ? 'severe'
+    severity: establishedFamine && ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE_RECOVERY ? 'severe'
       : ratio >= POPULATION_BALANCE.MODERATE_SHORTAGE ? 'moderate' : 'healthy',
     consecutiveDays: Math.max(0, Math.floor(consecutiveDays)),
+    severeConsecutiveDays: Math.max(0, Math.floor(severeConsecutiveDays)),
   };
+}
+
+export function calculateFoodShortagePersistence(
+  food: GoodMarketState | undefined,
+  population: ProvincePopulation,
+): Pick<ProvincePopulation, 'foodShortageDays' | 'severeFoodShortageDays'> {
+  const current = getFoodShortageStatus(food, population.foodShortageDays, population.severeFoodShortageDays);
+  const priorSevereDays = population.severeFoodShortageDays ?? 0;
+  const foodShortageDays = current.ratio >= POPULATION_BALANCE.MODERATE_SHORTAGE
+    ? (population.foodShortageDays ?? 0) + 1 : 0;
+  const remainsEstablished = priorSevereDays >= POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS
+    && current.ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE_RECOVERY;
+  const severeFoodShortageDays = current.ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE || remainsEstablished
+    ? priorSevereDays + 1 : 0;
+  return { foodShortageDays, severeFoodShortageDays };
 }
 
 /** Normalizes both current and legacy numeric population values at load boundaries. */
@@ -59,6 +85,7 @@ export function normalizePopulation(value: ProvincePopulation | number): Provinc
     unemployed,
     satisfaction: clamp(raw?.satisfaction ?? POPULATION_DEFAULTS.SATISFACTION, 0, 100),
     foodShortageDays: Math.max(0, Math.floor(raw?.foodShortageDays ?? 0)),
+    severeFoodShortageDays: Math.max(0, Math.floor(raw?.severeFoodShortageDays ?? raw?.foodShortageDays ?? 0)),
     migrationNet: Math.trunc(raw?.migrationNet ?? 0),
   };
 }
@@ -117,11 +144,12 @@ export function calculateSatisfactionBreakdown(
   const unemploymentRate = workforce > 0 ? population.unemployed / workforce : 0;
   const market = province.market;
   const food = market?.goods.food;
-  const foodShortageRatio = getFoodShortageStatus(food).ratio;
+  const foodStatus = getFoodShortageStatus(food, population.foodShortageDays, population.severeFoodShortageDays);
   const parts = {
     base: 65,
     unemployment: -unemploymentRate * 45,
-    food: -foodShortageRatio * 25 + ((food?.price ?? 1) - 1) * -5,
+    food: -foodStatus.ratio * 25 + ((food?.price ?? 1) - 1) * -5
+      - (foodStatus.severity === 'severe' ? POPULATION_BALANCE.SEVERE_SHORTAGE_SATISFACTION_PENALTY : 0),
     taxation: taxationId === 'taxation_high' ? -12 : taxationId === 'taxation_low' ? 8 : 0,
     economy: (clamp(options.economicMultiplier ?? 1, 0, 1.5) - 1) * 15,
     stability: (clamp(options.countryStability ?? 50, 0, 100) - 50) * 0.12,
@@ -169,14 +197,21 @@ export function calculatePopulationGrowthBreakdown(
   const capacityRatio = capacity > 0 ? population.total / capacity : 1;
   const market = province.market;
   const food = market?.goods.food;
-  const shortageRatio = getFoodShortageStatus(food, population.foodShortageDays).ratio;
+  // The current market is this tick's observation, so include it when deciding
+  // whether the three-tick famine grace period has just completed.
+  const projectedPersistence = calculateFoodShortagePersistence(food, population);
+  const foodStatus = getFoodShortageStatus(
+    food,
+    projectedPersistence.foodShortageDays,
+    projectedPersistence.severeFoodShortageDays,
+  );
+  const shortageRatio = foodStatus.ratio;
   let foodRate = 0;
   if (shortageRatio >= POPULATION_BALANCE.MODERATE_SHORTAGE) {
     foodRate = -0.0015 * Math.min(1, shortageRatio / POPULATION_BALANCE.SEVERE_SHORTAGE);
   }
-  if (shortageRatio >= POPULATION_BALANCE.SEVERE_SHORTAGE
-      && (population.foodShortageDays ?? 0) >= POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS) {
-    const severeProgress = (shortageRatio - POPULATION_BALANCE.SEVERE_SHORTAGE) / (1 - POPULATION_BALANCE.SEVERE_SHORTAGE);
+  if (foodStatus.severity === 'severe') {
+    const severeProgress = Math.max(0, (shortageRatio - POPULATION_BALANCE.SEVERE_SHORTAGE) / (1 - POPULATION_BALANCE.SEVERE_SHORTAGE));
     foodRate -= 0.0015 + severeProgress * 0.001;
   }
   foodRate = Math.max(-POPULATION_BALANCE.MAX_FOOD_RATE_PENALTY, foodRate);
@@ -217,9 +252,8 @@ export function processProvincePopulation(
   });
   const total = clamp(Math.floor(current.total + requestedGrowth), 0, getPopulationCapacity(province, options.capacityMultiplier));
   const food = province.market?.goods.food;
-  const shortageRatio = getFoodShortageStatus(food, current.foodShortageDays).ratio;
-  const foodShortageDays = shortageRatio >= POPULATION_BALANCE.MODERATE_SHORTAGE ? (current.foodShortageDays ?? 0) + 1 : 0;
-  let population = recalculateEmployment({ ...province, population: { ...current, total } }, { ...current, total, foodShortageDays, migrationNet: 0 });
+  const persistence = calculateFoodShortagePersistence(food, current);
+  let population = recalculateEmployment({ ...province, population: { ...current, total } }, { ...current, total, ...persistence, migrationNet: 0 });
   population = { ...population, satisfaction: calculateSatisfaction({ ...province, population }, taxationId, options) };
   return { ...province, population };
 }
@@ -237,8 +271,10 @@ export function calculateMigrationAttractiveness(province: Province, capacityMul
   const capacity = getPopulationCapacity(province, capacityMultiplier);
   const freeCapacity = capacity ? clamp(1 - population.total / capacity, 0, 1) : 0;
   const food = province.market?.goods.food;
-  const shortage = getFoodShortageStatus(food, population.foodShortageDays).ratio;
-  return employmentRate * 35 + population.satisfaction * 0.35 + freeCapacity * 20 - shortage * 30 - (atWar ? 10 : 0);
+  const foodStatus = getFoodShortageStatus(food, population.foodShortageDays, population.severeFoodShortageDays);
+  const foodPenalty = foodStatus.ratio * POPULATION_BALANCE.MIGRATION_FOOD_SHORTAGE_WEIGHT
+    + (foodStatus.severity === 'severe' ? POPULATION_BALANCE.MIGRATION_SEVERE_FAMINE_PENALTY : 0);
+  return employmentRate * 35 + population.satisfaction * 0.35 + freeCapacity * 20 - foodPenalty - (atWar ? 10 : 0);
 }
 
 /** Deterministic, internal-only migration. Each country should call this with its own provinces. */

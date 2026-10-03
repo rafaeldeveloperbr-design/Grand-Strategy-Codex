@@ -111,7 +111,12 @@ export function processAIEconomicDecisions(
     const market = normalizeMarket(targetProvince.market);
     const populationTotal = typeof targetProvince.population === 'number' ? targetProvince.population : targetProvince.population.total;
     const priorities: BuildingType[] = [];
-    const foodStatus = getFoodShortageStatus(market.goods.food, normalizePopulation(targetProvince.population).foodShortageDays);
+    const populationState = normalizePopulation(targetProvince.population);
+    const foodStatus = getFoodShortageStatus(
+      market.goods.food,
+      populationState.foodShortageDays,
+      populationState.severeFoodShortageDays,
+    );
     // Severe hunger always outranks infrastructure and other productive projects.
     if (foodStatus.severity === 'severe') priorities.push('farm');
     if (market.goods.wood.stock < market.goods.wood.demand * 2) priorities.push('lumber_mill');

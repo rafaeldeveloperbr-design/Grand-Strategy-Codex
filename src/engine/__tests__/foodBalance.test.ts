@@ -82,7 +82,7 @@ describe('balanceamento estrutural de FOOD', () => {
 
   it('população grande sem Fazenda entra em shortage severo sem criar estoque', () => {
     const market = processProvinceMarket(makeProvince(100_000));
-    const status = getFoodShortageStatus(market.goods.food);
+    const status = getFoodShortageStatus(market.goods.food, 3, 3);
     expect(status.severity).toBe('severe');
     expect(market.goods.food.stock).toBe(0);
     expect(market.goods.food.consumption).toBeLessThanOrEqual(market.goods.food.production);
@@ -93,7 +93,8 @@ describe('balanceamento estrutural de FOOD', () => {
     const moderate = { ...createDefaultMarket().goods.food, demand: 100, shortage: 20 };
     const severe = { ...moderate, shortage: 50 };
     expect(getFoodShortageStatus(moderate).severity).toBe('moderate');
-    expect(getFoodShortageStatus(severe).severity).toBe('severe');
+    expect(getFoodShortageStatus(severe, 3, 2).severity).toBe('moderate');
+    expect(getFoodShortageStatus(severe, 3, 3).severity).toBe('severe');
   });
 
   it('persiste dias de shortage e zera a memória após recuperação', () => {
@@ -103,17 +104,20 @@ describe('balanceamento estrutural de FOOD', () => {
     province = processProvincePopulation(province, 1, 'taxation_normal');
     province = processProvincePopulation(province, 1, 'taxation_normal');
     expect(province.population.foodShortageDays).toBe(3);
+    expect(province.population.severeFoodShortageDays).toBe(3);
     province.market = createDefaultMarket();
     province.market.goods.food.demand = 100;
     province.market.goods.food.consumption = 100;
     province.market.goods.food.shortage = 0;
     province = processProvincePopulation(province, 1, 'taxation_normal');
     expect(province.population.foodShortageDays).toBe(0);
+    expect(province.population.severeFoodShortageDays).toBe(0);
   });
 
   it('IA prioriza Fazenda antes de infraestrutura durante fome severa', () => {
     const province = makeProvince(100_000);
     province.market = processProvinceMarket(province);
+    province.population.severeFoodShortageDays = 3;
     const result = processAIEconomicDecisions(country, [province], createInitialTechState('A'), [], [], '1/1/1', false);
     expect(result.buildingConstructions[0]?.buildingType).toBe('farm');
   });

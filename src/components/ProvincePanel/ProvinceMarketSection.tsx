@@ -16,12 +16,16 @@ export function ProvinceMarketSection({ province }: { province: Province }) {
         const state = market.goods[id];
         const sourceType = id === 'food' ? 'farm' : id === 'wood' ? 'lumber_mill' : id === 'iron' ? 'iron_mine' : 'workshop';
         const source = province.buildings.find(building => building.type === sourceType && building.daysRemaining <= 0);
-        const foodStatus = id === 'food' ? getFoodShortageStatus(state, population.foodShortageDays) : undefined;
+        const foodStatus = id === 'food'
+          ? getFoodShortageStatus(state, population.foodShortageDays, population.severeFoodShortageDays)
+          : undefined;
+        const displayedDays = foodStatus?.severity === 'severe'
+          ? foodStatus.severeConsecutiveDays : foodStatus?.consecutiveDays ?? 0;
         const shortageLabel = foodStatus?.severity === 'severe'
-          ? ` 🔴 Fome severa ${foodStatus.percent}%${foodStatus.consecutiveDays > 0 ? ` · ${foodStatus.consecutiveDays} dias` : ''}`
+          ? ` 🔴 Fome severa ${foodStatus.percent}%${displayedDays > 0 ? ` · ${displayedDays} dias` : ''}`
           : foodStatus?.severity === 'moderate'
             ? ` ⚠️ Escassez ${foodStatus.percent}%${foodStatus.consecutiveDays > 0 ? ` · ${foodStatus.consecutiveDays} dias` : ''}`
-            : foodStatus && foodStatus.ratio > 0 ? ` ⚠️ Déficit ${foodStatus.percent}%` : '';
+            : foodStatus && foodStatus.ratio > 0 ? ` ⚠️ Déficit ${foodStatus.percent}%` : ' · Normal';
         return (
           <div className="province-panel__info-row" key={id} style={{ fontSize: '11px' }}>
             <span className="province-panel__label">{good.name}</span>

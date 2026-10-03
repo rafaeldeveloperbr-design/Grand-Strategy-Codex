@@ -2,10 +2,9 @@
  * useEconomyActions.ts - 0 
  */
 import { useCallback } from 'react';
-import { queueBuilding, cancelBuilding } from '../../engine/buildings';
-import { generateRecruitmentId, cancelRecruitment } from '../../engine/military';
+import { startBuildingProject, cancelBuilding } from '../../engine/buildings';
+import { generateRecruitmentId, cancelRecruitment, payRecruitmentCost } from '../../engine/military';
 import { getRecruitmentCost } from '../../data/units';
-import { getBuildingCost, getBuildingTime } from '../../data/buildings';
 import { LAWS } from '../../constants/laws';
 import type { BuildingType, UnitType, Recruitment, Province, Country, BuildingConstruction, GameDate } from '../../types';
 
@@ -26,6 +25,7 @@ export function useEconomyActions(params: {
   setBuildingConstructions: React.Dispatch<
     React.SetStateAction<BuildingConstruction[]>
   >;
+  setProvinces: React.Dispatch<React.SetStateAction<Province[]>>;
   setAllCountries: React.Dispatch<React.SetStateAction<Country[]>>;
   setRecruitments: React.Dispatch<React.SetStateAction<Recruitment[]>>;
   addLog: (msg: string) => void;
@@ -33,23 +33,20 @@ export function useEconomyActions(params: {
   dateRef: React.MutableRefObject<GameDate>;
   recruitments: Recruitment[];
 }) {
-  const { provinces, playerCountry, playerCountryTag, buildingConstructions, setBuildingConstructions, setAllCountries, setRecruitments, addLog, addToast, formatGameDate, dateRef } = params;
+  const { provinces, playerCountry, playerCountryTag, buildingConstructions, setBuildingConstructions, setProvinces, setAllCountries, setRecruitments, addLog, addToast, formatGameDate, dateRef } = params;
 
   const handleBuild = useCallback((provinceId: string, buildingType: BuildingType) => {
     const province = provinces.find((p) => p.id === provinceId);
     if (!province || province.owner !== playerCountryTag) return;
-    const existingBuilding = province.buildings.find((b) => b.type === buildingType);
-    const currentLevel = existingBuilding?.level ?? 0;
-    const cost = getBuildingCost(buildingType, currentLevel);
-    const buildTime = getBuildingTime(buildingType, currentLevel);
-    const result = queueBuilding(provinceId, playerCountryTag, buildingType, buildTime, cost, buildingConstructions, playerCountry.resources.gold);
+    const result = startBuildingProject(province, playerCountry, buildingType, buildingConstructions);
     if (result.success) {
-      setBuildingConstructions(result.updatedConstructions);
-      setAllCountries((prev) => prev.map((c) => c.tag === playerCountryTag ? { ...c, resources: { ...c.resources, gold: result.newGold } } : c));
+      setBuildingConstructions(result.constructions);
+      setProvinces(prev => prev.map(item => item.id === province.id ? result.province : item));
+      setAllCountries((prev) => prev.map((c) => c.tag === playerCountryTag ? result.country : c));
     } else {
-      addToast(`Ouro insuficiente para construir ${buildingType}`, 'error', 'Erro');
+      addToast(result.reason ?? 'Não foi possível construir', 'error', 'Erro');
     }
-  }, [provinces, playerCountryTag, playerCountry.resources.gold, buildingConstructions, addToast, setAllCountries, setBuildingConstructions]);
+  }, [provinces, playerCountryTag, playerCountry, buildingConstructions, addToast, setAllCountries, setBuildingConstructions, setProvinces]);
 
   const handleCancelBuilding = useCallback((constructionId: string) => {
     const result = cancelBuilding(constructionId, buildingConstructions, playerCountry.resources.gold);
@@ -71,18 +68,20 @@ export function useEconomyActions(params: {
     const armyCostMultiplier = conscriptionLaw?.bonuses.armyCostMultiplier ?? 1.0;
     const adjustedGoldCost = Math.floor(costs.gold * armyCostMultiplier);
 
-    if (playerCountry.resources.gold < adjustedGoldCost || playerCountry.resources.manpower < costs.manpower) {
-      addLog(`❌ Recursos insuficientes para recrutar ${unitType}`);
+    const payment = payRecruitmentCost(playerCountry, province, unitType, adjustedGoldCost);
+    if (!payment.success) {
+      addLog(`❌ ${payment.reason} para recrutar ${unitType}`);
       return;
     }
-    setAllCountries((prev) => prev.map((c) => c.tag === playerCountryTag ? { ...c, resources: { ...c.resources, gold: c.resources.gold - adjustedGoldCost, manpower: c.resources.manpower - costs.manpower } } : c));
+    setAllCountries((prev) => prev.map((c) => c.tag === playerCountryTag ? payment.country : c));
+    setProvinces(prev => prev.map(item => item.id === province.id ? payment.province : item));
     setRecruitments((prev) => {
       const existing = prev.find((r) => r.owner === playerCountryTag && r.provinceId === provinceId && r.unitType === unitType && r.daysRemaining === costs.days);
       if (existing) return prev.map((r) => r.id === existing.id ? { ...r, count: r.count + 1 } : r);
       const newRecruitment: Recruitment = { id: generateRecruitmentId(), provinceId, owner: playerCountryTag, unitType, daysRemaining: costs.days, count: 1 };
       return [...prev, newRecruitment];
     });
-  }, [provinces, playerCountryTag, playerCountry, addLog, setAllCountries, setRecruitments]);
+  }, [provinces, playerCountryTag, playerCountry, addLog, setAllCountries, setRecruitments, setProvinces]);
 
   const handleCancelRecruitment = useCallback((recruitmentId: string) => {
     const rec = params.recruitments.find((r) => r.id === recruitmentId);

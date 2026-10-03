@@ -1,5 +1,6 @@
 import { Army } from '../../types/army';
 import { Province } from '../../types/province';
+import { getProvinceDefense } from '../../data/buildings';
 
 
 /**
@@ -108,8 +109,9 @@ export function calculateDefenderTotalPower(
   }
 
   // Bônus por fortificação
-  if (province.defense > 0) {
-    const fortificationBonus = 1 + (province.defense * COMBAT_BALANCE.FORTIFICATION_BONUS_PER_LEVEL);
+  const effectiveDefense = getProvinceDefense(province);
+  if (effectiveDefense > 0) {
+    const fortificationBonus = 1 + (effectiveDefense * COMBAT_BALANCE.FORTIFICATION_BONUS_PER_LEVEL);
     bonusMultiplier *= fortificationBonus;
     hasTerritorialBonus = true;
   }

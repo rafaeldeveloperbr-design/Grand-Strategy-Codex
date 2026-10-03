@@ -5,6 +5,7 @@
 import { processArmyMovement } from '../../engine/military';
 import type { Army, Province, Country } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
+import { transferProvince } from '../../engine/territoryTransfer';
 
 type Params = {
   armies: Army[];
@@ -28,21 +29,20 @@ export function processMovementTick(p: Params) {
   if (provinces.some(prov => prov.owner.startsWith('rebel_'))) {
     const changes: { id: string; name: string; newOwner: string }[] = [];
 
-    provinces = provinces.map(pr => {
-      if (!pr.owner.startsWith('rebel_')) return pr;
+    for (const pr of provinces.filter(item => item.owner.startsWith('rebel_'))) {
       const rebelArmy = armies.find(a => a.owner === pr.owner);
       const liberator = rebelArmy?.originalOwner || pr.originalOwner;
-      if (!liberator) return pr;
+      if (!liberator) continue;
       changes.push({ id: pr.id, name: pr.name, newOwner: liberator });
-      return { ...pr, owner: liberator, unrest: 0 };
-    });
+      const transferred = transferProvince(
+        { provinces, countries, recruitments: [], constructions: [] },
+        pr.id, liberator, { liberation: true }
+      );
+      provinces = transferred.provinces;
+      countries = transferred.countries;
+    }
 
     if (changes.length > 0) {
-      countries = countries.map(c => ({
-        ...c,
-        provinces: provinces.filter(pr => pr.owner === c.tag).map(pr => pr.id),
-      }));
-
       for (const ch of changes) {
         const countryName = countries.find(c => c.tag === ch.newOwner)?.name || ch.newOwner;
         console.log(`🏴 Libertação corrigida: ${ch.name} → ${countryName}`);

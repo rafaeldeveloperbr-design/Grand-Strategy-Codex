@@ -58,11 +58,15 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
             const def = UNIT_DEFINITIONS[type];
             const canAffordGold = playerCountry.resources.gold >= def.cost;
             const canAffordManpower = playerCountry.resources.manpower >= def.manpowerCost;
-            const canRecruit = canAffordGold && canAffordManpower;
+            const canAffordIron = (province.market?.goods.iron.stock ?? 0) >= def.ironCost;
+            const canAffordTools = (province.market?.goods.tools.stock ?? 0) >= def.toolsCost;
+            const canRecruit = canAffordGold && canAffordManpower && canAffordIron && canAffordTools;
             const cantRecruitReason = !canAffordGold
               ? 'Ouro insuficiente'
               : !canAffordManpower
               ? 'Manpower insuficiente'
+              : !canAffordIron ? 'IRON insuficiente'
+              : !canAffordTools ? 'TOOLS insuficiente'
               : null;
 
             return (
@@ -84,6 +88,8 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
                 <div className="province-panel__build-costs">
                   <span className="province-panel__build-cost">💰 {def.cost}</span>
                   <span className="province-panel__build-cost">👥 {def.manpowerCost}</span>
+                  <span className="province-panel__build-cost">⛏️ {def.ironCost}</span>
+                  <span className="province-panel__build-cost">🔧 {def.toolsCost}</span>
                   <span className="province-panel__build-cost">📅 {def.trainingTime}d</span>
                 </div>
                 <button

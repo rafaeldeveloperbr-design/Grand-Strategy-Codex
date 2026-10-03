@@ -1,7 +1,7 @@
 /**
  * Tipos de edifícios disponíveis para construção
  */
-export type BuildingType = 'farm' | 'market' | 'barracks' | 'fortification' | 'workshop' | 'temple' | 'port' | 'university';
+export type BuildingType = 'farm' | 'lumber_mill' | 'iron_mine' | 'workshop' | 'market' | 'warehouse' | 'housing' | 'barracks' | 'fortress' | 'infrastructure';
 
 /**
  * Representa um edifício em construção ou já construído
@@ -33,6 +33,8 @@ export interface BuildingConstruction {
   totalDays: number;
   /** Custo em ouro da construção */
   cost: number;
+  targetLevel?: number;
+  resourceCosts?: Partial<Record<GoodId, number>>;
 }
 
 /**
@@ -51,9 +53,13 @@ export interface Province {
   /** Lista de IDs de províncias vizinhas (conexões de fronteira) */
   neighbors: string[];
   /** População atual da província */
-  population: number;
+  population: ProvincePopulation;
+  /** Local market state. Optional only at the legacy-save boundary. */
+  market?: ProvinceMarket;
   /** População máxima suportada */
   maxPopulation: number;
+  /** Original map capacity before Housing bonuses; populated during migration. */
+  baseMaxPopulation?: number;
   /** Nível de desenvolvimento base (1-10) */
   development: number;
   /** Lista de edifícios na província */
@@ -85,34 +91,44 @@ export interface BuildingDefinition {
   icon: string;
   /** Custo base em ouro */
   baseCost: number;
-  /** Multiplicador de custo por nível */
-  costMultiplier: number;
+  /** Linear cost increase paid for each next level. */
+  costPerLevel: number;
   /** Dias de construção base */
   baseBuildTime: number;
   /** Nível máximo */
   maxLevel: number;
-  /** Bônus por nível */
-  bonusPerLevel: BuildingBonus;
+  resourceCost: Partial<Record<GoodId, number>>;
+  workersPerLevel: number;
+  effectPerLevel: string;
 }
 
-/**
- * Bônus concedidos por um edifício
- */
-export interface BuildingBonus {
-  /** Bônus de renda de ouro */
-  goldIncome?: number;
-  /** Bônus de manpower */
-  manpowerGain?: number;
-  /** Bônus de defesa */
-  defense?: number;
-  /** Bônus de crescimento populacional (%) */
-  growthBonus?: number;
-  /** Redução de tempo de recrutamento militar (%) */
-  recruitmentSpeedBonus?: number;
-  /** Bônus de velocidade de construção (%) */
-  buildSpeedBonus?: number;
-  /** Bônus de estabilidade por mês */
-  stabilityBonus?: number;
-  /** Bônus de velocidade de pesquisa (%) */
-  researchSpeedBonus?: number;
+/** Canonical demographic state for a province. */
+export interface ProvincePopulation {
+  total: number;
+  /** Daily fractional growth rate (0.002 = 0.2%). */
+  growthRate: number;
+  employed: number;
+  unemployed: number;
+  /** Population satisfaction, clamped to 0..100. */
+  satisfaction: number;
+}
+
+export type GoodId = 'food' | 'wood' | 'iron' | 'tools';
+
+export interface GoodMarketState {
+  stock: number;
+  production: number;
+  demand: number;
+  consumption: number;
+  price: number;
+  shortage: number;
+  /** Transient flow metrics for the latest economic tick. */
+  imported: number;
+  exported: number;
+}
+
+export interface ProvinceMarket {
+  goods: Record<GoodId, GoodMarketState>;
+  /** Aggregate index clamped to 0..100. */
+  purchasingPower: number;
 }

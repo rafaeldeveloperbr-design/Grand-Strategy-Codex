@@ -2,6 +2,9 @@
 import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../types';
 import type { CountryTechState } from '../types/technology';
 import type { DiplomaticRelation, War } from '../types/diplomacy';
+import { normalizePopulation } from './population';
+import { createStartingMarket, normalizeMarket } from './market';
+import type { BuildingType } from '../types';
 
 // ============ META ============
 export type SaveMeta = {
@@ -92,16 +95,39 @@ function serializeV2(save: SaveGameV2): SerializedSaveGameV2 {
   return { ...save, technology: { player: save.technology.player, bots: Array.from(save.technology.bots.entries()) } };
 }
 function deserializeV2(raw: SerializedSaveGameV2): SaveGameV2 {
-  return { ...raw, technology: { player: raw.technology.player, bots: new Map(raw.technology.bots) } };
+  return {
+    ...raw,
+    world: { ...raw.world, provinces: raw.world.provinces.map(normalizeSavedProvince) },
+    economy: { constructions: raw.economy.constructions.map(normalizeConstruction) },
+    technology: { player: raw.technology.player, bots: new Map(raw.technology.bots) },
+  };
+}
+function normalizeSavedProvince(province: Province): Province {
+  return {
+    ...province,
+    population: normalizePopulation(province.population as Province['population'] | number),
+    market: province.market ? normalizeMarket(province.market) : createStartingMarket(),
+    baseMaxPopulation: province.baseMaxPopulation ?? province.maxPopulation,
+    buildings: (province.buildings ?? []).map(building => ({ ...building, type: migrateBuildingType(building.type as string) })),
+  };
+}
+export function migrateBuildingType(type: string): BuildingType {
+  const legacy: Record<string, BuildingType> = {
+    fortification: 'fortress', temple: 'housing', port: 'market', university: 'infrastructure',
+  };
+  return legacy[type] ?? type as BuildingType;
+}
+function normalizeConstruction(item: BuildingConstruction): BuildingConstruction {
+  return { ...item, buildingType: migrateBuildingType(item.buildingType as string) };
 }
 function migrateV1ToV2(v1: SaveGameV1): SaveGameV2 {
   const botTechsMap = v1.botTechs instanceof Map ? v1.botTechs : new Map(Object.entries(v1.botTechs as Record<string, CountryTechState>));
   return {
     version: 2, id: v1.id, name: v1.name, timestamp: v1.timestamp, date: v1.date,
-    world: { provinces: v1.provinces, countries: v1.countries },
+    world: { provinces: v1.provinces.map(normalizeSavedProvince), countries: v1.countries },
     military: { armies: v1.armies, wars: v1.wars, activeBattles: v1.activeBattles, recruitments: v1.recruitments },
     diplomacy: { relations: v1.relations },
-    economy: { constructions: v1.constructions },
+    economy: { constructions: v1.constructions.map(normalizeConstruction) },
     technology: { player: v1.playerTech, bots: botTechsMap },
   };
 }

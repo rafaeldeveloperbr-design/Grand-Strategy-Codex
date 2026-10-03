@@ -1,7 +1,26 @@
 import { Army, Province, Country, Recruitment, Regiment } from '../../types';
 import { UNIT_DEFINITIONS } from '../../data/units';
-import { BUILDING_DEFINITIONS } from '../../data/buildings';
 import { createArmy, createRegiment } from './militaryUtils';
+import { getRecruitmentCost } from '../../data/units';
+import { normalizeMarket } from '../market';
+
+export function payRecruitmentCost(country: Country, province: Province, unitType: Regiment['type'], goldCost?: number):
+  { success: boolean; reason?: string; country: Country; province: Province } {
+  const cost = getRecruitmentCost(unitType);
+  const market = normalizeMarket(province.market);
+  const payableGold = goldCost ?? cost.gold;
+  if (country.resources.gold < payableGold) return { success: false, reason: 'Dinheiro insuficiente', country, province };
+  if (country.resources.manpower < cost.manpower) return { success: false, reason: 'Manpower insuficiente', country, province };
+  if (market.goods.iron.stock < cost.iron) return { success: false, reason: 'IRON insuficiente', country, province };
+  if (market.goods.tools.stock < cost.tools) return { success: false, reason: 'TOOLS insuficiente', country, province };
+  market.goods.iron.stock -= cost.iron;
+  market.goods.tools.stock -= cost.tools;
+  return {
+    success: true,
+    province: { ...province, market },
+    country: { ...country, resources: { ...country.resources, gold: country.resources.gold - payableGold, manpower: country.resources.manpower - cost.manpower } },
+  };
+}
 
 export function processRecruitments(
   recruitments: Recruitment[],
@@ -25,22 +44,17 @@ export function processRecruitments(
     let recruitmentSpeedBonus = 0;
     if (province) {
       for (const building of province.buildings) {
-        if (building.daysRemaining <= 0 && building.type === 'barracks') {
-          const def = BUILDING_DEFINITIONS[building.type];
-          if (def.bonusPerLevel.recruitmentSpeedBonus) {
-            recruitmentSpeedBonus += def.bonusPerLevel.recruitmentSpeedBonus * building.level;
-          }
-        }
+        if (building.daysRemaining <= 0 && building.type === 'barracks') recruitmentSpeedBonus += 10 * building.level;
       }
     }
 
-    const daysReduction = Math.floor(recruitmentSpeedBonus / 100);
+    const daysReduction = Math.floor(recruitmentSpeedBonus / 10);
     const newDays = rec.daysRemaining - 1 - daysReduction;
 
     if (newDays <= 0) {
       const regiments: Regiment[] = [];
       for (let i = 0; i < rec.count; i++) {
-        regiments.push(createRegiment(rec.unitType));
+        regiments.push(createRegiment(rec.unitType, rec.provinceId));
       }
 
       const existingArmy = updatedArmies.find(

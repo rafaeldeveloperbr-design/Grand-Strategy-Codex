@@ -12,10 +12,14 @@
  */
 
 import { Province, Country } from '../types';
-import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { LAWS } from '../constants/laws';
 import { getStabilityModifiers, processDailyStabilityRecovery } from './stability';
 import { calculateUnrestEconomicImpact } from './unrest';
+import { calculateSatisfaction, getWorkerAvailability, normalizePopulation, processProvincePopulation } from './population';
+import { calculateMarketSatisfactionAdjustment, processProvinceMarket } from './market';
+import { processInternalTrade } from './internalTrade';
+import type { Army } from '../types';
+import { getPopulationCapacity } from '../data/buildings';
 
 /**
  * Constantes de balanceamento do jogo
@@ -49,35 +53,30 @@ export function calculateProvinceGoldIncome(
   goldIncomeMultiplier: number = 1.0
 ): number {
   const devMultiplier = 1 + (province.development - 1) * BALANCE.DEV_TAX_MULTIPLIER;
-  let baseIncome = (province.population / 1000) * BALANCE.TAX_PER_POP * devMultiplier;
+  const population = normalizePopulation(province.population);
+  let baseIncome = (population.total / 1000) * BALANCE.TAX_PER_POP * devMultiplier;
 
   // Adiciona bônus de edifícios
   for (const building of province.buildings) {
     if (building.daysRemaining <= 0) {
-      const def = BUILDING_DEFINITIONS[building.type];
-      if (def.bonusPerLevel.goldIncome) {
-        baseIncome += def.bonusPerLevel.goldIncome * building.level;
-      }
+      if (building.type === 'market') baseIncome *= 1 + building.level * 0.03;
     }
   }
 
   // Aplica multiplicador de renda (tecnologias/focos)
-  return baseIncome * goldIncomeMultiplier;
+  return baseIncome * goldIncomeMultiplier * getWorkerAvailability(province);
 }
 
 /**
  * Calcula o ganho de manpower de uma província
  */
 export function calculateProvinceManpowerGain(province: Province): number {
-  let gain = (province.population / 1000) * BALANCE.MANPOWER_FRACTION;
+  let gain = (normalizePopulation(province.population).total / 1000) * BALANCE.MANPOWER_FRACTION;
 
   // Adiciona bônus de edifícios (acampamentos)
   for (const building of province.buildings) {
     if (building.daysRemaining <= 0) {
-      const def = BUILDING_DEFINITIONS[building.type];
-      if (def.bonusPerLevel.manpowerGain) {
-        gain += def.bonusPerLevel.manpowerGain * building.level;
-      }
+      if (building.type === 'barracks') gain += 25 * building.level;
     }
   }
 
@@ -96,7 +95,7 @@ export function calculatePopulationGrowth(
   countryStability: number
 ): number {
   // Taxa base
-  let growthRate = BALANCE.BASE_GROWTH_RATE;
+  let growthRate = normalizePopulation(province.population).growthRate;
 
   // Bônus por estabilidade alta
   if (countryStability > 50) {
@@ -106,32 +105,30 @@ export function calculatePopulationGrowth(
   // Bônus de edifícios (fazendas)
   for (const building of province.buildings) {
     if (building.daysRemaining <= 0) {
-      const def = BUILDING_DEFINITIONS[building.type];
-      if (def.bonusPerLevel.growthBonus) {
-        growthRate += (def.bonusPerLevel.growthBonus / 100) * building.level;
-      }
+      if (building.type === 'farm') growthRate += 0.0001 * building.level;
     }
   }
 
   // Penalidade por superpopulação
-  const popRatio = province.population / province.maxPopulation;
+  const totalPopulation = normalizePopulation(province.population).total;
+  const popRatio = totalPopulation / province.maxPopulation;
   if (popRatio > 0.8) {
     growthRate -= BALANCE.OVERPOPULATION_PENALTY * (popRatio - 0.8) * 5;
   }
 
   // Crescimento absoluto
-  const growth = province.population * growthRate;
+  const growth = totalPopulation * growthRate;
   
   // Limita pela capacidade máxima
-  const newPop = Math.min(province.population + growth, province.maxPopulation);
-  return newPop - province.population;
+  const newPop = Math.max(0, Math.min(totalPopulation + growth, province.maxPopulation));
+  return newPop - totalPopulation;
 }
 
 /**
  * Calcula o manpower máximo de um país baseado em suas províncias
  */
 export function calculateMaxManpower(provinces: Province[]): number {
-  const totalPop = provinces.reduce((sum, p) => sum + p.population, 0);
+  const totalPop = provinces.reduce((sum, p) => sum + normalizePopulation(p.population).total, 0);
   return Math.floor(totalPop * BALANCE.ELIGIBLE_POP_FRACTION);
 }
 
@@ -161,7 +158,9 @@ export function processDailyTick(
     manpowerMultiplier: number;
     buildCostMultiplier: number;
     buildTimeMultiplier: number;
-  }
+  },
+  atWar: boolean = false,
+  armies: Army[] = []
 ): { country: Country; provinces: Province[] } {
   // Calcula economia total do país
   let totalGoldIncome = 0;
@@ -186,7 +185,7 @@ export function processDailyTick(
   const buildTimeMultiplier = (techBonuses?.buildTimeMultiplier ?? 1.0) * lawBuildTimeMultiplier * stabilityModifiers.constructionSpeed;
   const recruitmentSpeedMultiplier = stabilityModifiers.recruitmentSpeed;
 
-  const updatedProvinces = provinces.map((province) => {
+  let updatedProvinces: Province[] = provinces.map((province) => {
     // Calcula impacto econômico do unrest local
     const unrest = province.unrest ?? 0;
     const unrestImpact = calculateUnrestEconomicImpact(unrest);
@@ -196,14 +195,6 @@ export function processDailyTick(
     const provinceManpowerMultiplier = manpowerMultiplier * unrestImpact.manpowerMultiplier;
     const provinceGrowthMultiplier = lawPopGrowthMultiplier * unrestImpact.growthMultiplier;
     
-    // Renda desta província (com multiplicadores de tecnologia, leis e unrest)
-    const goldIncome = calculateProvinceGoldIncome(province, provinceGoldMultiplier);
-    totalGoldIncome += goldIncome;
-
-    // Manpower desta província (com multiplicadores de tecnologia, leis e unrest)
-    const manpowerGain = calculateProvinceManpowerGain(province) * provinceManpowerMultiplier;
-    totalManpowerGain += manpowerGain;
-
     // Crescimento populacional (com multiplicador de leis e unrest)
     const basePopGrowth = calculatePopulationGrowth(province, country.resources.stability);
     const popGrowth = basePopGrowth * provinceGrowthMultiplier;
@@ -214,12 +205,48 @@ export function processDailyTick(
       daysRemaining: Math.max(0, b.daysRemaining - buildTimeMultiplier),
     }));
 
+    const populationProvince = processProvincePopulation(
+      province,
+      provinceGrowthMultiplier,
+      country.activeLaws?.taxation || 'taxation_normal',
+      { atWar, economicMultiplier: provinceGoldMultiplier, growthAmount: popGrowth }
+    );
+    populationProvince.maxPopulation = getPopulationCapacity(populationProvince);
+    const market = processProvinceMarket(populationProvince, armies);
+    const population = {
+      ...populationProvince.population,
+      satisfaction: calculateSatisfaction(
+        populationProvince,
+        country.activeLaws?.taxation || 'taxation_normal',
+        { atWar, economicMultiplier: provinceGoldMultiplier, marketAdjustment: calculateMarketSatisfactionAdjustment(market) }
+      ),
+    };
+    const economicallyUpdatedProvince = { ...populationProvince, population, market };
+
+    // Production and tax income use the newly recalculated workforce.
+    totalGoldIncome += calculateProvinceGoldIncome(economicallyUpdatedProvince, provinceGoldMultiplier);
+    totalManpowerGain += calculateProvinceManpowerGain(economicallyUpdatedProvince) * provinceManpowerMultiplier;
+
     return {
-      ...province,
-      population: Math.floor(province.population + popGrowth),
+      ...economicallyUpdatedProvince,
       buildings: updatedBuildings,
     };
   });
+
+  // Local production/consumption is followed by deterministic domestic
+  // redistribution, then market-sensitive satisfaction is finalized.
+  updatedProvinces = processInternalTrade(updatedProvinces).map(province => ({
+    ...province,
+    population: {
+      ...province.population,
+      satisfaction: calculateSatisfaction(
+        province,
+        country.activeLaws?.taxation || 'taxation_normal',
+        { atWar, economicMultiplier: goldIncomeMultiplier * calculateUnrestEconomicImpact(province.unrest ?? 0).goldMultiplier,
+          marketAdjustment: calculateMarketSatisfactionAdjustment(province.market!) }
+      ),
+    },
+  }));
 
   // Calcula despesas
   const expenses = calculateCountryExpenses(country, updatedProvinces);

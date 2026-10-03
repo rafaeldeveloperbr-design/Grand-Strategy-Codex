@@ -51,6 +51,7 @@ import { useCheats } from './hooks/app/useCheats';
 import { CheatPanel } from './components/CheatPanel';
 import { UNIT_DEFINITIONS } from './data/units';
 import { useSaveSystem } from './hooks/app/useSaveSystem';
+import { createStartingMarket } from './engine/market';
 
 
 const createInitialArmies = (): Army[] => {
@@ -149,7 +150,7 @@ const App: React.FC = () => {
   const [playerCountryTag] = useState('IMP');
   const [date, setDate] = useState<GameDate>({ year: 1444, month: 11, day: 11 });
   const [gameSpeed, setGameSpeed] = useState(0);
-  const [provinces, setProvinces] = useState<Province[]>(() => provincesData.map(p => ({ ...p, buildings: [...p.buildings], unrest: 0, originalOwner: p.owner } as Province)));
+  const [provinces, setProvinces] = useState<Province[]>(() => provincesData.map(p => ({ ...p, buildings: [...p.buildings], market: createStartingMarket(), baseMaxPopulation: p.maxPopulation, unrest: 0, originalOwner: p.owner } as Province)));
   const [allCountries, setAllCountries] = useState<Country[]>(() =>
     initialCountries.map((c): Country => ({
       ...c,
@@ -200,7 +201,7 @@ const App: React.FC = () => {
 
   useGameLoop({ provincesRef, countriesRef, armiesRef, recruitmentsRef, warsRef, diplomaticRelationsRef, dateRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, aiDifficultyRef, activeBattlesRef, ceilingLogRef, gameLoopRef, playerCountryTag, battleHistory, hasTriggeredEndGame, gameSpeed, isPaused: modals.isPaused, allCountries, setProvinces, setAllCountries, setArmies, setWars, setDiplomaticRelations, setRecruitments, setBuildingConstructions, setPlayerTechState, setBotTechStates, setDate, setActiveBattles, setEndGameType, setGameStats, setHasTriggeredEndGame, setIsPaused: modals.setIsPaused, setBattleHistory, setBattleReport: modals.setBattleReport, addLog, addToast, addAILog, formatGameDate });
 
-  const economy = useEconomyActions({ provinces, playerCountry, playerCountryTag, buildingConstructions, setBuildingConstructions, setAllCountries, recruitments, setRecruitments, addLog, addToast, formatGameDate, dateRef });
+  const economy = useEconomyActions({ provinces, playerCountry, playerCountryTag, buildingConstructions, setBuildingConstructions, setProvinces, setAllCountries, recruitments, setRecruitments, addLog, addToast, formatGameDate, dateRef });
   const armyActions = useArmyActions({ selectedArmy: selection.selectedArmy, setSelectedArmy: selection.setSelectedArmy, setSelectedProvince: selection.setSelectedProvince, setIsPanelOpen: selection.setIsPanelOpen, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection: selection.splitSelection, setSplitSelection: selection.setSplitSelection, setShowSplitModal: selection.setShowSplitModal });
   const diplomacy = useDiplomacyActions({ diplomacyTarget: modals.diplomacyTarget, setDiplomacyTarget: modals.setDiplomacyTarget, playerCountry, playerCountryTag, allCountries, setAllCountries, diplomaticRelations, setDiplomaticRelations, wars, setWars, date, addLog });
   const tech = useTechActions({ playerCountry, playerCountryTag, playerTechState, setPlayerTechState, allCountries, setAllCountries, addLog, addToast, playerTechStateRef, setAiDifficulty, setEndGameType, setGameStats, setGameSpeed, setIsPaused: modals.setIsPaused });

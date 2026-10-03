@@ -17,6 +17,8 @@ export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
     icon: '🗡️',
     cost: 50,
     manpowerCost: 1000,
+    ironCost: 5,
+    toolsCost: 3,
     trainingTime: 30,
     attack: 10,
     defense: 12,
@@ -28,6 +30,8 @@ export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
     icon: '🐎',
     cost: 80,
     manpowerCost: 1000,
+    ironCost: 7,
+    toolsCost: 4,
     trainingTime: 45,
     attack: 15,
     defense: 8,
@@ -39,6 +43,8 @@ export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
     icon: '💣',
     cost: 120,
     manpowerCost: 1000,
+    ironCost: 14,
+    toolsCost: 8,
     trainingTime: 60,
     attack: 20,
     defense: 5,
@@ -50,6 +56,8 @@ export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
     icon: '🏹',
     cost: 40,
     manpowerCost: 800,
+    ironCost: 3,
+    toolsCost: 4,
     trainingTime: 20,
     attack: 8,
     defense: 14,
@@ -61,6 +69,8 @@ export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
     icon: '🐴',
     cost: 140,
     manpowerCost: 1000,
+    ironCost: 12,
+    toolsCost: 7,
     trainingTime: 45,
     attack: 22,
     defense: 12,
@@ -72,6 +82,8 @@ export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
     icon: '👑',
     cost: 200,
     manpowerCost: 1000,
+    ironCost: 16,
+    toolsCost: 10,
     trainingTime: 60,
     attack: 25,
     defense: 25,
@@ -83,6 +95,8 @@ export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
     icon: '🏗️',
     cost: 180,
     manpowerCost: 500,
+    ironCost: 20,
+    toolsCost: 8,
     trainingTime: 50,
     attack: 30,
     defense: 3,
@@ -93,11 +107,13 @@ export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
 /**
  * Calcula o custo total para recrutar uma unidade
  */
-export function getRecruitmentCost(unitType: UnitType): { gold: number; manpower: number; days: number } {
+export function getRecruitmentCost(unitType: UnitType): { gold: number; manpower: number; iron: number; tools: number; days: number } {
   const def = UNIT_DEFINITIONS[unitType];
   return {
     gold: def.cost,
     manpower: def.manpowerCost,
+    iron: def.ironCost,
+    tools: def.toolsCost,
     days: def.trainingTime,
   };
 }

@@ -1,9 +1,12 @@
 import { Country, Province, BuildingType, UnitType, Recruitment, BuildingConstruction } from '../../types';
 import { CountryTechState } from '../../types/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
-import { BUILDING_DEFINITIONS, getBuildingCost, getBuildingTime } from '../../data/buildings';
+import { BUILDING_DEFINITIONS } from '../../data/buildings';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
+import { startBuildingProject } from '../buildings';
+import { payRecruitmentCost } from '../military';
+import { GOOD_IDS, normalizeMarket } from '../market';
 
 export function processAIEconomicDecisions(
   country: Country,
@@ -18,6 +21,7 @@ export function processAIEconomicDecisions(
   buildingConstructions: BuildingConstruction[];
   recruitments: Recruitment[];
   country: Country;
+  provinces: Province[];
   logs: Array<{ actionType: 'building' | 'military' | 'tech' | 'focus'; message: string }>;
 } {
   const logs: Array<{ actionType: 'building' | 'military' | 'tech' | 'focus'; message: string }> = [];
@@ -25,6 +29,7 @@ export function processAIEconomicDecisions(
   let updatedConstructions = [...buildingConstructions];
   let updatedRecruitments = [...recruitments];
   let updatedCountry = { ...country };
+  let updatedProvinces = [...provinces];
 
   // 1. SELEÇÃO DE FOCO NACIONAL
   if (!updatedTechState.activeFocusId) {
@@ -98,46 +103,32 @@ export function processAIEconomicDecisions(
     const aiProvinces = provinces.filter(p => p.owner === country.tag);
     
     if (aiProvinces.length > 0) {
-      const targetProvince = aiProvinces[Math.floor(Math.random() * aiProvinces.length)];
+      const targetProvince = [...aiProvinces].sort((a, b) => a.id.localeCompare(b.id))[0];
       const hasConstruction = updatedConstructions.some(c => c.provinceId === targetProvince.id);
       
       if (!hasConstruction) {
-        const buildingTypes = Object.keys(BUILDING_DEFINITIONS) as BuildingType[];
-        const chosenBuilding = buildingTypes[Math.floor(Math.random() * buildingTypes.length)];
+        const market = normalizeMarket(targetProvince.market);
+        const chosenBuilding: BuildingType = market.goods[GOOD_IDS.FOOD].shortage > 0 ? 'farm'
+          : market.goods[GOOD_IDS.WOOD].stock < 8 ? 'lumber_mill'
+          : market.goods[GOOD_IDS.IRON].stock < 6 ? 'iron_mine'
+          : market.goods[GOOD_IDS.TOOLS].stock < 4 ? 'workshop'
+          : targetProvince.population.total > targetProvince.maxPopulation * 0.9 ? 'housing' : 'warehouse';
         const def = BUILDING_DEFINITIONS[chosenBuilding];
         
         const existingBuilding = targetProvince.buildings.find(b => b.type === chosenBuilding);
         const currentLevel = existingBuilding?.level ?? 0;
         
         if (currentLevel < def.maxLevel) {
-          const buildingCost = getBuildingCost(chosenBuilding, currentLevel);
-          const buildTime = getBuildingTime(chosenBuilding, currentLevel);
-          
-          if (updatedCountry.resources.gold >= buildingCost) {
-            updatedCountry = {
-              ...updatedCountry,
-              resources: {
-                ...updatedCountry.resources,
-                gold: updatedCountry.resources.gold - buildingCost,
-              },
-            };
-
-            const newConstruction: BuildingConstruction = {
-              id: `const_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-              provinceId: targetProvince.id,
-              owner: country.tag,
-              buildingType: chosenBuilding,
-              daysRemaining: buildTime,
-              totalDays: buildTime,
-              cost: buildingCost,
-            };
-
-            updatedConstructions = [...updatedConstructions, newConstruction];
+          const started = startBuildingProject(targetProvince, updatedCountry, chosenBuilding, updatedConstructions);
+          if (started.success) {
+            updatedCountry = started.country;
+            updatedConstructions = started.constructions;
+            updatedProvinces = updatedProvinces.map(p => p.id === targetProvince.id ? started.province : p);
 
             const translatedName = getBuildingName(chosenBuilding);
             logs.push({
               actionType: 'building',
-              message: `Iniciou obra de ${translatedName} em ${targetProvince.name} (💰 ${buildingCost})`,
+              message: `Iniciou obra de ${translatedName} em ${targetProvince.name}`,
             });
           }
         }
@@ -156,15 +147,10 @@ export function processAIEconomicDecisions(
         const chosenUnit = unitTypes[Math.floor(Math.random() * unitTypes.length)];
         const def = UNIT_DEFINITIONS[chosenUnit];
         
-        if (updatedCountry.resources.gold >= def.cost && updatedCountry.resources.manpower >= def.manpowerCost) {
-          updatedCountry = {
-            ...updatedCountry,
-            resources: {
-              ...updatedCountry.resources,
-              gold: updatedCountry.resources.gold - def.cost,
-              manpower: updatedCountry.resources.manpower - def.manpowerCost,
-            },
-          };
+        const payment = payRecruitmentCost(updatedCountry, targetProvince, chosenUnit);
+        if (payment.success) {
+          updatedCountry = payment.country;
+          updatedProvinces = updatedProvinces.map(p => p.id === targetProvince.id ? payment.province : p);
 
           const existingRecruitment = updatedRecruitments.find(
             r => r.owner === country.tag &&
@@ -204,6 +190,7 @@ export function processAIEconomicDecisions(
     buildingConstructions: updatedConstructions,
     recruitments: updatedRecruitments,
     country: updatedCountry,
+    provinces: updatedProvinces,
     logs,
   };
 }

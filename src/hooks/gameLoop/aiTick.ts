@@ -61,6 +61,7 @@ export function processAiTick(p: Params) {
 
       const economicResult = processAIEconomicDecisions(country, provinces, botTechState, buildingConstructions, recruitments, dateString, canRecruitMilitary);
       countries = countries.map(c => c.tag === country.tag ? economicResult.country : c);
+      provinces = economicResult.provinces;
       currentBotTechStates.set(country.tag, economicResult.techState);
       buildingConstructions = economicResult.buildingConstructions;
       recruitments = economicResult.recruitments;

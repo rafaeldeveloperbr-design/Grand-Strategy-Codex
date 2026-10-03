@@ -23,6 +23,8 @@ export interface UnitDefinition {
   cost: number;
   /** Custo em manpower por regimento */
   manpowerCost: number;
+  ironCost: number;
+  toolsCost: number;
   /** Dias de treinamento */
   trainingTime: number;
   /** Poder de ataque base */
@@ -42,6 +44,8 @@ export interface Regiment {
   strength: number;
   /** Moral (0-100) */
   morale: number;
+  /** Province where this regiment was raised; used to attribute fatal losses. */
+  originProvinceId?: string;
 }
 
 /**

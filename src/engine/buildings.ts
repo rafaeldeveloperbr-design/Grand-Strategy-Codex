@@ -5,39 +5,47 @@
  * Gerencia a fila de construções, processamento diário e cancelamento
  */
 
-import { BuildingConstruction, BuildingType, Province } from '../types';
+import { BuildingConstruction, BuildingType, Country, GoodId, Province } from '../types';
+import { canBuildBuilding, getBuildingCost, getBuildingResourceCost, getBuildingTime } from '../data/buildings';
+import { normalizeMarket } from './market';
 
-/**
- * Adiciona uma construção à fila se o jogador tiver ouro suficiente
- */
-export function queueBuilding(
-  provinceId: string,
-  owner: string,
-  buildingType: BuildingType,
-  totalDays: number,
-  cost: number,
-  constructions: BuildingConstruction[],
-  currentGold: number
-): { updatedConstructions: BuildingConstruction[]; newGold: number; success: boolean } {
-  // Verifica se o jogador tem ouro suficiente
-  if (currentGold < cost) {
-    return { updatedConstructions: constructions, newGold: currentGold, success: false };
+export type ProjectStartResult = {
+  success: boolean;
+  reason?: string;
+  province: Province;
+  country: Country;
+  constructions: BuildingConstruction[];
+};
+
+/** Validates and pays a construction exactly once when it enters the queue. */
+export function startBuildingProject(
+  province: Province, country: Country, type: BuildingType, constructions: BuildingConstruction[]
+): ProjectStartResult {
+  const currentLevel = province.buildings.find(building => building.type === type)?.level ?? 0;
+  if (!canBuildBuilding(type, currentLevel)) return { success: false, reason: 'Nível máximo', province, country, constructions };
+  if (constructions.some(item => item.provinceId === province.id && item.buildingType === type))
+    return { success: false, reason: 'Construção já em andamento', province, country, constructions };
+  const gold = getBuildingCost(type, currentLevel);
+  if (country.resources.gold < gold) return { success: false, reason: 'Dinheiro insuficiente', province, country, constructions };
+  const resourceCosts = getBuildingResourceCost(type, currentLevel);
+  const market = normalizeMarket(province.market);
+  for (const id of ['wood', 'iron', 'tools'] as GoodId[]) {
+    if (market.goods[id].stock < (resourceCosts[id] ?? 0))
+      return { success: false, reason: `${id.toUpperCase()} insuficiente`, province, country, constructions };
   }
-
-  const newConstruction: BuildingConstruction = {
-    id: `const_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-    provinceId,
-    owner,
-    buildingType,
-    daysRemaining: totalDays,
-    totalDays,
-    cost,
+  for (const [id, amount] of Object.entries(resourceCosts) as [GoodId, number][]) {
+    market.goods[id].stock -= amount;
+  }
+  const totalDays = getBuildingTime(type, currentLevel);
+  const construction: BuildingConstruction = {
+    id: `const_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, provinceId: province.id,
+    owner: country.tag, buildingType: type, daysRemaining: totalDays, totalDays, cost: gold,
+    targetLevel: currentLevel + 1, resourceCosts,
   };
-
   return {
-    updatedConstructions: [...constructions, newConstruction],
-    newGold: currentGold - cost,
-    success: true,
+    success: true, province: { ...province, market },
+    country: { ...country, resources: { ...country.resources, gold: country.resources.gold - gold } },
+    constructions: [...constructions, construction],
   };
 }
 

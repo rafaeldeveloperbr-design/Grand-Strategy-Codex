@@ -7,7 +7,7 @@ import { processRecruitments } from '../../engine/military';
 import { processConstructions } from '../../engine/buildings';
 import { processDailyTick } from '../../engine/economy';
 import { getBuildingName, getUnitName } from '../../utils/translations';
-import type { Province, Country, Army, Recruitment, BuildingConstruction } from '../../types';
+import type { Province, Country, Army, Recruitment, BuildingConstruction, War } from '../../types';
 import type { GameDate } from '../../types/date';
 import type { ToastType } from '../../types/toast';
 import type { AIActionType } from '../../types/aiLog';
@@ -18,6 +18,7 @@ type Params = {
   countries: Country[];
   provinces: Province[];
   buildingConstructions: BuildingConstruction[];
+  wars: War[];
   playerCountryTag: string;
   date: GameDate;
   allCountries: Country[];
@@ -114,7 +115,8 @@ export function processEconomyTick(p: Params) {
   // PASSO D: ECONOMIA/POPULAÇÃO
   countries = countries.map(country => {
     const countryProvinces = provinces.filter(pr => pr.owner === country.tag);
-    const { country: updatedCountry, provinces: updatedProvs } = processDailyTick(country, countryProvinces);
+    const atWar = p.wars.some(war => war.attacker === country.tag || war.defender === country.tag);
+    const { country: updatedCountry, provinces: updatedProvs } = processDailyTick(country, countryProvinces, undefined, atWar, armies);
 
     for (const updatedProv of updatedProvs) {
       const idx = provinces.findIndex(pr => pr.id === updatedProv.id);

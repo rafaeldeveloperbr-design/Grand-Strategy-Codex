@@ -187,7 +187,7 @@ export function useGameLoop(props: Props) {
     let currentBotTechStates = new Map<string, CountryTechState>(botTechStatesRef.current);
 
     // 2. ECONOMY - primeiro, gera recursos e recrutamentos
-    const eco = processEconomyTick({ recruitments, armies, countries, provinces, buildingConstructions, playerCountryTag, date: snapshot.date, allCountries, addToast, addAILog, addLog, formatGameDate });
+    const eco = processEconomyTick({ recruitments, armies, countries, provinces, buildingConstructions, wars, playerCountryTag, date: snapshot.date, allCountries, addToast, addAILog, addLog, formatGameDate });
     recruitments = eco.recruitments; armies = eco.armies; provinces = eco.provinces; buildingConstructions = eco.buildingConstructions; countries = eco.countries;
 
     // 4. STABILITY - depende de economy

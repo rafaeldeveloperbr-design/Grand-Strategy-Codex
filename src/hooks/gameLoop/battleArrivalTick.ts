@@ -7,6 +7,8 @@ import type { Army, Province, Country, War, ActiveBattle } from '../../types';
 import type { GameDate } from '../../types/date';
 import type { Recruitment, BuildingConstruction } from '../../types';
 import type { ToastType } from '../../types/toast';
+import { transferProvince } from '../../engine/territoryTransfer';
+import { checkRebelTerritoryReturn } from '../../engine/rebellions';
 
 type Params = {
   arrivedArmies: Army[];
@@ -47,7 +49,7 @@ type Params = {
 
 export function processBattleArrival(p: Params) {
   let { arrivedArmies, armies, provinces, countries, wars, recruitments, buildingConstructions, currentActiveBattles } = p;
-  const { snapshot, playerCountryTag, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities } = p;
+  const { snapshot, playerCountryTag, activeBattlesRef, addLog, addToast, setActiveBattles } = p;
 
   // 1. Primeiro move todo mundo que chegou pra lista principal
   for (const arrived of arrivedArmies) {
@@ -74,34 +76,31 @@ export function processBattleArrival(p: Params) {
       );
     };
 
-    // Se não tem inimigo e não é guerra, só ocupa
+    // Only hostile armies fight. Empty territory can be transferred only by a
+    // valid war occupation or by the established rebel liberation rule.
     const enemies = armies.filter(a =>
       a.location === province.id &&
       a.id !== arrived.id &&
       isHostile(arrived.owner, a.owner, arrived.originalOwner, a.originalOwner)
     );
 
-    const shouldBattle = enemies.length > 0 || isInWar;
-
-    if (!shouldBattle && province.owner !== arrived.owner) {
-      // Ocupação pacífica
+    if (enemies.length === 0 && province.owner !== arrived.owner) {
       const oldOwner = province.owner;
-      const newOwner = arrived.owner;
-
-      provinces = provinces.map(pr => pr.id === province.id ? { ...pr, owner: newOwner, originalOwner: pr.originalOwner || oldOwner } : pr);
-      countries = countries.map(c => {
-        if (c.tag === newOwner) return { ...c, provinces: [...c.provinces, province.id] };
-        if (c.tag === oldOwner) return { ...c, provinces: c.provinces.filter(pid => pid !== province.id) };
-        return c;
-      });
-
-      const cancelResult = cancelProvinceActivities(province.id, oldOwner, newOwner, recruitments, buildingConstructions, provinces);
-      recruitments = cancelResult.recruitments;
-      buildingConstructions = cancelResult.constructions;
-      provinces = cancelResult.provinces;
-
+      const rebelReturnOwner = checkRebelTerritoryReturn(arrived);
+      const canLiberate = !!rebelReturnOwner && province.owner.startsWith('rebel_');
+      if (isInWar || canLiberate) {
+        const newOwner = rebelReturnOwner || arrived.owner;
+        const transferred = transferProvince(
+          { provinces, countries, recruitments, constructions: buildingConstructions },
+          province.id, newOwner, { date: snapshot.date, liberation: canLiberate }
+        );
+        provinces = transferred.provinces;
+        countries = transferred.countries;
+        recruitments = transferred.recruitments;
+        buildingConstructions = transferred.constructions;
+        addLog(`🏳️ ${newOwner} ocupou ${province.name} de ${oldOwner}`);
+      }
       armies = [...armies, { ...arrived, inCombat: false, destination: null, targetDestination: null, path: [] }];
-      addLog(`🏳️ ${arrived.owner} ocupou ${province.name}`);
       continue;
     }
 

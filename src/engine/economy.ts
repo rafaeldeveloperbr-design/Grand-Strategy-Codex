@@ -16,7 +16,7 @@ import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { LAWS } from '../constants/laws';
 import { getStabilityModifiers, processDailyStabilityRecovery } from './stability';
 import { calculateUnrestEconomicImpact } from './unrest';
-import { calculateSatisfaction, getWorkerAvailability, normalizePopulation, processProvincePopulation } from './population';
+import { calculateSatisfaction, getPopulationCapacity, getWorkerAvailability, normalizePopulation, processProvincePopulation } from './population';
 import { calculateMarketSatisfactionAdjustment, processProvinceMarket } from './market';
 import { processInternalTrade } from './internalTrade';
 
@@ -88,6 +88,11 @@ export function calculateProvinceManpowerGain(province: Province): number {
   return gain;
 }
 
+export function calculateProvinceDefense(province: Province): number {
+  const fortressLevel = province.buildings.find(building => building.type === 'fortress' && building.daysRemaining <= 0)?.level ?? 0;
+  return province.defense + fortressLevel * 2;
+}
+
 /**
  * Calcula a defesa total de uma província
  */
@@ -119,7 +124,7 @@ export function calculatePopulationGrowth(
 
   // Penalidade por superpopulação
   const totalPopulation = normalizePopulation(province.population).total;
-  const popRatio = totalPopulation / province.maxPopulation;
+  const popRatio = totalPopulation / getPopulationCapacity(province);
   if (popRatio > 0.8) {
     growthRate -= BALANCE.OVERPOPULATION_PENALTY * (popRatio - 0.8) * 5;
   }
@@ -128,7 +133,7 @@ export function calculatePopulationGrowth(
   const growth = totalPopulation * growthRate;
   
   // Limita pela capacidade máxima
-  const newPop = Math.max(0, Math.min(totalPopulation + growth, province.maxPopulation));
+  const newPop = Math.max(0, Math.min(totalPopulation + growth, getPopulationCapacity(province)));
   return newPop - totalPopulation;
 }
 

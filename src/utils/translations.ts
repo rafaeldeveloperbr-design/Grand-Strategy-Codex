@@ -8,12 +8,14 @@
 export const BUILDING_NAMES: Record<string, string> = {
   farm: 'Fazenda',
   market: 'Mercado',
-  barracks: 'Acampamento',
-  fortification: 'Fortificação',
+  lumber_mill: 'Serraria',
+  iron_mine: 'Mina de Ferro',
+  warehouse: 'Armazém',
+  housing: 'Habitação',
+  barracks: 'Quartel',
+  fortress: 'Fortaleza',
   workshop: 'Oficina',
-  temple: 'Templo',
-  port: 'Porto',
-  university: 'Universidade',
+  infrastructure: 'Infraestrutura',
 };
 
 export const UNIT_NAMES: Record<string, string> = {

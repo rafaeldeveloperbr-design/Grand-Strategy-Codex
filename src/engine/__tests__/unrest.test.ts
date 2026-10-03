@@ -107,7 +107,7 @@ describe('UNREST', () => {
           unrest: 20,
           buildings: [
             {
-              type: 'temple',
+              type: 'housing',
               level: 1,
               daysRemaining: 0,
             },

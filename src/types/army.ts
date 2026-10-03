@@ -23,6 +23,8 @@ export interface UnitDefinition {
   cost: number;
   /** Custo em manpower por regimento */
   manpowerCost: number;
+  ironCost: number;
+  toolsCost: number;
   /** Dias de treinamento */
   trainingTime: number;
   /** Poder de ataque base */

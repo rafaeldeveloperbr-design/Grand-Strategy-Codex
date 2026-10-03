@@ -100,9 +100,22 @@ function deserializeV2(raw: SerializedSaveGameV2): SaveGameV2 {
     technology: { player: raw.technology.player, bots: new Map(raw.technology.bots) },
   };
 }
+export function migrateLegacyBuildings(buildings: Province['buildings']): Province['buildings'] {
+  const aliases: Record<string, Province['buildings'][number]['type']> = {
+    fortification: 'fortress', temple: 'housing', port: 'market', university: 'infrastructure',
+  };
+  const merged = new Map<Province['buildings'][number]['type'], Province['buildings'][number]>();
+  for (const raw of buildings ?? []) {
+    const type = aliases[raw.type as string] ?? raw.type;
+    const prior = merged.get(type);
+    merged.set(type, { ...raw, type, level: Math.min(5, Math.max(prior?.level ?? 0, raw.level)) });
+  }
+  return [...merged.values()];
+}
 function normalizeSavedProvince(province: Province): Province {
   return {
     ...province,
+    buildings: migrateLegacyBuildings(province.buildings),
     population: normalizePopulation(province.population as Province['population'] | number),
     market: normalizeMarket(province.market),
   };

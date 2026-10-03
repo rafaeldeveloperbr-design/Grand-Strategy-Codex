@@ -2,6 +2,18 @@ import { Army, Province, Country, Recruitment, Regiment } from '../../types';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { BUILDING_DEFINITIONS } from '../../data/buildings';
 import { createArmy, createRegiment } from './militaryUtils';
+import { normalizeMarket } from '../market';
+import type { UnitType } from '../../types';
+
+export function payRecruitmentCost(province: Province, country: Country, unitType: UnitType, goldCost = UNIT_DEFINITIONS[unitType].cost) {
+  const def = UNIT_DEFINITIONS[unitType]; const market = normalizeMarket(province.market);
+  if (country.resources.gold < goldCost) return { success: false as const, reason: 'Dinheiro insuficiente', province, country };
+  if (country.resources.manpower < def.manpowerCost) return { success: false as const, reason: 'Manpower insuficiente', province, country };
+  if (market.goods.iron.stock < def.ironCost) return { success: false as const, reason: 'IRON insuficiente', province, country };
+  if (market.goods.tools.stock < def.toolsCost) return { success: false as const, reason: 'TOOLS insuficiente', province, country };
+  market.goods.iron.stock -= def.ironCost; market.goods.tools.stock -= def.toolsCost;
+  return { success: true as const, reason: null, province: { ...province, market }, country: { ...country, resources: { ...country.resources, gold: country.resources.gold - goldCost, manpower: country.resources.manpower - def.manpowerCost } } };
+}
 
 export function processRecruitments(
   recruitments: Recruitment[],
@@ -34,8 +46,7 @@ export function processRecruitments(
       }
     }
 
-    const daysReduction = Math.floor(recruitmentSpeedBonus / 100);
-    const newDays = rec.daysRemaining - 1 - daysReduction;
+    const newDays = rec.daysRemaining - (1 + recruitmentSpeedBonus / 100);
 
     if (newDays <= 0) {
       const regiments: Regiment[] = [];

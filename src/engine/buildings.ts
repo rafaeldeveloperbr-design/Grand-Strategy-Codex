@@ -6,6 +6,34 @@
  */
 
 import { BuildingConstruction, BuildingType, Province } from '../types';
+import { getBuildingCosts, getBuildingTime, BUILDING_DEFINITIONS } from '../data/buildings';
+import { normalizeMarket } from './market';
+
+export type BuildingBlockReason = 'Nível máximo' | 'Construção em andamento' | 'Dinheiro insuficiente' | 'WOOD insuficiente' | 'IRON insuficiente' | 'TOOLS insuficiente';
+
+export function getBuildingBlockReason(province: Province, type: BuildingType, gold: number, constructions: BuildingConstruction[]): BuildingBlockReason | null {
+  const level = province.buildings.find(building => building.type === type)?.level ?? 0;
+  const costs = getBuildingCosts(type, level); const market = normalizeMarket(province.market);
+  if (level >= BUILDING_DEFINITIONS[type].maxLevel) return 'Nível máximo';
+  if (constructions.some(item => item.provinceId === province.id)) return 'Construção em andamento';
+  if (gold < costs.gold) return 'Dinheiro insuficiente';
+  if (market.goods.wood.stock < costs.wood) return 'WOOD insuficiente';
+  if (market.goods.iron.stock < costs.iron) return 'IRON insuficiente';
+  if (market.goods.tools.stock < costs.tools) return 'TOOLS insuficiente';
+  return null;
+}
+
+/** Atomically validates and pays a construction order exactly once. */
+export function startBuilding(province: Province, owner: string, type: BuildingType, gold: number, constructions: BuildingConstruction[]) {
+  const reason = getBuildingBlockReason(province, type, gold, constructions);
+  if (reason) return { success: false as const, reason, province, gold, constructions };
+  const level = province.buildings.find(building => building.type === type)?.level ?? 0;
+  const costs = getBuildingCosts(type, level); const totalDays = getBuildingTime(type, level);
+  const market = normalizeMarket(province.market);
+  market.goods.wood.stock -= costs.wood; market.goods.iron.stock -= costs.iron; market.goods.tools.stock -= costs.tools;
+  const construction: BuildingConstruction = { id: `const_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, provinceId: province.id, owner, buildingType: type, daysRemaining: totalDays, totalDays, cost: costs.gold, resourceCost: { wood: costs.wood, iron: costs.iron, tools: costs.tools } };
+  return { success: true as const, reason: null, province: { ...province, market }, gold: gold - costs.gold, constructions: [...constructions, construction] };
+}
 
 /**
  * Adiciona uma construção à fila se o jogador tiver ouro suficiente

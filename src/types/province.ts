@@ -1,7 +1,7 @@
 /**
  * Tipos de edifícios disponíveis para construção
  */
-export type BuildingType = 'farm' | 'market' | 'barracks' | 'fortification' | 'workshop' | 'temple' | 'port' | 'university';
+export type BuildingType = 'farm' | 'lumber_mill' | 'iron_mine' | 'workshop' | 'market' | 'warehouse' | 'housing' | 'barracks' | 'fortress' | 'infrastructure';
 
 /**
  * Representa um edifício em construção ou já construído
@@ -33,6 +33,8 @@ export interface BuildingConstruction {
   totalDays: number;
   /** Custo em ouro da construção */
   cost: number;
+  /** Provincial goods paid once when the order is placed. */
+  resourceCost?: Partial<Record<GoodId, number>>;
 }
 
 /**
@@ -71,6 +73,8 @@ export interface Province {
   /** Data da última conquista (para calcular decaimento de unrest) */
   lastConquestDate?: number;
   originalOwner?: string; // Rastreia o país que perdeu a província originalmente
+  /** Transient total used by the market tick for garrison food demand. */
+  stationedTroops?: number;
 }
 
 /**
@@ -93,6 +97,7 @@ export interface BuildingDefinition {
   baseBuildTime: number;
   /** Nível máximo */
   maxLevel: number;
+  resourceCost: Partial<Record<GoodId, number>>;
   /** Bônus por nível */
   bonusPerLevel: BuildingBonus;
 }
@@ -117,6 +122,9 @@ export interface BuildingBonus {
   stabilityBonus?: number;
   /** Bônus de velocidade de pesquisa (%) */
   researchSpeedBonus?: number;
+  productivityBonus?: number;
+  storageBonus?: number;
+  populationCapacity?: number;
 }
 
 /** Canonical demographic state for a province. */
@@ -148,4 +156,11 @@ export interface ProvinceMarket {
   goods: Record<GoodId, GoodMarketState>;
   /** Aggregate index clamped to 0..100. */
   purchasingPower: number;
+}
+
+export interface BuildingCost {
+  gold: number;
+  wood: number;
+  iron: number;
+  tools: number;
 }

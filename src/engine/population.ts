@@ -1,13 +1,150 @@
-import type { Army, Province, ProvincePopulation } from '../types';
+import type { Army, GoodMarketState, Province, ProvincePopulation } from '../types';
 import { BUILDING_DEFINITIONS } from '../data/buildings';
 
-export const POPULATION_DEFAULTS = {
-  GROWTH_RATE: 0.002,
-  SATISFACTION: 60,
+export const POPULATION_BALANCE = {
+  DEFAULT_GROWTH_RATE: 0.002,
+  DEFAULT_SATISFACTION: 60,
   WORKFORCE_SHARE: 0.6,
+  BASE_JOB_SHARE: 0.2,
+  DEVELOPMENT_JOB_SHARE: 0.04,
+  CAPACITY_PRESSURE_START: 0.90,
+  CAPACITY_RATE_PENALTY: 0.01,
+  MODERATE_SHORTAGE: 0.15,
+  FOOD_CRISIS_SHORTAGE: 0.30,
+  SEVERE_SHORTAGE: 0.5,
+  SEVERE_SHORTAGE_RECOVERY: 0.15,
+  SEVERE_SHORTAGE_GRACE_DAYS: 3,
+  PROLONGED_FOOD_CRISIS_DAYS: 30,
+  MAX_FOOD_RATE_PENALTY: 0.004,
+  SEVERE_SHORTAGE_SATISFACTION_PENALTY: 10,
+  MIGRATION_FOOD_SHORTAGE_WEIGHT: 45,
+  MIGRATION_SEVERE_FAMINE_PENALTY: 35,
+  MIGRATION_ATTRACTIVENESS_THRESHOLD: 15,
+  MIGRATION_DAILY_SHARE: 0.0002,
+  MIGRATION_DAILY_LIMIT: 20,
 } as const;
 
+export const POPULATION_DEFAULTS = {
+  GROWTH_RATE: POPULATION_BALANCE.DEFAULT_GROWTH_RATE,
+  SATISFACTION: POPULATION_BALANCE.DEFAULT_SATISFACTION,
+  WORKFORCE_SHARE: POPULATION_BALANCE.WORKFORCE_SHARE,
+} as const;
+
+export type FoodShortageSeverity =
+  | 'healthy'
+  | 'moderate'
+  | 'crisis'
+  | 'severe';
+export interface FoodShortageStatus {
+  ratio: number;
+  percent: number;
+  severity: FoodShortageSeverity;
+  consecutiveDays: number;
+  severeConsecutiveDays: number;
+}
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+/** Shared interpretation of the market shortage used by population, AI, and UI. */
+export function getFoodShortageStatus(
+  food: GoodMarketState | undefined,
+  consecutiveDays = 0,
+  severeConsecutiveDays = 0,
+): FoodShortageStatus {
+  const ratio =
+    food && food.demand > 0
+      ? clamp(food.shortage / food.demand, 0, 1)
+      : 0;
+
+  const establishedBySevereShortage =
+    severeConsecutiveDays >= POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS;
+
+  const establishedByProlongedCrisis =
+    ratio >= POPULATION_BALANCE.FOOD_CRISIS_SHORTAGE &&
+    consecutiveDays >= POPULATION_BALANCE.PROLONGED_FOOD_CRISIS_DAYS;
+
+  const establishedFamine =
+    establishedBySevereShortage || establishedByProlongedCrisis;
+
+  let severity: FoodShortageSeverity;
+
+  if (
+    establishedFamine &&
+    ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE_RECOVERY
+  ) {
+    severity = 'severe';
+  } else if (ratio >= POPULATION_BALANCE.FOOD_CRISIS_SHORTAGE) {
+    severity = 'crisis';
+  } else if (ratio >= POPULATION_BALANCE.MODERATE_SHORTAGE) {
+    severity = 'moderate';
+  } else {
+    severity = 'healthy';
+  }
+
+  return {
+    ratio,
+    percent: Math.round(ratio * 100),
+    severity,
+    consecutiveDays: Math.max(0, Math.floor(consecutiveDays)),
+    severeConsecutiveDays: Math.max(0, Math.floor(severeConsecutiveDays)),
+  };
+}
+
+export function calculateFoodShortagePersistence(
+  food: GoodMarketState | undefined,
+  population: ProvincePopulation,
+): Pick<ProvincePopulation, 'foodShortageDays' | 'severeFoodShortageDays'> {
+  const ratio =
+    food && food.demand > 0
+      ? clamp(food.shortage / food.demand, 0, 1)
+      : 0;
+
+  const priorFoodDays = population.foodShortageDays ?? 0;
+  const priorSevereDays = population.severeFoodShortageDays ?? 0;
+
+  // Qualquer escassez >= 15% mantém o contador geral.
+  const foodShortageDays =
+    ratio >= POPULATION_BALANCE.MODERATE_SHORTAGE
+      ? priorFoodDays + 1
+      : 0;
+
+  const famineAlreadyEstablished =
+    priorSevereDays >= POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS;
+
+  // Entrada rápida: >= 50% por 3 dias.
+  const severeThreshold =
+    ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE;
+
+  // Entrada lenta: >= 30% por 30 dias.
+  const prolongedCrisis =
+    ratio >= POPULATION_BALANCE.FOOD_CRISIS_SHORTAGE &&
+    foodShortageDays >= POPULATION_BALANCE.PROLONGED_FOOD_CRISIS_DAYS;
+
+  // Depois de estabelecida, só recupera abaixo de 15%.
+  const remainsInFamine =
+    famineAlreadyEstablished &&
+    ratio >= POPULATION_BALANCE.SEVERE_SHORTAGE_RECOVERY;
+
+  let severeFoodShortageDays = 0;
+
+  if (remainsInFamine) {
+    severeFoodShortageDays = priorSevereDays + 1;
+  } else if (severeThreshold) {
+    severeFoodShortageDays = priorSevereDays + 1;
+  } else if (prolongedCrisis) {
+    // Marca imediatamente como fome estabelecida.
+    severeFoodShortageDays = Math.max(
+      POPULATION_BALANCE.SEVERE_SHORTAGE_GRACE_DAYS,
+      priorSevereDays + 1,
+    );
+  }
+
+  return {
+    foodShortageDays,
+    severeFoodShortageDays,
+  };
+}
+
 
 /** Normalizes both current and legacy numeric population values at load boundaries. */
 export function normalizePopulation(value: ProvincePopulation | number): ProvincePopulation {
@@ -21,39 +158,82 @@ export function normalizePopulation(value: ProvincePopulation | number): Provinc
     employed,
     unemployed,
     satisfaction: clamp(raw?.satisfaction ?? POPULATION_DEFAULTS.SATISFACTION, 0, 100),
+    foodShortageDays: Math.max(0, Math.floor(raw?.foodShortageDays ?? 0)),
+    severeFoodShortageDays: Math.max(0, Math.floor(raw?.severeFoodShortageDays ?? raw?.foodShortageDays ?? 0)),
+    migrationNet: Math.trunc(raw?.migrationNet ?? 0),
   };
+}
+
+const JOB_SHARE_BY_BUILDING = {
+  market: 0.035, workshop: 0.035, infrastructure: 0.035,
+  farm: 0.025, lumber_mill: 0.025, iron_mine: 0.025,
+  housing: 0.01, warehouse: 0.01, barracks: 0.01, fortress: 0.01,
+} as const;
+
+export function calculateWorkforce(population: ProvincePopulation | number): number {
+  return Math.floor(normalizePopulation(population).total * POPULATION_BALANCE.WORKFORCE_SHARE);
 }
 
 export function calculateEmploymentCapacity(province: Province): number {
   const population = normalizePopulation(province.population);
-  let capacityRatio = 0.2 + clamp(province.development, 0, 10) * 0.04;
+  let capacityRatio = POPULATION_BALANCE.BASE_JOB_SHARE
+    + clamp(province.development, 0, 10) * POPULATION_BALANCE.DEVELOPMENT_JOB_SHARE;
   for (const building of province.buildings) {
     if (building.daysRemaining > 0) continue;
-    const jobsPerLevel = building.type === 'market' || building.type === 'workshop' || building.type === 'infrastructure'
-      ? 0.035 : building.type === 'farm' || building.type === 'lumber_mill' || building.type === 'iron_mine' ? 0.025 : 0.01;
-    capacityRatio += jobsPerLevel * building.level;
+    capacityRatio += JOB_SHARE_BY_BUILDING[building.type] * building.level;
   }
-  return Math.floor(population.total * clamp(capacityRatio, 0, POPULATION_DEFAULTS.WORKFORCE_SHARE));
+  return Math.floor(population.total * clamp(capacityRatio, 0, POPULATION_BALANCE.WORKFORCE_SHARE));
 }
 
 export function recalculateEmployment(province: Province, population = normalizePopulation(province.population)): ProvincePopulation {
-  const workforce = Math.floor(population.total * POPULATION_DEFAULTS.WORKFORCE_SHARE);
+  const workforce = calculateWorkforce(population);
   const employed = Math.min(workforce, calculateEmploymentCapacity({ ...province, population }));
-  return { ...population, employed, unemployed: Math.max(0, workforce - employed) };
+  return { ...population, employed, unemployed: workforce - employed };
 }
 
-export function calculateSatisfaction(
+export interface SatisfactionBreakdown {
+  base: number;
+  unemployment: number;
+  food: number;
+  taxation: number;
+  economy: number;
+  stability: number;
+  war: number;
+  final: number;
+}
+
+export interface SatisfactionOptions {
+  atWar?: boolean;
+  economicMultiplier?: number;
+  countryStability?: number;
+}
+
+export function calculateSatisfactionBreakdown(
   province: Province,
   taxationId: string,
-  options: { atWar?: boolean; economicMultiplier?: number; marketAdjustment?: number } = {}
-): number {
+  options: SatisfactionOptions = {}
+): SatisfactionBreakdown {
   const population = recalculateEmployment(province);
   const workforce = population.employed + population.unemployed;
   const unemploymentRate = workforce > 0 ? population.unemployed / workforce : 0;
-  const taxEffect = taxationId === 'taxation_high' ? -12 : taxationId === 'taxation_low' ? 8 : 0;
-  const economyEffect = (clamp(options.economicMultiplier ?? 1, 0, 1.5) - 1) * 20;
-  const warEffect = options.atWar ? -5 : 0;
-  return clamp(65 - unemploymentRate * 55 + taxEffect + economyEffect + warEffect + (options.marketAdjustment ?? 0), 0, 100);
+  const market = province.market;
+  const food = market?.goods.food;
+  const foodStatus = getFoodShortageStatus(food, population.foodShortageDays, population.severeFoodShortageDays);
+  const parts = {
+    base: 65,
+    unemployment: -unemploymentRate * 45,
+    food: -foodStatus.ratio * 25 + ((food?.price ?? 1) - 1) * -5
+      - (foodStatus.severity === 'severe' ? POPULATION_BALANCE.SEVERE_SHORTAGE_SATISFACTION_PENALTY : 0),
+    taxation: taxationId === 'taxation_high' ? -12 : taxationId === 'taxation_low' ? 8 : 0,
+    economy: (clamp(options.economicMultiplier ?? 1, 0, 1.5) - 1) * 15,
+    stability: (clamp(options.countryStability ?? 50, 0, 100) - 50) * 0.12,
+    war: options.atWar ? -5 : 0,
+  };
+  return { ...parts, final: clamp(Object.values(parts).reduce((sum, value) => sum + value, 0), 0, 100) };
+}
+
+export function calculateSatisfaction(province: Province, taxationId: string, options: SatisfactionOptions = {}): number {
+  return calculateSatisfactionBreakdown(province, taxationId, options).final;
 }
 
 export function getPopulationCapacity(province: Province, multiplier = 1): number {
@@ -64,51 +244,135 @@ export function getPopulationCapacity(province: Province, multiplier = 1): numbe
 export interface PopulationGrowthOptions {
   growthMultiplier?: number;
   capacityMultiplier?: number;
+  atWar?: boolean;
 }
 
-/** Single source of truth for the absolute population change applied by a daily tick. */
-export function calculateProvincePopulationGrowth(
+export interface PopulationGrowthBreakdown {
+  baseRate: number;
+  foodRate: number;
+  capacityRate: number;
+  satisfactionRate: number;
+  stabilityRate: number;
+  warRate: number;
+  technologyAndLawMultiplier: number;
+  finalRate: number;
+  capacity: number;
+  finalGrowth: number;
+}
+
+/** Canonical growth calculation shared by simulation and UI. */
+export function calculatePopulationGrowthBreakdown(
   province: Province,
   countryStability: number,
   options: PopulationGrowthOptions = {}
-): number {
+): PopulationGrowthBreakdown {
   const population = normalizePopulation(province.population);
-  let growthRate = population.growthRate;
-  if (countryStability > 50) growthRate += 0.001 * ((countryStability - 50) / 50);
+  const capacity = getPopulationCapacity(province, options.capacityMultiplier);
+  const capacityRatio = capacity > 0 ? population.total / capacity : 1;
+  const market = province.market;
+  const food = market?.goods.food;
+  // The current market is this tick's observation, so include it when deciding
+  // whether the three-tick famine grace period has just completed.
+  const projectedPersistence = calculateFoodShortagePersistence(food, population);
+  const foodStatus = getFoodShortageStatus(
+    food,
+    projectedPersistence.foodShortageDays,
+    projectedPersistence.severeFoodShortageDays,
+  );
+  const shortageRatio = foodStatus.ratio;
+  let foodRate = 0;
+  if (shortageRatio >= POPULATION_BALANCE.MODERATE_SHORTAGE) {
+    foodRate = -0.0015 * Math.min(1, shortageRatio / POPULATION_BALANCE.SEVERE_SHORTAGE);
+  }
+  if (foodStatus.severity === 'severe') {
+    const severeProgress = Math.max(0, (shortageRatio - POPULATION_BALANCE.SEVERE_SHORTAGE) / (1 - POPULATION_BALANCE.SEVERE_SHORTAGE));
+    foodRate -= 0.0015 + severeProgress * 0.001;
+  }
+  foodRate = Math.max(-POPULATION_BALANCE.MAX_FOOD_RATE_PENALTY, foodRate);
+  const capacityRate = capacityRatio > POPULATION_BALANCE.CAPACITY_PRESSURE_START
+    ? -POPULATION_BALANCE.CAPACITY_RATE_PENALTY * (capacityRatio - POPULATION_BALANCE.CAPACITY_PRESSURE_START) * 5
+    : 0;
+  const satisfactionRate = (population.satisfaction - 60) * 0.000015;
+  const stabilityRate = countryStability > 50 ? 0.001 * ((countryStability - 50) / 50) : 0;
+  const warRate = options.atWar ? -0.00025 : 0;
+  let buildingRate = 0;
   for (const building of province.buildings) {
     if (building.daysRemaining > 0) continue;
-    const growthBonus = BUILDING_DEFINITIONS[building.type].bonusPerLevel.growthBonus;
-    if (growthBonus) growthRate += growthBonus / 100 * building.level;
+    const bonus = BUILDING_DEFINITIONS[building.type].bonusPerLevel.growthBonus;
+    if (bonus) buildingRate += bonus / 100 * building.level;
   }
-  const capacity = getPopulationCapacity(province, options.capacityMultiplier);
-  const ratio = capacity > 0 ? population.total / capacity : 1;
-  if (ratio > 0.8) growthRate -= 0.01 * (ratio - 0.8) * 5;
-  const requestedGrowth = population.total * growthRate * Math.max(0, options.growthMultiplier ?? 1);
+  const baseRate = population.growthRate + buildingRate;
+  const multiplier = Math.max(0, options.growthMultiplier ?? 1);
+  const finalRate = (baseRate + foodRate + capacityRate + satisfactionRate + stabilityRate + warRate) * multiplier;
+  const requestedGrowth = population.total * finalRate;
   const nextTotal = clamp(population.total + requestedGrowth, 0, capacity);
-  return nextTotal - population.total;
+  return {
+    baseRate, foodRate, capacityRate, satisfactionRate, stabilityRate, warRate,
+    technologyAndLawMultiplier: multiplier, finalRate, capacity, finalGrowth: nextTotal - population.total
+  };
+}
+
+export function calculateProvincePopulationGrowth(province: Province, countryStability: number, options: PopulationGrowthOptions = {}): number {
+  return calculatePopulationGrowthBreakdown(province, countryStability, options).finalGrowth;
 }
 
 export function processProvincePopulation(
   province: Province,
   growthMultiplier: number,
   taxationId: string,
-  options: { atWar?: boolean; economicMultiplier?: number; growthAmount?: number; capacityMultiplier?: number; countryStability?: number } = {}
+  options: SatisfactionOptions & { growthAmount?: number; capacityMultiplier?: number; countryStability?: number } = {}
 ): Province {
   const current = normalizePopulation(province.population);
   const requestedGrowth = options.growthAmount ?? calculateProvincePopulationGrowth(province, options.countryStability ?? 50, {
-    growthMultiplier,
-    capacityMultiplier: options.capacityMultiplier,
+    growthMultiplier, capacityMultiplier: options.capacityMultiplier, atWar: options.atWar,
   });
   const total = clamp(Math.floor(current.total + requestedGrowth), 0, getPopulationCapacity(province, options.capacityMultiplier));
-  let population = recalculateEmployment({ ...province, population: { ...current, total } }, { ...current, total });
+  const food = province.market?.goods.food;
+  const persistence = calculateFoodShortagePersistence(food, current);
+  let population = recalculateEmployment({ ...province, population: { ...current, total } }, { ...current, total, ...persistence, migrationNet: 0 });
   population = { ...population, satisfaction: calculateSatisfaction({ ...province, population }, taxationId, options) };
   return { ...province, population };
 }
 
 export function getWorkerAvailability(province: Province): number {
   const population = recalculateEmployment(province);
-  const workforce = Math.floor(population.total * POPULATION_DEFAULTS.WORKFORCE_SHARE);
+  const workforce = calculateWorkforce(population);
   return workforce === 0 ? 0 : clamp(population.employed / workforce, 0, 1);
+}
+
+export function calculateMigrationAttractiveness(province: Province, capacityMultiplier = 1, atWar = false): number {
+  const population = recalculateEmployment(province);
+  const workforce = population.employed + population.unemployed;
+  const employmentRate = workforce ? population.employed / workforce : 1;
+  const capacity = getPopulationCapacity(province, capacityMultiplier);
+  const freeCapacity = capacity ? clamp(1 - population.total / capacity, 0, 1) : 0;
+  const food = province.market?.goods.food;
+  const foodStatus = getFoodShortageStatus(food, population.foodShortageDays, population.severeFoodShortageDays);
+  const foodPenalty = foodStatus.ratio * POPULATION_BALANCE.MIGRATION_FOOD_SHORTAGE_WEIGHT
+    + (foodStatus.severity === 'severe' ? POPULATION_BALANCE.MIGRATION_SEVERE_FAMINE_PENALTY : 0);
+  return employmentRate * 35 + population.satisfaction * 0.35 + freeCapacity * 20 - foodPenalty - (atWar ? 10 : 0);
+}
+
+/** Deterministic, internal-only migration. Each country should call this with its own provinces. */
+export function processInternalMigration(provinces: Province[], capacityMultiplier = 1, atWar = false): Province[] {
+  if (provinces.length < 2) return provinces.map(p => ({ ...p, population: { ...normalizePopulation(p.population), migrationNet: 0 } }));
+  const ranked = [...provinces].sort((a, b) => calculateMigrationAttractiveness(a, capacityMultiplier, atWar)
+    - calculateMigrationAttractiveness(b, capacityMultiplier, atWar) || a.id.localeCompare(b.id));
+  const origin = ranked[0];
+  const destination = ranked[ranked.length - 1];
+  const difference = calculateMigrationAttractiveness(destination, capacityMultiplier, atWar)
+    - calculateMigrationAttractiveness(origin, capacityMultiplier, atWar);
+  const originPopulation = normalizePopulation(origin.population);
+  const destinationPopulation = normalizePopulation(destination.population);
+  const room = Math.max(0, Math.floor(getPopulationCapacity(destination, capacityMultiplier) - destinationPopulation.total));
+  const amount = difference >= POPULATION_BALANCE.MIGRATION_ATTRACTIVENESS_THRESHOLD
+    ? Math.min(room, Math.floor(originPopulation.total * POPULATION_BALANCE.MIGRATION_DAILY_SHARE), POPULATION_BALANCE.MIGRATION_DAILY_LIMIT)
+    : 0;
+  return provinces.map(province => {
+    const current = normalizePopulation(province.population);
+    const delta = province.id === origin.id ? -amount : province.id === destination.id ? amount : 0;
+    return { ...province, population: recalculateEmployment(province, { ...current, total: Math.max(0, current.total + delta), migrationNet: delta }) };
+  });
 }
 
 /** Applies only newly observed regiment strength losses with a known origin. */
@@ -117,9 +381,8 @@ export function applyMilitaryCasualties(provinces: Province[], before: Army[], a
   for (const oldArmy of before) {
     const newArmy = after.find(army => army.id === oldArmy.id);
     const remainingByOrigin = new Map<string, number>();
-    for (const regiment of newArmy?.regiments ?? []) {
-      if (regiment.originProvinceId) remainingByOrigin.set(regiment.originProvinceId,
-        (remainingByOrigin.get(regiment.originProvinceId) ?? 0) + regiment.strength);
+    for (const regiment of newArmy?.regiments ?? []) if (regiment.originProvinceId) {
+      remainingByOrigin.set(regiment.originProvinceId, (remainingByOrigin.get(regiment.originProvinceId) ?? 0) + regiment.strength);
     }
     for (const regiment of oldArmy.regiments) {
       if (!regiment.originProvinceId) continue;

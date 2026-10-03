@@ -243,7 +243,7 @@ const App: React.FC = () => {
 
   const cheats = useCheats({
     playerCountryTag, setAllCountries, setRecruitments, setBuildingConstructions,
-    setArmies, provincesRef, armiesRef, addLog, addToast, setGameSpeed, setDate,
+    setArmies, provincesRef, armiesRef,setProvinces, addLog, addToast, setGameSpeed, setDate,
     selectedProvince: selection.selectedProvince
   });
 

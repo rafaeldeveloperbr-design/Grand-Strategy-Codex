@@ -95,7 +95,7 @@ export function calculateArmyBasePower(
 export function calculateDefenderTotalPower(
   army: Army,
   province: Province,
-  techBonuses?: { infantry: number; cavalry: number; artillery: number }
+  techBonuses?: { infantry: number; cavalry: number; artillery: number; fortificationMultiplier?: number }
 ): { totalPower: number; hasTerritorialBonus: boolean; bonusMultiplier: number } {
   const basePower = calculateArmyBasePower(army, techBonuses);
   
@@ -111,7 +111,7 @@ export function calculateDefenderTotalPower(
   // Bônus por fortificação
   const effectiveDefense = province.defense + getBuildingLevel(province, 'fortress') * 2;
   if (effectiveDefense > 0) {
-    const fortificationBonus = 1 + (effectiveDefense * COMBAT_BALANCE.FORTIFICATION_BONUS_PER_LEVEL);
+    const fortificationBonus = 1 + (effectiveDefense * COMBAT_BALANCE.FORTIFICATION_BONUS_PER_LEVEL * (techBonuses?.fortificationMultiplier ?? 1));
     bonusMultiplier *= fortificationBonus;
     hasTerritorialBonus = true;
   }

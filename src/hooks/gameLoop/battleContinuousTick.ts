@@ -19,6 +19,8 @@ import type { ToastType } from '../../types/toast';
 import { calculateArmySize } from '../../engine/combat/combatCalculations';
 import { transferProvince } from '../../engine/territoryTransfer';
 import { applyMilitaryCasualties } from '../../engine/population';
+import type { CountryTechState } from '../../types/technology';
+import { calculateTechBonuses } from '../../engine/technology';
 
 
 // ===== TIPOS QUE FALTAVAM =====
@@ -78,6 +80,8 @@ type Params = {
   snapshot: { date: GameDate };
   playerCountryTag: string;
   allCountries: Country[];
+  playerTechState: CountryTechState;
+  botTechStates: Map<string, CountryTechState>;
   addLog: (msg: string) => void;
   addToast: (
     message: string,
@@ -115,7 +119,16 @@ export function processBattleContinuous(p: Params) {
     }
     const repaired = synchronizeBattle(battle, armies) || battle;
     const armiesBeforeCombat = armies;
-    const result = processBattleDay(repaired, armies, province, provinces);
+    const combatMultipliers = new Map(p.countries.map(country => {
+      const state = country.tag === p.playerCountryTag ? p.playerTechState : p.botTechStates.get(country.tag);
+      const bonuses = state ? calculateTechBonuses(state).combatPowerBonus : { infantry:0, cavalry:0, artillery:0 };
+      return [country.tag, 1 + Math.max(bonuses.infantry, bonuses.cavalry, bonuses.artillery)];
+    }));
+    const fortificationMultipliers = new Map(p.countries.map(country => {
+      const state = country.tag === p.playerCountryTag ? p.playerTechState : p.botTechStates.get(country.tag);
+      return [country.tag, state ? calculateTechBonuses(state).fortificationMultiplier : 1];
+    }));
+    const result = processBattleDay(repaired, armies, province, provinces, combatMultipliers, fortificationMultipliers);
     armies = result.armies;
     provinces = applyMilitaryCasualties(provinces, armiesBeforeCombat, armies);
 

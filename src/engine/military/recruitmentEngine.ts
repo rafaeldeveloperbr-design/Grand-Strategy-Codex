@@ -19,7 +19,7 @@ export function processRecruitments(
   recruitments: Recruitment[],
   armies: Army[],
   countries: Country[],
-  provinces: Province[] = []
+  provinces: Province[] = [], recruitmentTimeMultipliers: ReadonlyMap<string, number> = new Map()
 ): { recruitments: Recruitment[]; armies: Army[]; countries: Country[]; completedRecruitments: Recruitment[] } {
   const updatedRecruitments: Recruitment[] = [];
   const completedRecruitments: Recruitment[] = [];
@@ -46,7 +46,8 @@ export function processRecruitments(
       }
     }
 
-    const newDays = rec.daysRemaining - (1 + recruitmentSpeedBonus / 100);
+    const timeMultiplier = recruitmentTimeMultipliers.get(rec.owner) ?? 1;
+    const newDays = rec.daysRemaining - (1 + recruitmentSpeedBonus / 100) / timeMultiplier;
 
     if (newDays <= 0) {
       const regiments: Regiment[] = [];

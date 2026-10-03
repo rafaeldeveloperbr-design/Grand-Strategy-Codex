@@ -1,6 +1,8 @@
 import type { ActiveBattle, Army, GameDate, Province, RetreatInfo } from '../../types';
 import { applyTroopLoss, calculateArmySize } from './combatCalculations';
 import { findRetreatProvince } from './combatRetreats';
+import { getBuildingLevel } from '../../data/buildings';
+import { COMBAT_BALANCE } from './combatCalculations';
 
 export type BattleExtended = ActiveBattle & {
   reinforcementEntryDay?: Record<string, number>;
@@ -136,7 +138,7 @@ export function addReinforcementsToBattle(battle: BattleExtended, army: Army, si
 }
 
 /** Processes every participant, including collective retreat/annihilation. */
-export function processBattleDay(battle: BattleExtended, armies: Army[], province: Province, allProvinces: Province[]) {
+export function processBattleDay(battle: BattleExtended, armies: Army[], province: Province, allProvinces: Province[], combatMultipliers: ReadonlyMap<string, number> = new Map(), fortificationMultipliers: ReadonlyMap<string, number> = new Map()) {
   const synced = synchronizeBattle(battle, armies);
   if (!synced) {
     const attackerAlive = sideTotal(battle, armies, 'attacker') > 0;
@@ -146,8 +148,15 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
   const daysRemaining = synced.daysRemaining - 1;
   const attackerBefore = synced.attackerCurrentTroops;
   const defenderBefore = synced.defenderCurrentTroops;
-  const attackerLoss = Math.min(attackerBefore, Math.floor(defenderBefore / Math.max(1, synced.daysTotal)));
-  const defenderLoss = Math.min(defenderBefore, Math.floor((defenderBefore / Math.max(1, synced.daysTotal)) * 0.95));
+  const attackerOwner = participants(synced, armies, 'attacker')[0]?.owner ?? '';
+  const defenderOwner = participants(synced, armies, 'defender')[0]?.owner ?? '';
+  const attackerPower = combatMultipliers.get(attackerOwner) ?? 1;
+  const defenderPower = combatMultipliers.get(defenderOwner) ?? 1;
+  const effectiveDefense = province.defense + getBuildingLevel(province, 'fortress') * 2;
+  const fortificationMultiplier = fortificationMultipliers.get(defenderOwner) ?? 1;
+  const defensivePosition = 1 + effectiveDefense * COMBAT_BALANCE.FORTIFICATION_BONUS_PER_LEVEL * fortificationMultiplier;
+  const attackerLoss = Math.min(attackerBefore, Math.floor(defenderBefore / Math.max(1, synced.daysTotal) * defenderPower * defensivePosition));
+  const defenderLoss = Math.min(defenderBefore, Math.floor((defenderBefore / Math.max(1, synced.daysTotal)) * 0.95 * attackerPower));
   let updatedArmies = applySideLoss(armies, participants(synced, armies, 'attacker'), attackerLoss);
   updatedArmies = applySideLoss(updatedArmies, participants(synced, updatedArmies, 'defender'), defenderLoss);
   let next = synchronizeBattle(synced, updatedArmies);

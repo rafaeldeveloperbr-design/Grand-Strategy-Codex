@@ -386,3 +386,12 @@
 .research-col:hover {
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
 }
+.technology-modifiers { margin: 0 20px 16px; padding: 12px 16px; border: 1px solid rgba(96,165,250,.35); background: rgba(15,23,42,.72); border-radius: 8px; }
+.technology-modifiers h3 { margin: 0 0 8px; color: #93c5fd; font-size: 14px; }
+.technology-modifiers__grid { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; }
+.technology-modifiers__grid strong { color: #86efac; }
+.tree-category { color: #94a3b8; font-size: 10px; letter-spacing: .08em; margin-bottom: 4px; }
+.tree-effects { margin: 7px 0; color: #bfdbfe; font-size: 11px; line-height: 1.45; }
+.tree-prerequisites { margin: 7px 0; padding: 6px; background: rgba(0,0,0,.2); font-size: 11px; }
+.tree-prerequisites .completed { color: #86efac; }
+.tree-prerequisites .missing { color: #fca5a5; }

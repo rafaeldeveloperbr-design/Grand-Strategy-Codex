@@ -16,7 +16,7 @@ import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { LAWS } from '../constants/laws';
 import { getStabilityModifiers, processDailyStabilityRecovery } from './stability';
 import { calculateUnrestEconomicImpact } from './unrest';
-import { calculateSatisfaction, getPopulationCapacity, getWorkerAvailability, normalizePopulation, processProvincePopulation } from './population';
+import { calculateProvincePopulationGrowth, calculateSatisfaction, getWorkerAvailability, normalizePopulation, processProvincePopulation } from './population';
 import { calculateMarketSatisfactionAdjustment, processProvinceMarket } from './market';
 import { processInternalTrade } from './internalTrade';
 import type { TechnologyBonuses } from './technology';
@@ -101,41 +101,22 @@ export function calculateProvinceDefense(province: Province): number {
 /**
  * Calcula o crescimento populacional de uma província
  */
-export function calculatePopulationGrowth(
+export const calculatePopulationGrowth = calculateProvincePopulationGrowth;
+
+export function calculateDailyPopulationGrowth(
   province: Province,
-  countryStability: number
+  country: Country,
+  techBonuses?: TechnologyBonuses
 ): number {
-  // Taxa base
-  let growthRate = normalizePopulation(province.population).growthRate;
-
-  // Bônus por estabilidade alta
-  if (countryStability > 50) {
-    growthRate += BALANCE.STABILITY_GROWTH_BONUS * ((countryStability - 50) / 50);
-  }
-
-  // Bônus de edifícios (fazendas)
-  for (const building of province.buildings) {
-    if (building.daysRemaining <= 0) {
-      const def = BUILDING_DEFINITIONS[building.type];
-      if (def.bonusPerLevel.growthBonus) {
-        growthRate += (def.bonusPerLevel.growthBonus / 100) * building.level;
-      }
-    }
-  }
-
-  // Penalidade por superpopulação
-  const totalPopulation = normalizePopulation(province.population).total;
-  const popRatio = totalPopulation / getPopulationCapacity(province);
-  if (popRatio > 0.8) {
-    growthRate -= BALANCE.OVERPOPULATION_PENALTY * (popRatio - 0.8) * 5;
-  }
-
-  // Crescimento absoluto
-  const growth = totalPopulation * growthRate;
-  
-  // Limita pela capacidade máxima
-  const newPop = Math.max(0, Math.min(totalPopulation + growth, getPopulationCapacity(province)));
-  return newPop - totalPopulation;
+  const taxationLaw = LAWS[country.activeLaws?.taxation || 'taxation_normal'];
+  const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0);
+  const growthMultiplier = (taxationLaw?.bonuses.popGrowthMultiplier ?? 1)
+    * unrestImpact.growthMultiplier
+    * (techBonuses?.populationGrowthMultiplier ?? 1);
+  return calculateProvincePopulationGrowth(province, country.resources.stability, {
+    growthMultiplier,
+    capacityMultiplier: techBonuses?.populationCapacityMultiplier,
+  });
 }
 
 /**
@@ -181,7 +162,6 @@ export function processDailyTick(
 
   const lawGoldMultiplier = taxationLaw?.bonuses.goldMultiplier ?? 1.0;
   const lawManpowerMultiplier = conscriptionLaw?.bonuses.manpowerMultiplier ?? 1.0;
-  const lawPopGrowthMultiplier = taxationLaw?.bonuses.popGrowthMultiplier ?? 1.0;
   const lawBuildTimeMultiplier = governanceLaw?.bonuses.buildTimeMultiplier ?? 1.0;
 
   // Obtém modificadores de estabilidade
@@ -201,11 +181,8 @@ export function processDailyTick(
     // Aplica multiplicadores de unrest na economia da província
     const provinceGoldMultiplier = goldIncomeMultiplier * unrestImpact.goldMultiplier;
     const provinceManpowerMultiplier = manpowerMultiplier * unrestImpact.manpowerMultiplier;
-    const provinceGrowthMultiplier = lawPopGrowthMultiplier * unrestImpact.growthMultiplier * (techBonuses?.populationGrowthMultiplier ?? 1);
-    
     // Crescimento populacional (com multiplicador de leis e unrest)
-    const basePopGrowth = calculatePopulationGrowth(province, country.resources.stability);
-    const popGrowth = basePopGrowth * provinceGrowthMultiplier;
+    const popGrowth = calculateDailyPopulationGrowth(province, country, techBonuses);
 
     // Avança construções (com multiplicadores de tecnologia e leis)
     const updatedBuildings = province.buildings.map((b) => ({
@@ -215,7 +192,7 @@ export function processDailyTick(
 
     const populationProvince = processProvincePopulation(
       province,
-      provinceGrowthMultiplier,
+      1,
       country.activeLaws?.taxation || 'taxation_normal',
       { atWar, economicMultiplier: provinceGoldMultiplier, growthAmount: popGrowth, capacityMultiplier: techBonuses?.populationCapacityMultiplier }
     );
@@ -256,7 +233,10 @@ export function processDailyTick(
   }));
 
   // Calcula despesas
-  const expenses = calculateCountryExpenses(country, updatedProvinces);
+  const baseExpenses = calculateCountryExpenses(country, updatedProvinces);
+  const militaryMaintenance = updatedProvinces.reduce((sum, province) => sum + (province.stationedTroops ?? 0) / 1000 * 0.1, 0)
+    * (techBonuses?.militaryMaintenanceMultiplier ?? 1);
+  const expenses = baseExpenses + militaryMaintenance;
   const goldBalance = totalGoldIncome - expenses;
 
   // Atualiza manpower

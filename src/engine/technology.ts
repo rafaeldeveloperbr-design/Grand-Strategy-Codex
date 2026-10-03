@@ -5,29 +5,184 @@ import { DIFFICULTY_SPEED_MULTIPLIERS } from '../types/difficulty';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../data/technology';
 
 export interface TechnologyBonuses {
-  combatPowerBonus: { infantry:number; cavalry:number; artillery:number };
-  goldIncomeMultiplier:number; buildCostMultiplier:number; buildTimeMultiplier:number; manpowerMultiplier:number;
-  productionMultipliers: Record<'food'|'wood'|'iron'|'tools',number>;
-  recruitmentTimeMultiplier:number; militaryMaintenanceMultiplier:number; fortificationMultiplier:number;
-  populationGrowthMultiplier:number; populationCapacityMultiplier:number; researchSpeedMultiplier:number;
+  combatPowerBonus: { infantry: number; cavalry: number; artillery: number };
+  goldIncomeMultiplier: number;
+  buildCostMultiplier: number;
+  buildTimeMultiplier: number;
+  manpowerMultiplier: number;
+  productionMultipliers: Record<'food' | 'wood' | 'iron' | 'tools', number>;
+  recruitmentTimeMultiplier: number;
+  militaryMaintenanceMultiplier: number;
+  fortificationMultiplier: number;
+  populationGrowthMultiplier: number;
+  populationCapacityMultiplier: number;
+  researchSpeedMultiplier: number;
 }
-const baseBonuses = (): TechnologyBonuses => ({combatPowerBonus:{infantry:0,cavalry:0,artillery:0},goldIncomeMultiplier:1,buildCostMultiplier:1,buildTimeMultiplier:1,manpowerMultiplier:1,productionMultipliers:{food:1,wood:1,iron:1,tools:1},recruitmentTimeMultiplier:1,militaryMaintenanceMultiplier:1,fortificationMultiplier:1,populationGrowthMultiplier:1,populationCapacityMultiplier:1,researchSpeedMultiplier:1});
 
-export function normalizeTechState(value: Partial<CountryTechState> | undefined, countryTag='UNKNOWN'): CountryTechState {
- return {countryTag:value?.countryTag ?? countryTag,activeFocusId:value?.activeFocusId ?? null,activeResearchId:value?.activeResearchId ?? null,completedFocuses:[...(value?.completedFocuses ?? [])],completedTechnologies:[...(value?.completedTechnologies ?? [])],focusProgressDays:Number.isFinite(value?.focusProgressDays) ? value!.focusProgressDays! : 0,researchProgressDays:Number.isFinite(value?.researchProgressDays) ? value!.researchProgressDays! : 0};
+export interface TechnologyModifierEntry { label: string; percent: number }
+export interface ResearchProgress { current: number; required: number; percent: number; remainingProgress: number; estimatedDaysRemaining: number }
+
+const createNeutralBonuses = (): TechnologyBonuses => ({
+  combatPowerBonus: { infantry: 0, cavalry: 0, artillery: 0 },
+  goldIncomeMultiplier: 1,
+  buildCostMultiplier: 1,
+  buildTimeMultiplier: 1,
+  manpowerMultiplier: 1,
+  productionMultipliers: { food: 1, wood: 1, iron: 1, tools: 1 },
+  recruitmentTimeMultiplier: 1,
+  militaryMaintenanceMultiplier: 1,
+  fortificationMultiplier: 1,
+  populationGrowthMultiplier: 1,
+  populationCapacityMultiplier: 1,
+  researchSpeedMultiplier: 1,
+});
+
+export function normalizeTechState(value: Partial<CountryTechState> | undefined, countryTag = 'UNKNOWN'): CountryTechState {
+  const activeResearchId = TECHNOLOGIES.some(technology => technology.id === value?.activeResearchId)
+    ? value?.activeResearchId ?? null
+    : null;
+  return {
+    countryTag: value?.countryTag ?? countryTag,
+    activeFocusId: value?.activeFocusId ?? null,
+    activeResearchId,
+    completedFocuses: [...(value?.completedFocuses ?? [])],
+    completedTechnologies: [...new Set((value?.completedTechnologies ?? []).filter(id => TECHNOLOGIES.some(technology => technology.id === id)))],
+    focusProgressDays: Number.isFinite(value?.focusProgressDays) ? value?.focusProgressDays ?? 0 : 0,
+    researchProgressDays: activeResearchId && Number.isFinite(value?.researchProgressDays) ? Math.max(0, value?.researchProgressDays ?? 0) : 0,
+  };
 }
-export const createInitialTechState = (countryTag:string):CountryTechState => normalizeTechState(undefined,countryTag);
 
-export function startNationalFocus(state:CountryTechState,id:string):CountryTechState|null { const f=NATIONAL_FOCUSES.find(x=>x.id===id); if(!f||state.activeFocusId||state.completedFocuses.includes(id)||!(f.prerequisites??[]).every(p=>state.completedFocuses.includes(p))) return null; return {...state,activeFocusId:id,focusProgressDays:0}; }
-export function startTechnologyResearch(state:CountryTechState,id:string,country:Country):{techState:CountryTechState|null;cost:number} { const t=TECHNOLOGIES.find(x=>x.id===id); if(!t) return {techState:null,cost:0}; if(state.activeResearchId||state.completedTechnologies.includes(id)||!t.prerequisites.every(p=>state.completedTechnologies.includes(p))||country.resources.gold<t.costGold) return {techState:null,cost:t.costGold}; return {techState:{...state,activeResearchId:id,researchProgressDays:0},cost:t.costGold}; }
+export const createInitialTechState = (countryTag: string): CountryTechState => normalizeTechState(undefined, countryTag);
 
-export function processDailyTechProgress(state:CountryTechState,country:Country,difficulty:AIDifficulty='medium',isPlayer=false) {
- const s=normalizeTechState(state,country.tag), notifications:string[]=[]; let next={...s,completedFocuses:[...s.completedFocuses],completedTechnologies:[...s.completedTechnologies]}; const aiSpeed=isPlayer?1:DIFFICULTY_SPEED_MULTIPLIERS[difficulty];
- if(next.activeFocusId){const f=NATIONAL_FOCUSES.find(x=>x.id===next.activeFocusId);if(f){next.focusProgressDays+=aiSpeed;if(next.focusProgressDays>=f.durationDays){next.completedFocuses.push(f.id);next.activeFocusId=null;next.focusProgressDays=0;notifications.push(`✅ Foco concluído: ${f.title}`)}}}
- if(next.activeResearchId){const t=TECHNOLOGIES.find(x=>x.id===next.activeResearchId);if(t){next.researchProgressDays+=aiSpeed*calculateTechBonuses(next).researchSpeedMultiplier;if(next.researchProgressDays>=t.durationDays){next.completedTechnologies.push(t.id);next.activeResearchId=null;next.researchProgressDays=0;notifications.push(`🔬 Pesquisa concluída: ${t.title}`)}}}
- return {techState:next,notifications};
+export function startNationalFocus(state: CountryTechState, id: string): CountryTechState | null {
+  const focus = NATIONAL_FOCUSES.find(item => item.id === id);
+  if (!focus || state.activeFocusId || state.completedFocuses.includes(id)
+    || !(focus.prerequisites ?? []).every(prerequisite => state.completedFocuses.includes(prerequisite))) return null;
+  return { ...state, activeFocusId: id, focusProgressDays: 0 };
 }
-function applyTechnologyEffect(e:TechnologyEffect,b:TechnologyBonuses){switch(e.type){case'GOOD_PRODUCTION':b.productionMultipliers[e.good]+=e.value;break;case'PRODUCTION_EFFICIENCY':for(const g of ['food','wood','iron','tools'] as const)b.productionMultipliers[g]+=e.value;break;case'RECRUITMENT_TIME':b.recruitmentTimeMultiplier+=e.value;break;case'COMBAT_POWER':for(const u of ['infantry','cavalry','artillery'] as const)b.combatPowerBonus[u]+=e.value;break;case'MILITARY_MAINTENANCE':b.militaryMaintenanceMultiplier+=e.value;break;case'FORTIFICATION_BONUS':b.fortificationMultiplier+=e.value;break;case'POPULATION_GROWTH':b.populationGrowthMultiplier+=e.value;break;case'POPULATION_CAPACITY':b.populationCapacityMultiplier+=e.value;break;case'GOLD_INCOME':b.goldIncomeMultiplier+=e.value;break;case'RESEARCH_SPEED':b.researchSpeedMultiplier+=e.value;break;}}
-function applyFocus(e:RewardEffect,b:TechnologyBonuses){switch(e.type){case'COMBAT_POWER':if(e.unitType)b.combatPowerBonus[e.unitType]+=e.value;break;case'GOLD_INCOME':b.goldIncomeMultiplier+=e.value;break;case'BUILD_COST':b.buildCostMultiplier+=e.value;break;case'BUILD_TIME':b.buildTimeMultiplier+=e.value;break;case'MANPOWER':b.manpowerMultiplier+=e.value;break;case'RESEARCH_SPEED':b.researchSpeedMultiplier+=e.value;break;default:break;}}
-export function calculateTechBonuses(state:CountryTechState):TechnologyBonuses {const b=baseBonuses();for(const id of state.completedFocuses){const f=NATIONAL_FOCUSES.find(x=>x.id===id);if(f)applyFocus(f.rewardEffect,b)}for(const id of state.completedTechnologies){const t=TECHNOLOGIES.find(x=>x.id===id);t?.effects.forEach(e=>applyTechnologyEffect(e,b))}return b;}
-export function getMilitaryCombatBonuses(state: CountryTechState) { const b=calculateTechBonuses(state); return {...b.combatPowerBonus,fortificationMultiplier:b.fortificationMultiplier}; }
+
+export function startTechnologyResearch(state: CountryTechState, id: string, country: Country): { techState: CountryTechState | null; cost: number } {
+  const technology = TECHNOLOGIES.find(item => item.id === id);
+  if (!technology) return { techState: null, cost: 0 };
+  if (state.activeResearchId || state.completedTechnologies.includes(id)
+    || !technology.prerequisites.every(prerequisite => state.completedTechnologies.includes(prerequisite))
+    || country.resources.gold < technology.costGold) return { techState: null, cost: technology.costGold };
+  return { techState: { ...state, activeResearchId: id, researchProgressDays: 0 }, cost: technology.costGold };
+}
+
+export function getResearchProgress(state: CountryTechState): ResearchProgress | null {
+  const technology = TECHNOLOGIES.find(item => item.id === state.activeResearchId);
+  if (!technology) return null;
+  const current = Math.min(technology.durationDays, Math.max(0, state.researchProgressDays));
+  const speed = calculateTechBonuses(state).researchSpeedMultiplier;
+  const remainingProgress = Math.max(0, technology.durationDays - current);
+  return { current, required: technology.durationDays, remainingProgress, percent: technology.durationDays ? current / technology.durationDays * 100 : 100, estimatedDaysRemaining: Math.ceil(remainingProgress / speed) };
+}
+
+export function processDailyTechProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false) {
+  const normalized = normalizeTechState(state, country.tag);
+  const notifications: string[] = [];
+  const next = { ...normalized, completedFocuses: [...normalized.completedFocuses], completedTechnologies: [...normalized.completedTechnologies] };
+  const difficultySpeed = isPlayer ? 1 : DIFFICULTY_SPEED_MULTIPLIERS[difficulty];
+  if (next.activeFocusId) {
+    const focus = NATIONAL_FOCUSES.find(item => item.id === next.activeFocusId);
+    if (focus) {
+      next.focusProgressDays += difficultySpeed;
+      if (next.focusProgressDays >= focus.durationDays) {
+        next.completedFocuses.push(focus.id); next.activeFocusId = null; next.focusProgressDays = 0;
+        notifications.push(`✅ Foco concluído: ${focus.title}`);
+      }
+    }
+  }
+  if (next.activeResearchId) {
+    const technology = TECHNOLOGIES.find(item => item.id === next.activeResearchId);
+    if (technology) {
+      next.researchProgressDays += difficultySpeed * calculateTechBonuses(next).researchSpeedMultiplier;
+      if (next.researchProgressDays >= technology.durationDays) {
+        next.completedTechnologies.push(technology.id); next.activeResearchId = null; next.researchProgressDays = 0;
+        notifications.push(`🔬 Pesquisa concluída: ${technology.title}`);
+      }
+    }
+  }
+  return { techState: next, notifications };
+}
+
+function applyTechnologyEffect(effect: TechnologyEffect, bonuses: TechnologyBonuses) {
+  switch (effect.type) {
+    case 'GOOD_PRODUCTION': bonuses.productionMultipliers[effect.good] += effect.value; break;
+    case 'PRODUCTION_EFFICIENCY': for (const good of ['food', 'wood', 'iron', 'tools'] as const) bonuses.productionMultipliers[good] += effect.value; break;
+    case 'RECRUITMENT_TIME': bonuses.recruitmentTimeMultiplier += effect.value; break;
+    case 'COMBAT_POWER': for (const unit of ['infantry', 'cavalry', 'artillery'] as const) bonuses.combatPowerBonus[unit] += effect.value; break;
+    case 'MILITARY_MAINTENANCE': bonuses.militaryMaintenanceMultiplier += effect.value; break;
+    case 'FORTIFICATION_BONUS': bonuses.fortificationMultiplier += effect.value; break;
+    case 'POPULATION_GROWTH': bonuses.populationGrowthMultiplier += effect.value; break;
+    case 'POPULATION_CAPACITY': bonuses.populationCapacityMultiplier += effect.value; break;
+    case 'GOLD_INCOME': bonuses.goldIncomeMultiplier += effect.value; break;
+    case 'RESEARCH_SPEED': bonuses.researchSpeedMultiplier += effect.value; break;
+  }
+}
+
+function applyFocusEffect(effect: RewardEffect, bonuses: TechnologyBonuses) {
+  switch (effect.type) {
+    case 'COMBAT_POWER': if (effect.unitType) bonuses.combatPowerBonus[effect.unitType] += effect.value; break;
+    case 'GOLD_INCOME': bonuses.goldIncomeMultiplier += effect.value; break;
+    case 'BUILD_COST': bonuses.buildCostMultiplier += effect.value; break;
+    case 'BUILD_TIME': bonuses.buildTimeMultiplier += effect.value; break;
+    case 'MANPOWER': bonuses.manpowerMultiplier += effect.value; break;
+    case 'RESEARCH_SPEED': bonuses.researchSpeedMultiplier += effect.value; break;
+    default: break;
+  }
+}
+
+export function calculateTechnologyBonuses(state: CountryTechState): TechnologyBonuses {
+  const bonuses = createNeutralBonuses();
+  for (const id of state.completedTechnologies) TECHNOLOGIES.find(technology => technology.id === id)?.effects.forEach(effect => applyTechnologyEffect(effect, bonuses));
+  return bonuses;
+}
+
+export function calculateTechBonuses(state: CountryTechState): TechnologyBonuses {
+  const bonuses = calculateTechnologyBonuses(state);
+  for (const id of state.completedFocuses) {
+    const focus = NATIONAL_FOCUSES.find(item => item.id === id);
+    if (focus) applyFocusEffect(focus.rewardEffect, bonuses);
+  }
+  return bonuses;
+}
+
+export function getMilitaryCombatBonuses(state: CountryTechState) {
+  const bonuses = calculateTechBonuses(state);
+  return { ...bonuses.combatPowerBonus, fortificationMultiplier: bonuses.fortificationMultiplier };
+}
+
+const signedPercent = (value: number) => Math.round(value * 100);
+export function formatTechnologyEffect(effect: TechnologyEffect): string {
+  const amount = `${effect.value >= 0 ? '+' : ''}${signedPercent(effect.value)}%`;
+  switch (effect.type) {
+    case 'GOOD_PRODUCTION': return `Produção de ${effect.good.toUpperCase()}: ${amount}`;
+    case 'PRODUCTION_EFFICIENCY': return `Eficiência produtiva geral: ${amount}`;
+    case 'RECRUITMENT_TIME': return `Tempo de recrutamento: ${amount}`;
+    case 'COMBAT_POWER': return `Poder de combate: ${amount}`;
+    case 'MILITARY_MAINTENANCE': return `Manutenção militar: ${amount}`;
+    case 'FORTIFICATION_BONUS': return `Bônus de fortificações: ${amount}`;
+    case 'POPULATION_GROWTH': return `Crescimento populacional: ${amount}`;
+    case 'POPULATION_CAPACITY': return `Capacidade populacional: ${amount}`;
+    case 'GOLD_INCOME': return `Renda: ${amount}`;
+    case 'RESEARCH_SPEED': return `Velocidade de pesquisa: ${amount}`;
+  }
+}
+
+export function getActiveTechnologyModifierEntries(state: CountryTechState): TechnologyModifierEntry[] {
+  const bonuses = calculateTechnologyBonuses(state);
+  const entries: TechnologyModifierEntry[] = [];
+  const add = (label: string, value: number, neutral = 1) => { if (Math.abs(value - neutral) > Number.EPSILON) entries.push({ label, percent: signedPercent(value - neutral) }); };
+  for (const good of ['food', 'wood', 'iron', 'tools'] as const) add(`Produção de ${good.toUpperCase()}`, bonuses.productionMultipliers[good]);
+  add('Renda', bonuses.goldIncomeMultiplier);
+  add('Crescimento populacional', bonuses.populationGrowthMultiplier);
+  add('Capacidade populacional', bonuses.populationCapacityMultiplier);
+  add('Velocidade de recrutamento', 2 - bonuses.recruitmentTimeMultiplier);
+  add('Poder de combate', 1 + Math.max(...Object.values(bonuses.combatPowerBonus)));
+  add('Manutenção militar', 2 - bonuses.militaryMaintenanceMultiplier);
+  add('Fortificações', bonuses.fortificationMultiplier);
+  add('Velocidade de pesquisa', bonuses.researchSpeedMultiplier);
+  return entries;
+}

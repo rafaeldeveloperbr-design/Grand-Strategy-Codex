@@ -2,6 +2,7 @@ import React from 'react';
 import { Country } from '../types';
 import { CountryTechState } from '../types/technology';
 import { TECHNOLOGIES } from '../data/technology';
+import { formatTechnologyEffect, getActiveTechnologyModifierEntries, getResearchProgress } from '../engine/technology';
 import '../styles/tech-modal.css';
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onStartResearch, onCancelResearch, onClose }) => {
+    const activeModifiers = getActiveTechnologyModifierEntries(techState);
+    const activeProgress = getResearchProgress(techState);
 
     const canStart = (id: string) => {
         const t = TECHNOLOGIES.find(x => x.id === id);
@@ -38,6 +41,17 @@ export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onSta
                     <button className="tech-modal__close" onClick={onClose}>×</button>
                 </div>
 
+                {activeModifiers.length > 0 && (
+                    <section className="technology-modifiers" aria-label="Modificadores tecnológicos ativos">
+                        <h3>Modificadores tecnológicos ativos</h3>
+                        <div className="technology-modifiers__grid">
+                            {activeModifiers.map(modifier => (
+                                <span key={modifier.label}>{modifier.label}: <strong>{modifier.percent > 0 ? '+' : ''}{modifier.percent}%</strong></span>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
                 <div className="research-columns">
                     {categories.map(cat => (
                         <div
@@ -55,27 +69,28 @@ export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onSta
                                 {TECHNOLOGIES.filter(t => t.category === cat.id).map(tech => {
                                     const isActive = techState.activeResearchId === tech.id;
                                     const isDone = techState.completedTechnologies.includes(tech.id);
-                                    const progressDays = isActive ? techState.researchProgressDays : 0;
-                                    const remaining = tech.durationDays - progressDays;
-                                    const progress = (progressDays / tech.durationDays) * 100;
-                                    const missing = tech.prerequisites.filter(id => !techState.completedTechnologies.includes(id)).map(id => TECHNOLOGIES.find(t => t.id === id)?.title ?? id);
-                                    const effects = tech.effects.map(effect => `${effect.type}: ${effect.value > 0 ? '+' : ''}${Math.round(effect.value * 100)}%`).join(' • ');
+                                    const progress = isActive ? activeProgress : null;
+                                    const prerequisites = tech.prerequisites.map(id => ({
+                                        title: TECHNOLOGIES.find(item => item.id === id)?.title ?? id,
+                                        completed: techState.completedTechnologies.includes(id),
+                                    }));
 
                                     return (
                                         <div key={tech.id} className="tree-node-wrapper">
                                             <div className={`tree-node research-node ${isDone ? 'completed' : ''} ${isActive ? 'active' : ''} ${!canStart(tech.id) && !isDone && !isActive ? 'locked' : ''}`}>
                                                 <span className="tree-node-icon">{tech.icon}</span>
                                                 <h4>{tech.title}</h4>
+                                                <div className="tree-category">{cat.name}</div>
                                                 <p className="tree-desc">{tech.description}</p>
                                                 <div className="tree-cost">💰 {tech.costGold} | ⏱ {tech.durationDays}d</div>
-                                                <div className="tree-cost">{effects}</div>
-                                                {missing.length > 0 && <div className="tree-desc">🔒 Requer: {missing.join(', ')}</div>}
+                                                <div className="tree-effects">{tech.effects.map(effect => <div key={`${effect.type}-${'good' in effect ? effect.good : ''}`}>⚙️ {formatTechnologyEffect(effect)}</div>)}</div>
+                                                {prerequisites.length > 0 && <div className="tree-prerequisites"><strong>Requer:</strong>{prerequisites.map(item => <div key={item.title} className={item.completed ? 'completed' : 'missing'}>{item.completed ? '✓' : '✗'} {item.title}</div>)}</div>}
 
                                                 {!isDone && (
                                                     <div className="tree-progress-wrap">
-                                                        <div className="tree-progress"><div style={{ width: `${isActive ? progress : 0}%` }} /></div>
+                                                        <div className="tree-progress"><div style={{ width: `${progress?.percent ?? 0}%` }} /></div>
                                                         <span className="tree-time">
-                                                            {isActive ? `⏳ ${remaining} dias restantes` : `${tech.durationDays} dias`}
+                                                            {progress ? `Pesquisa: ${progress.current.toFixed(1)} / ${progress.required} dias (${Math.floor(progress.percent)}%) • ~${progress.estimatedDaysRemaining} dias restantes` : `${tech.durationDays} dias`}
                                                         </span>
                                                     </div>
                                                 )}

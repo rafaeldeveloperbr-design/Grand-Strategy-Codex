@@ -1,4 +1,5 @@
 import type { Army, Province, ProvincePopulation } from '../types';
+import { BUILDING_DEFINITIONS } from '../data/buildings';
 
 export const POPULATION_DEFAULTS = {
   GROWTH_RATE: 0.002,
@@ -60,14 +61,44 @@ export function getPopulationCapacity(province: Province, multiplier = 1): numbe
   return Math.max(0, (province.maxPopulation + housing * 5000) * multiplier);
 }
 
+export interface PopulationGrowthOptions {
+  growthMultiplier?: number;
+  capacityMultiplier?: number;
+}
+
+/** Single source of truth for the absolute population change applied by a daily tick. */
+export function calculateProvincePopulationGrowth(
+  province: Province,
+  countryStability: number,
+  options: PopulationGrowthOptions = {}
+): number {
+  const population = normalizePopulation(province.population);
+  let growthRate = population.growthRate;
+  if (countryStability > 50) growthRate += 0.001 * ((countryStability - 50) / 50);
+  for (const building of province.buildings) {
+    if (building.daysRemaining > 0) continue;
+    const growthBonus = BUILDING_DEFINITIONS[building.type].bonusPerLevel.growthBonus;
+    if (growthBonus) growthRate += growthBonus / 100 * building.level;
+  }
+  const capacity = getPopulationCapacity(province, options.capacityMultiplier);
+  const ratio = capacity > 0 ? population.total / capacity : 1;
+  if (ratio > 0.8) growthRate -= 0.01 * (ratio - 0.8) * 5;
+  const requestedGrowth = population.total * growthRate * Math.max(0, options.growthMultiplier ?? 1);
+  const nextTotal = clamp(population.total + requestedGrowth, 0, capacity);
+  return nextTotal - population.total;
+}
+
 export function processProvincePopulation(
   province: Province,
   growthMultiplier: number,
   taxationId: string,
-  options: { atWar?: boolean; economicMultiplier?: number; growthAmount?: number; capacityMultiplier?: number } = {}
+  options: { atWar?: boolean; economicMultiplier?: number; growthAmount?: number; capacityMultiplier?: number; countryStability?: number } = {}
 ): Province {
   const current = normalizePopulation(province.population);
-  const requestedGrowth = options.growthAmount ?? current.total * current.growthRate * Math.max(0, growthMultiplier);
+  const requestedGrowth = options.growthAmount ?? calculateProvincePopulationGrowth(province, options.countryStability ?? 50, {
+    growthMultiplier,
+    capacityMultiplier: options.capacityMultiplier,
+  });
   const total = clamp(Math.floor(current.total + requestedGrowth), 0, getPopulationCapacity(province, options.capacityMultiplier));
   let population = recalculateEmployment({ ...province, population: { ...current, total } }, { ...current, total });
   population = { ...population, satisfaction: calculateSatisfaction({ ...province, population }, taxationId, options) };

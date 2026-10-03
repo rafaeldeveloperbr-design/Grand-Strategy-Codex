@@ -2,7 +2,10 @@ import React from 'react';
 import { Province, Country, Army } from '../../types';
 import { calculateArmySize } from '../../engine/combat';
 import { getUnrestDescription, getUnrestColor, isProvincePacified } from '../../engine/unrest';
-import { normalizePopulation } from '../../engine/population';
+import { getPopulationCapacity, normalizePopulation } from '../../engine/population';
+import { calculateDailyPopulationGrowth } from '../../engine/economy';
+import { calculateTechnologyBonuses, calculateTechBonuses } from '../../engine/technology';
+import type { CountryTechState } from '../../types/technology';
 import { ProvinceMarketSection } from './ProvinceMarketSection';
 
 interface ProvinceInfoTabProps {
@@ -14,6 +17,7 @@ interface ProvinceInfoTabProps {
     country?: Country;
   }>;
   onProvinceClick: (provinceId: string) => void;
+  techState?: CountryTechState;
 }
 
 export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
@@ -22,12 +26,20 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
   armiesHere,
   neighborProvinces,
   onProvinceClick,
+  techState,
 }) => {
   const unrest = province.unrest ?? 0;
   const isPacified = isProvincePacified(province);
   const population = normalizePopulation(province.population);
   const workforce = population.employed + population.unemployed;
   const unemploymentRate = workforce > 0 ? population.unemployed / workforce * 100 : 0;
+  const combinedBonuses = techState ? calculateTechBonuses(techState) : undefined;
+  const technologyBonuses = techState ? calculateTechnologyBonuses(techState) : undefined;
+  const baseCapacity = getPopulationCapacity(province);
+  const effectiveCapacity = getPopulationCapacity(province, combinedBonuses?.populationCapacityMultiplier);
+  const dailyGrowth = ownerCountry ? calculateDailyPopulationGrowth(province, ownerCountry, combinedBonuses) : 0;
+  const growthTechPercent = ((technologyBonuses?.populationGrowthMultiplier ?? 1) - 1) * 100;
+  const capacityTechPercent = ((technologyBonuses?.populationCapacityMultiplier ?? 1) - 1) * 100;
 
   return (
     <>
@@ -57,21 +69,24 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
         <div className="province-panel__info-row">
           <span className="province-panel__label">Habitantes:</span>
           <span className="province-panel__value">
-            {population.total.toLocaleString()} / {province.maxPopulation.toLocaleString()}
+            {population.total.toLocaleString()} / {effectiveCapacity.toLocaleString()}
           </span>
         </div>
         <div className="province-panel__pop-bar">
           <div
             className="province-panel__pop-fill"
             style={{
-              width: `${(population.total / province.maxPopulation) * 100}%`,
+              width: `${Math.min(100, effectiveCapacity > 0 ? population.total / effectiveCapacity * 100 : 100)}%`,
               backgroundColor: ownerCountry?.color ?? '#666',
             }}
           />
         </div>
         <div className="province-panel__info-row"><span className="province-panel__label">Empregados:</span><span className="province-panel__value">{population.employed.toLocaleString()}</span></div>
         <div className="province-panel__info-row"><span className="province-panel__label">Desempregados:</span><span className="province-panel__value">{population.unemployed.toLocaleString()} ({unemploymentRate.toFixed(1)}%)</span></div>
-        <div className="province-panel__info-row"><span className="province-panel__label">Crescimento:</span><span className="province-panel__value">{(population.growthRate * 100).toFixed(2)}%/dia</span></div>
+        <div className="province-panel__info-row"><span className="province-panel__label">📈 Crescimento:</span><span className="province-panel__value">{dailyGrowth >= 0 ? '+' : ''}{Math.floor(dailyGrowth).toLocaleString()} / dia</span></div>
+        {growthTechPercent !== 0 && <div className="province-panel__info-row"><span className="province-panel__label">Tecnologia:</span><span className="province-panel__value">+{Math.round(growthTechPercent)}%</span></div>}
+        <div className="province-panel__info-row" title={`Base: ${baseCapacity.toLocaleString()} • Final: ${effectiveCapacity.toLocaleString()}`}><span className="province-panel__label">🏠 Capacidade:</span><span className="province-panel__value">{effectiveCapacity.toLocaleString()}</span></div>
+        {capacityTechPercent !== 0 && <div className="province-panel__info-row"><span className="province-panel__label">Tecnologia:</span><span className="province-panel__value">+{Math.round(capacityTechPercent)}%</span></div>}
         <div className="province-panel__info-row"><span className="province-panel__label">Satisfação:</span><span className="province-panel__value">{Math.round(population.satisfaction)}%</span></div>
       </div>
 

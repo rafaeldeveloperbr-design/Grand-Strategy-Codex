@@ -6,6 +6,7 @@ import { ProvinceInfoTab } from './ProvinceInfoTab';
 import { ProvinceBuildingsTab } from './ProvinceBuildingsTab';
 import { ProvinceMilitaryTab } from './ProvinceMilitaryTab';
 import { ProvinceSidebar } from './ProvinceSidebar';
+import type { CountryTechState } from '../../types/technology';
 
 export interface ProvincePanelProps {
   province: Province;
@@ -15,6 +16,8 @@ export interface ProvincePanelProps {
   armies: Army[];
   recruitments: Recruitment[];
   buildingConstructions: BuildingConstruction[];
+  playerTechState: CountryTechState;
+  botTechStates: Map<string, CountryTechState>;
   onClose: () => void;
   onProvinceClick: (provinceId: string) => void;
   onBuild: (provinceId: string, buildingType: BuildingType) => void;
@@ -33,6 +36,8 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
   armies,
   recruitments,
   buildingConstructions,
+  playerTechState,
+  botTechStates,
   onClose,
   onProvinceClick,
   onBuild,
@@ -43,6 +48,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
   const [activeTab, setActiveTab] = useState<PanelTab>('info');
   const ownerCountry = getCountryByTag(province.owner);
   const isPlayerOwned = province.owner === playerCountry.tag;
+  const ownerTechState = isPlayerOwned ? playerTechState : botTechStates.get(province.owner);
 
   const armiesHere = armies.filter((a) => a.location === province.id);
   const recruitmentsHere = recruitments.filter((r) => r.provinceId === province.id);
@@ -104,6 +110,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
                 armiesHere={armiesHere}
                 neighborProvinces={neighborProvinces}
                 onProvinceClick={onProvinceClick}
+                techState={ownerTechState}
               />
             )}
 

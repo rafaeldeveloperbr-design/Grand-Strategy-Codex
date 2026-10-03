@@ -7,7 +7,7 @@ import { getPopulationCapacity } from '../population';
 import { getStorageCapacity, normalizeMarket } from '../market';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
-import { startTechnologyResearch } from '../technology';
+import { calculateTechBonuses, startTechnologyResearch } from '../technology';
 
 const ALL_FINITE = (market: ReturnType<typeof normalizeMarket>) => Object.values(market.goods).every(g => Number.isFinite(g.stock));
 
@@ -116,7 +116,8 @@ export function processAIEconomicDecisions(
     if (market.goods.iron.stock < market.goods.iron.demand * 2) priorities.push('iron_mine');
     if (market.goods.tools.stock < market.goods.tools.demand * 2) priorities.push('workshop');
     if (ALL_FINITE(market) && Object.values(market.goods).some(g => g.stock >= getStorageCapacity(targetProvince) * .9)) priorities.push('warehouse');
-    if (populationTotal >= getPopulationCapacity(targetProvince) * .9) priorities.push('housing');
+    const capacityMultiplier = calculateTechBonuses(updatedTechState).populationCapacityMultiplier;
+    if (populationTotal >= getPopulationCapacity(targetProvince, capacityMultiplier) * .9) priorities.push('housing');
     priorities.push('infrastructure', 'market', 'barracks', 'fortress');
     for (const chosenBuilding of priorities) {
       const result = startBuilding(

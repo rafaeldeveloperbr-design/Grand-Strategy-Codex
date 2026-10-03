@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Country, Province } from '../../types';
 import { calculateProduction } from '../market';
-import { getPopulationCapacity } from '../population';
-import { calculateArmyBasePower } from '../combat/combatCalculations';
-import { calculateTechBonuses, createInitialTechState, getMilitaryCombatBonuses, normalizeTechState, processDailyTechProgress, startTechnologyResearch } from '../technology';
+import { calculateProvincePopulationGrowth, getPopulationCapacity, processProvincePopulation } from '../population';
+import { calculateArmyBasePower, calculateDefenderTotalPower } from '../combat/combatCalculations';
+import { calculateTechBonuses, calculateTechnologyBonuses, createInitialTechState, getActiveTechnologyModifierEntries, getMilitaryCombatBonuses, normalizeTechState, processDailyTechProgress, startTechnologyResearch } from '../technology';
 import { processAIEconomicDecisions } from '../aiEngine/aiEconomy';
+import { processDailyTick } from '../economy';
 
 const country = { tag:'TST', resources:{gold:1000} } as Country;
 const stateWith = (...ids:string[]) => ({...createInitialTechState('TST'),completedTechnologies:ids});
@@ -27,4 +28,15 @@ describe('Technology V2',()=>{
  it('IA respeita pré-requisitos',()=>{const result=processAIEconomicDecisions(country,[],createInitialTechState('TST'),[],[],'1/1/1');expect(result.techState.activeResearchId).not.toBe('professional_army')});
  it('normaliza save antigo sem progresso',()=>{const normalized=normalizeTechState({countryTag:'OLD',completedTechnologies:['sanitation']});expect(normalized.researchProgressDays).toBe(0);expect(normalized.completedTechnologies).toEqual(['sanitation'])});
  it('preserva pesquisa e progresso do save',()=>{const normalized=normalizeTechState({...createInitialTechState('TST'),activeResearchId:'education',researchProgressDays:12.5});expect(normalized.activeResearchId).toBe('education');expect(normalized.researchProgressDays).toBe(12.5)});
+ it('calcula crescimento base em helper compartilhado',()=>expect(calculateProvincePopulationGrowth(province,50)).toBe(10));
+ it('Saneamento aumenta em 10% o crescimento efetivo',()=>expect(calculateProvincePopulationGrowth(province,50,{growthMultiplier:calculateTechBonuses(stateWith('sanitation')).populationGrowthMultiplier})).toBeCloseTo(11));
+ it('simulação usa o mesmo helper de crescimento',()=>{const growth=calculateProvincePopulationGrowth(province,50,{growthMultiplier:1.1});expect(processProvincePopulation(province,1.1,'taxation_normal').population.total).toBe(province.population.total+Math.floor(growth))});
+ it('retorna modificadores neutros sem entradas visuais',()=>expect(getActiveTechnologyModifierEntries(createInitialTechState('TST'))).toEqual([]));
+ it('Administração Comercial afeta todos os bens uma vez',()=>expect(calculateTechBonuses(stateWith('commercial_administration')).productionMultipliers).toEqual({food:1.05,wood:1.05,iron:1.05,tools:1.05}));
+ it('Administração Pública aumenta renda',()=>expect(calculateTechBonuses(stateWith('public_administration')).goldIncomeMultiplier).toBe(1.05));
+ it('Urbanização acumula capacidade com Medicina',()=>expect(calculateTechBonuses(stateWith('medicine','urbanization')).populationCapacityMultiplier).toBeCloseTo(1.2));
+ it('fortaleza e tecnologia de fortificação coexistem',()=>{const army={owner:'TST',regiments:[{type:'infantry',strength:100,morale:100}]} as Parameters<typeof calculateDefenderTotalPower>[0];const fortified={...province,defense:1,buildings:[...province.buildings,{type:'fortress',level:1,daysRemaining:0}]} as Province;const base=calculateDefenderTotalPower(army,fortified,{infantry:0,cavalry:0,artillery:0}).totalPower;const technology=calculateDefenderTotalPower(army,fortified,getMilitaryCombatBonuses(stateWith('fortifications'))).totalPower;expect(technology).toBeGreaterThan(base)});
+ it('Technology e National Focus são combinados sem contaminar resumo tecnológico',()=>{const state={...stateWith('improved_weapons'),completedFocuses:['focus_military_modernization']};expect(calculateTechBonuses(state).combatPowerBonus.infantry).toBeCloseTo(.25);expect(calculateTechnologyBonuses(state).combatPowerBonus.infantry).toBeCloseTo(.1)});
+ it('normalização remove referências a tecnologias inexistentes',()=>{const normalized=normalizeTechState({...createInitialTechState('TST'),activeResearchId:'removed',completedTechnologies:['sanitation','removed'],researchProgressDays:4});expect(normalized.activeResearchId).toBeNull();expect(normalized.completedTechnologies).toEqual(['sanitation']);expect(normalized.researchProgressDays).toBe(0)});
+ it('Logística Militar reduz manutenção das tropas',()=>{const completeCountry={tag:'TST',name:'Test',adjective:'Test',color:'#000',colorLight:'#111',provinces:['p'],resources:{gold:1000,manpower:0,maxManpower:0,stability:50,prestige:0},economy:{goldIncome:0,goldExpense:0,manpowerGain:0,manpowerExpense:0},flag:'',activeLaws:{conscription:'conscription_peacetime',taxation:'taxation_normal',governance:'governance_balanced',economy:'',intelligence:''}} satisfies Country;const occupied={...province,stationedTroops:10000};const base=processDailyTick(completeCountry,[occupied]).country.economy.goldExpense;const logistics=processDailyTick(completeCountry,[occupied],calculateTechBonuses(stateWith('military_logistics'))).country.economy.goldExpense;expect(logistics).toBeLessThan(base)});
 });

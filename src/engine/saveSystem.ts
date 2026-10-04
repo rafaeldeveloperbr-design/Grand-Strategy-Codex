@@ -5,6 +5,7 @@ import type { DiplomaticRelation, War } from '../types/diplomacy';
 import { normalizePopulation } from './population';
 import { normalizeMarket } from './market';
 import { normalizeTechState } from './technology';
+import { normalizeActiveLaws } from './government';
 
 // ============ META ============
 export type SaveMeta = {
@@ -97,9 +98,12 @@ function serializeV2(save: SaveGameV2): SerializedSaveGameV2 {
 function deserializeV2(raw: SerializedSaveGameV2): SaveGameV2 {
   return {
     ...raw,
-    world: { ...raw.world, provinces: raw.world.provinces.map(normalizeSavedProvince) },
+    world: { ...raw.world, provinces: raw.world.provinces.map(normalizeSavedProvince), countries: raw.world.countries.map(normalizeSavedCountry) },
     technology: { player: normalizeTechState(raw.technology.player), bots: new Map(raw.technology.bots.map(([tag, state]) => [tag, normalizeTechState(state, tag)])) },
   };
+}
+function normalizeSavedCountry(country: Country): Country {
+  return { ...country, activeLaws: normalizeActiveLaws(country.activeLaws) };
 }
 export function migrateLegacyBuildings(buildings: Province['buildings']): Province['buildings'] {
   const aliases: Record<string, Province['buildings'][number]['type']> = {
@@ -125,7 +129,7 @@ function migrateV1ToV2(v1: SaveGameV1): SaveGameV2 {
   const botTechsMap = v1.botTechs instanceof Map ? v1.botTechs : new Map(Object.entries(v1.botTechs as Record<string, CountryTechState>));
   return {
     version: 2, id: v1.id, name: v1.name, timestamp: v1.timestamp, date: v1.date,
-    world: { provinces: v1.provinces.map(normalizeSavedProvince), countries: v1.countries },
+    world: { provinces: v1.provinces.map(normalizeSavedProvince), countries: v1.countries.map(normalizeSavedCountry) },
     military: { armies: v1.armies, wars: v1.wars, activeBattles: v1.activeBattles, recruitments: v1.recruitments },
     diplomacy: { relations: v1.relations },
     economy: { constructions: v1.constructions },

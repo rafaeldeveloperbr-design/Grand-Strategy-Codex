@@ -96,7 +96,7 @@ export function getStorageCapacity(province: Province): number {
 export function calculateLocalPrice(id: GoodId, supply: number, demand: number): number { const base = GOODS[id].basePrice; if (demand <= 0) return base * .5; return round(base * clamp(Math.sqrt(demand / Math.max(.01, supply)), .5, 3)); }
 export function calculatePurchasingPower(province: Province, goods: Record<GoodId, GoodMarketState>): number { const p = recalculateEmployment(province); const workforce = p.employed + p.unemployed; const employment = workforce ? p.employed / workforce : 0; const food = goods.food; return round(clamp(45 + employment * 35 + province.development * 1.5 - (food.price - 1) * 18 - (food.demand ? food.shortage / food.demand : 0) * 35, 0, 100)); }
 export function calculateMarketSatisfactionAdjustment(market: ProvinceMarket): number { const food = market.goods.food; return clamp((1 - food.price) * 8 + (market.purchasingPower - 50) * .16 - (food.demand ? food.shortage / food.demand : 0) * 18, -30, 8); }
-export function processProvinceMarket(province: Province, multipliers: Partial<Record<GoodId, number>> = {}): ProvinceMarket {
+export function processProvinceMarket(province: Province, multipliers: Partial<Record<GoodId, number>> = {}, purchasingPowerMultiplier = 1): ProvinceMarket {
   const previous = normalizeMarket(province.market); const production = calculateProduction(province, multipliers); const demand = calculateDemand(province);
   // Workshops use conserved provincial stocks; output scales proportionally with either missing input.
   const plannedTools = production.tools;
@@ -114,7 +114,7 @@ export function processProvinceMarket(province: Province, multipliers: Partial<R
     return [id, { stock: round(Math.min(capacity, Math.max(0, available - consumption))), production: production[id], demand: demand[id], consumption: round(consumption), price: calculateLocalPrice(id, available, demand[id]), shortage: round(shortage), imported: 0, exported: 0 }];
   })) as Record<GoodId, GoodMarketState>;
   const market = { goods, purchasingPower: 50 };
-market.purchasingPower = calculatePurchasingPower(province, goods);
+market.purchasingPower = Math.max(0, Math.min(100, calculatePurchasingPower(province, goods) * purchasingPowerMultiplier));
 
 if (province.name === 'Mons Ferrum') {
   console.log(`[MARKET] ${province.name}`, {

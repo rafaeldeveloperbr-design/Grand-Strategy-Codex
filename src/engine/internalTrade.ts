@@ -48,7 +48,7 @@ export function calculateTradeBalance(province: Province, goodId: GoodId, effici
 }
 
 /** Redistributes real stock inside connected components of a single country. */
-export function processInternalTrade(provinces: Province[], efficiencyMultiplier = 1): Province[] {
+export function processInternalTrade(provinces: Province[], efficiencyMultiplier = 1, purchasingPowerMultiplier = 1): Province[] {
   const result = provinces.map(province => ({
     ...province,
     market: normalizeMarket(province.market),
@@ -106,7 +106,7 @@ export function processInternalTrade(provinces: Province[], efficiencyMultiplier
       good.shortage = round(Math.max(0, good.demand - effectiveSupply));
       good.price = calculateLocalPrice(id, effectiveSupply, good.demand);
     }
-    market.purchasingPower = calculatePurchasingPower(province, market.goods);
+    market.purchasingPower = Math.max(0, Math.min(100, calculatePurchasingPower(province, market.goods) * purchasingPowerMultiplier));
     return province;
   });
 }

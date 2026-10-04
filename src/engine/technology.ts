@@ -3,6 +3,7 @@ import type { CountryTechState, RewardEffect, TechnologyEffect } from '../types/
 import type { AIDifficulty } from '../types/difficulty';
 import { DIFFICULTY_SPEED_MULTIPLIERS } from '../types/difficulty';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../data/technology';
+import { calculateLawModifiers } from './government';
 
 export interface TechnologyBonuses {
   combatPowerBonus: { infantry: number; cavalry: number; artillery: number };
@@ -92,10 +93,11 @@ export function processDailyTechProgress(state: CountryTechState, country: Count
   const notifications: string[] = [];
   const next = { ...normalized, completedFocuses: [...normalized.completedFocuses], completedTechnologies: [...normalized.completedTechnologies] };
   const difficultySpeed = isPlayer ? 1 : DIFFICULTY_SPEED_MULTIPLIERS[difficulty];
+  const lawModifiers = calculateLawModifiers(country.activeLaws);
   if (next.activeFocusId) {
     const focus = NATIONAL_FOCUSES.find(item => item.id === next.activeFocusId);
     if (focus) {
-      next.focusProgressDays += difficultySpeed;
+      next.focusProgressDays += difficultySpeed * lawModifiers.focusSpeedMultiplier;
       if (next.focusProgressDays >= focus.durationDays) {
         next.completedFocuses.push(focus.id); next.activeFocusId = null; next.focusProgressDays = 0;
         notifications.push(`✅ Foco concluído: ${focus.title}`);
@@ -105,7 +107,7 @@ export function processDailyTechProgress(state: CountryTechState, country: Count
   if (next.activeResearchId) {
     const technology = TECHNOLOGIES.find(item => item.id === next.activeResearchId);
     if (technology) {
-      next.researchProgressDays += difficultySpeed * calculateTechBonuses(next).researchSpeedMultiplier;
+      next.researchProgressDays += difficultySpeed * calculateTechBonuses(next).researchSpeedMultiplier * lawModifiers.researchSpeedMultiplier;
       if (next.researchProgressDays >= technology.durationDays) {
         next.completedTechnologies.push(technology.id); next.activeResearchId = null; next.researchProgressDays = 0;
         notifications.push(`🔬 Pesquisa concluída: ${technology.title}`);

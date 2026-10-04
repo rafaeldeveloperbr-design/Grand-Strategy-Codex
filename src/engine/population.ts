@@ -211,7 +211,7 @@ export interface SatisfactionOptions {
 
 export function calculateSatisfactionBreakdown(
   province: Province,
-  taxationId: string,
+  _taxationId: string,
   options: SatisfactionOptions = {}
 ): SatisfactionBreakdown {
   const population = recalculateEmployment(province);
@@ -225,7 +225,7 @@ export function calculateSatisfactionBreakdown(
     unemployment: -unemploymentRate * 45,
     food: -foodStatus.ratio * 25 + ((food?.price ?? 1) - 1) * -5
       - (foodStatus.severity === 'severe' ? POPULATION_BALANCE.SEVERE_SHORTAGE_SATISFACTION_PENALTY : 0),
-    taxation: taxationId === 'taxation_high' ? -12 : taxationId === 'taxation_low' ? 8 : 0,
+    taxation: 0,
     economy: (clamp(options.economicMultiplier ?? 1, 0, 1.5) - 1) * 15,
     stability: (clamp(options.countryStability ?? 50, 0, 100) - 50) * 0.12,
     war: options.atWar ? -5 : 0,

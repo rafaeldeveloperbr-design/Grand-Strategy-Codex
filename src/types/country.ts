@@ -1,6 +1,8 @@
 /**
  * Representa uma nação/país jogável ou não-jogável.
  */
+import type { ActiveLaws } from './government';
+
 export interface Country {
   /** Tag única do país (ex: "BRA", "FRA", "GER") */
   tag: string;
@@ -21,13 +23,7 @@ export interface Country {
   /** Bandeira (emoji ou ícone) */
   flag: string;
   /** Leis ativas do país */
-  activeLaws: {
-    conscription: string;
-    taxation: string;
-    governance: string;
-    economy: string;
-    intelligence: string;
-  };
+  activeLaws: ActiveLaws;
   /** Indica se o país já foi totalmente anexado (para evitar processamento repetido) */
   isAnnexed?: boolean;
 }
@@ -61,4 +57,3 @@ export interface CountryEconomy {
   /** Custo de manutenção de tropas por dia */
   manpowerExpense: number;
 }
-

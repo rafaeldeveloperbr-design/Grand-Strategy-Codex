@@ -13,6 +13,8 @@ import type { ToastType } from '../../types/toast';
 import type { AIActionType } from '../../types/aiLog';
 import type { CountryTechState } from '../../types/technology';
 import { calculateTechBonuses } from '../../engine/technology';
+import { calculateLawModifiers } from '../../engine/government';
+import { getStabilityModifiers } from '../../engine/stability';
 
 type Params = {
   recruitments: Recruitment[];
@@ -50,7 +52,7 @@ export function processEconomyTick(p: Params) {
 
   // PASSO A: RECRUTAMENTO
   const stateFor = (tag: string) => tag === p.playerCountryTag ? p.playerTechState : p.botTechStates.get(tag);
-  const recruitmentMultipliers = new Map(countries.map(c => [c.tag, stateFor(c.tag) ? calculateTechBonuses(stateFor(c.tag)!).recruitmentTimeMultiplier : 1]));
+  const recruitmentMultipliers = new Map(countries.map(c => [c.tag, (stateFor(c.tag) ? calculateTechBonuses(stateFor(c.tag)!).recruitmentTimeMultiplier : 1) * calculateLawModifiers(c.activeLaws).recruitmentTimeMultiplier]));
   const recruitResult = processRecruitments(recruitments, armies, countries, provinces, recruitmentMultipliers);
   armies = recruitResult.armies;
   recruitments = recruitResult.recruitments;
@@ -78,7 +80,12 @@ export function processEconomyTick(p: Params) {
   }
 
   // PASSO A.5: CONSTRUÇÕES
-  const constructionResult = processConstructions(buildingConstructions, provinces);
+  const constructionSpeeds = new Map(countries.map(country => [country.tag,
+    (stateFor(country.tag) ? calculateTechBonuses(stateFor(country.tag)!).buildTimeMultiplier : 1)
+    * calculateLawModifiers(country.activeLaws).constructionSpeedMultiplier
+    * getStabilityModifiers(country.resources.stability).constructionSpeed
+  ]));
+  const constructionResult = processConstructions(buildingConstructions, provinces, constructionSpeeds);
   buildingConstructions = constructionResult.updatedConstructions;
 
   for (const completed of constructionResult.completedConstructions) {

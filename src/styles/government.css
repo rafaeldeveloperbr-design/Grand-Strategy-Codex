@@ -171,6 +171,10 @@
   color: var(--text-primary);
   font-weight: 600;
 }
+.government-modal__law-bonus.positive{ color: var(--accent-green); }
+.government-modal__law-bonus.negative{ color: var(--accent-red); }
+.government-modal__requirement{ margin: 8px 0; color: var(--accent-gold); font-size: 12px; }
+.government-modal__law-button{ max-width: 58%; }
 
 .government-modal__law-footer{
   display: flex;

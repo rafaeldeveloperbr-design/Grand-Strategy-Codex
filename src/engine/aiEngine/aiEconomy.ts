@@ -8,6 +8,7 @@ import { getStorageCapacity, normalizeMarket } from '../market';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
 import { calculateTechBonuses, startTechnologyResearch } from '../technology';
+import { chooseAILaw, enactLaw } from '../government';
 
 const ALL_FINITE = (market: ReturnType<typeof normalizeMarket>) => Object.values(market.goods).every(g => Number.isFinite(g.stock));
 
@@ -107,6 +108,13 @@ export function processAIEconomicDecisions(
         message: `Iniciou a pesquisa tecnológica: ${affordableTech.title} (💰 ${affordableTech.costGold})`,
       });
     }
+  }
+
+  // Laws are considered after research so policy churn cannot starve Technology V2.
+  const selectedLaw = chooseAILaw(updatedCountry, provinces, {atWar});
+  if (selectedLaw) {
+    const result = enactLaw(updatedCountry.activeLaws, selectedLaw, updatedCountry.resources.gold, {atWar});
+    if (result.allowed) updatedCountry = {...updatedCountry,activeLaws:result.activeLaws,resources:{...updatedCountry.resources,gold:result.gold}};
   }
 
   // 3. CONSTRUÇÃO EM PROVÍNCIAS: shortages and real capacity drive the choice.

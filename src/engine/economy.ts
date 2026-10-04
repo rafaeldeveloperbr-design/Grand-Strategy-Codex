@@ -13,7 +13,6 @@
 
 import { Province, Country } from '../types';
 import { BUILDING_DEFINITIONS } from '../data/buildings';
-import { LAWS } from '../constants/laws';
 import { getStabilityModifiers, processDailyStabilityRecovery } from './stability';
 import { calculateUnrestEconomicImpact } from './unrest';
 import { calculatePopulationGrowthBreakdown, calculateProvincePopulationGrowth, getWorkerAvailability, normalizePopulation, processInternalMigration, processProvincePopulation, recalculateEmployment } from './population';
@@ -21,6 +20,7 @@ import type { PopulationGrowthBreakdown } from './population';
 import { processProvinceMarket } from './market';
 import { processInternalTrade } from './internalTrade';
 import type { TechnologyBonuses } from './technology';
+import { calculateLawModifiers } from './government';
 
 /**
  * Constantes de balanceamento do jogo
@@ -113,14 +113,13 @@ export function calculateDailyPopulationGrowthBreakdown(
   techBonuses?: TechnologyBonuses,
   atWar = false
 ): PopulationGrowthBreakdown {
-  const taxationLaw = LAWS[country.activeLaws?.taxation || 'taxation_normal'];
   const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0);
+  const lawModifiers = calculateLawModifiers(country.activeLaws);
   const effectiveStability = Math.min(100, country.resources.stability + (techBonuses?.stabilityModifier ?? 0) * 100);
   return calculatePopulationGrowthBreakdown(province, effectiveStability, {
-    growthMultiplier: (taxationLaw?.bonuses.popGrowthMultiplier ?? 1)
-      * unrestImpact.growthMultiplier
+    growthMultiplier: lawModifiers.populationGrowthMultiplier * unrestImpact.growthMultiplier
       * (techBonuses?.populationGrowthMultiplier ?? 1),
-    capacityMultiplier: techBonuses?.populationCapacityMultiplier,
+    capacityMultiplier: (techBonuses?.populationCapacityMultiplier ?? 1) * lawModifiers.populationCapacityMultiplier,
     atWar,
   });
 }
@@ -162,22 +161,18 @@ export function processDailyTick(
   let totalManpowerGain = 0;
 
   // Obtém bônus das leis ativas
-  const conscriptionLaw = LAWS[country.activeLaws?.conscription || 'conscription_peacetime'];
-  const taxationLaw = LAWS[country.activeLaws?.taxation || 'taxation_normal'];
-  const governanceLaw = LAWS[country.activeLaws?.governance || 'governance_balanced'];
-  const effectiveStability = Math.min(100, country.resources.stability + (techBonuses?.stabilityModifier ?? 0) * 100);
-
-  const lawGoldMultiplier = taxationLaw?.bonuses.goldMultiplier ?? 1.0;
-  const lawManpowerMultiplier = conscriptionLaw?.bonuses.manpowerMultiplier ?? 1.0;
-  const lawBuildTimeMultiplier = governanceLaw?.bonuses.buildTimeMultiplier ?? 1.0;
+  const lawModifiers = calculateLawModifiers(country.activeLaws);
+  const effectiveStability = Math.min(100, country.resources.stability + ((techBonuses?.stabilityModifier ?? 0) + lawModifiers.stabilityModifier) * 100);
 
   // Obtém modificadores de estabilidade
   const stabilityModifiers = getStabilityModifiers(effectiveStability);
 
   // Combina multiplicadores de tecnologia, leis e estabilidade
-  const goldIncomeMultiplier = (techBonuses?.goldIncomeMultiplier ?? 1.0) * lawGoldMultiplier * stabilityModifiers.goldIncome;
-  const manpowerMultiplier = (techBonuses?.manpowerMultiplier ?? 1.0) * lawManpowerMultiplier * stabilityModifiers.manpowerGrowth;
-  const buildTimeMultiplier = (techBonuses?.buildTimeMultiplier ?? 1.0) * lawBuildTimeMultiplier * stabilityModifiers.constructionSpeed;
+  const goldIncomeMultiplier = (techBonuses?.goldIncomeMultiplier ?? 1.0) * lawModifiers.goldIncomeMultiplier * stabilityModifiers.goldIncome;
+  const manpowerMultiplier = (techBonuses?.manpowerMultiplier ?? 1.0) * lawModifiers.manpowerMultiplier * stabilityModifiers.manpowerGrowth;
+  const buildTimeMultiplier = (techBonuses?.buildTimeMultiplier ?? 1.0) * lawModifiers.constructionSpeedMultiplier * stabilityModifiers.constructionSpeed;
+  const productionMultipliers = Object.fromEntries((['food','wood','iron','tools'] as const).map(good => [good, (techBonuses?.productionMultipliers[good] ?? 1) * lawModifiers.productionMultipliers[good]]));
+  const capacityMultiplier = (techBonuses?.populationCapacityMultiplier ?? 1) * lawModifiers.populationCapacityMultiplier;
 
   // Employment limits production; the resulting real market then informs
   // satisfaction and the following demographic change.
@@ -191,14 +186,14 @@ export function processDailyTick(
     return {
       ...province,
       population: recalculateEmployment(province),
-      market: processProvinceMarket({ ...province, population: recalculateEmployment(province) }, techBonuses?.productionMultipliers),
+      market: processProvinceMarket({ ...province, population: recalculateEmployment(province) }, productionMultipliers, lawModifiers.purchasingPowerMultiplier),
       buildings: updatedBuildings,
     };
   });
 
   // Local production/consumption is followed by deterministic domestic
   // redistribution, then market-sensitive satisfaction is finalized.
-  updatedProvinces = processInternalTrade(updatedProvinces, techBonuses?.internalTradeMultiplier).map(province => {
+  updatedProvinces = processInternalTrade(updatedProvinces, (techBonuses?.internalTradeMultiplier ?? 1) * lawModifiers.internalTradeMultiplier, lawModifiers.purchasingPowerMultiplier).map(province => {
     const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0);
     const growth = calculateDailyPopulationGrowth(province, country, techBonuses, atWar);
     return processProvincePopulation(province, 1, country.activeLaws?.taxation || 'taxation_normal', {
@@ -206,11 +201,11 @@ export function processDailyTick(
       countryStability: effectiveStability,
       economicMultiplier: goldIncomeMultiplier * unrestImpact.goldMultiplier,
       growthAmount: growth,
-      capacityMultiplier: techBonuses?.populationCapacityMultiplier,
-      flatModifier: techBonuses?.satisfactionModifier,
+      capacityMultiplier,
+      flatModifier: (techBonuses?.satisfactionModifier ?? 0) + lawModifiers.satisfactionModifier,
     });
   });
-  updatedProvinces = processInternalMigration(updatedProvinces, techBonuses?.populationCapacityMultiplier, atWar, techBonuses?.migrationAttractionMultiplier);
+  updatedProvinces = processInternalMigration(updatedProvinces, capacityMultiplier, atWar, (techBonuses?.migrationAttractionMultiplier ?? 1) * lawModifiers.migrationAttractionMultiplier);
 
   for (const province of updatedProvinces) {
     const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0);
@@ -221,13 +216,13 @@ export function processDailyTick(
   // Calcula despesas
   const baseExpenses = calculateCountryExpenses(country, updatedProvinces);
   const militaryMaintenance = updatedProvinces.reduce((sum, province) => sum + (province.stationedTroops ?? 0) / 1000 * 0.1, 0)
-    * (techBonuses?.militaryMaintenanceMultiplier ?? 1);
+    * (techBonuses?.militaryMaintenanceMultiplier ?? 1) * lawModifiers.militaryMaintenanceMultiplier;
   const expenses = baseExpenses + militaryMaintenance;
   const goldBalance = totalGoldIncome - expenses;
 
   // Atualiza manpower
   // Recalcula maxManpower com população atualizada
-  const newMaxManpower = calculateMaxManpower(updatedProvinces, lawManpowerMultiplier * (techBonuses?.manpowerMultiplier ?? 1));
+  const newMaxManpower = calculateMaxManpower(updatedProvinces, lawModifiers.manpowerMultiplier * (techBonuses?.manpowerMultiplier ?? 1));
   const newManpower = Math.min(country.resources.manpower + totalManpowerGain, newMaxManpower);
 
   // Atualiza país

@@ -35,7 +35,13 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
             <h4 className="province-panel__sidebar-subtitle">🔨 Construções</h4>
             {provinceConstructions.map((item, idx) => {
               const def = BUILDING_DEFINITIONS[item.buildingType];
-              const progress = ((item.totalDays - item.daysRemaining) / item.totalDays) * 100;
+              const progress = Math.max(
+                0,
+                Math.min(
+                  100,
+                  ((item.totalDays - item.daysRemaining) / item.totalDays) * 100
+                )
+              );
               const isActive = idx === 0;
 
               return (
@@ -57,7 +63,9 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
                   </div>
                   <div className="province-panel__sidebar-item-info">
                     <span className="province-panel__construction-days">
-                      {isActive ? `${item.daysRemaining}d` : `${item.totalDays}d`}
+                      {isActive
+                        ? `${Math.ceil(item.daysRemaining)}d`
+                        : `${Math.ceil(item.totalDays)}d`}
                     </span>
                   </div>
                   <div className="province-panel__construction-bar">
@@ -82,7 +90,13 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
             {recruitmentsHere.map((rec) => {
               const def = UNIT_DEFINITIONS[rec.unitType];
               const totalTime = def.trainingTime;
-              const progress = ((totalTime - rec.daysRemaining) / totalTime) * 100;
+              const progress = Math.max(
+                0,
+                Math.min(
+                  100,
+                  ((totalTime - rec.daysRemaining) / totalTime) * 100
+                )
+              );
 
               return (
                 <div key={rec.id} className="province-panel__sidebar-item">
@@ -99,7 +113,9 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
                     </button>
                   </div>
                   <div className="province-panel__sidebar-item-info">
-                    <span className="province-panel__construction-days">{rec.daysRemaining}d</span>
+                    <span className="province-panel__construction-days">
+                      {Math.ceil(rec.daysRemaining)}d
+                    </span>
                   </div>
                   <div className="province-panel__construction-bar">
                     <div

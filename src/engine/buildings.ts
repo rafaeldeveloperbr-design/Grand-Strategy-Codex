@@ -22,15 +22,15 @@ export function getBuildingBlockReason(
   constructions: BuildingConstruction[],
 ): BuildingBlockReason | null {
   const currentLevel =
-  province.buildings.find(building => building.type === type)?.level ?? 0;
+    province.buildings.find(building => building.type === type)?.level ?? 0;
 
-const queuedLevels = constructions.filter(
-  construction =>
-    construction.provinceId === province.id &&
-    construction.buildingType === type
-).length;
+  const queuedLevels = constructions.filter(
+    construction =>
+      construction.provinceId === province.id &&
+      construction.buildingType === type
+  ).length;
 
-const level = currentLevel + queuedLevels;
+  const level = currentLevel + queuedLevels;
 
   const costs = getBuildingCosts(type, level);
 
@@ -94,8 +94,16 @@ export function startBuilding(
     };
   }
 
-  const level =
+  const currentLevel =
     province.buildings.find(building => building.type === type)?.level ?? 0;
+
+  const queuedLevels = constructions.filter(
+    construction =>
+      construction.provinceId === province.id &&
+      construction.buildingType === type
+  ).length;
+
+  const level = currentLevel + queuedLevels;
 
   const costs = getBuildingCosts(type, level);
   const totalDays = getBuildingTime(type, level);

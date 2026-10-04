@@ -89,12 +89,23 @@ describe('balanceamento estrutural de FOOD', () => {
     expect(Object.values(market.goods).every(good => Number.isFinite(good.stock))).toBe(true);
   });
 
-  it('classifica shortage moderado e severo pelos thresholds compartilhados', () => {
-    const moderate = { ...createDefaultMarket().goods.food, demand: 100, shortage: 20 };
-    const severe = { ...moderate, shortage: 50 };
+  it('classifica shortage moderado, crise e fome severa pelos thresholds compartilhados', () => {
+    const moderate = {
+      ...createDefaultMarket().goods.food,
+      demand: 100,
+      shortage: 20,
+    };
+
+    const crisis = {
+      ...moderate,
+      shortage: 50,
+    };
+
     expect(getFoodShortageStatus(moderate).severity).toBe('moderate');
-    expect(getFoodShortageStatus(severe, 3, 2).severity).toBe('moderate');
-    expect(getFoodShortageStatus(severe, 3, 3).severity).toBe('severe');
+
+    expect(getFoodShortageStatus(crisis, 3, 2).severity).toBe('crisis');
+
+    expect(getFoodShortageStatus(crisis, 3, 3).severity).toBe('severe');
   });
 
   it('persiste dias de shortage e zera a memória após recuperação', () => {

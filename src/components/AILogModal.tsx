@@ -38,6 +38,7 @@ export const AILogModal: React.FC<AILogModalProps> = ({ isOpen, onClose }) => {
       case 'tech': return '🔬';
       case 'focus': return '🎯';
       case 'diplomacy': return '🤝';
+      case 'government': return '🏛️';
       default: return '📋';
     }
   };
@@ -49,6 +50,7 @@ export const AILogModal: React.FC<AILogModalProps> = ({ isOpen, onClose }) => {
       case 'tech': return 'Tecnologia';
       case 'focus': return 'Foco';
       case 'diplomacy': return 'Diplomacia';
+      case 'government': return 'Governo';
       default: return 'Outro';
     }
   };
@@ -60,6 +62,7 @@ export const AILogModal: React.FC<AILogModalProps> = ({ isOpen, onClose }) => {
       case 'tech': return 'var(--accent-blue)';
       case 'focus': return 'var(--accent-green)';
       case 'diplomacy': return 'var(--accent-purple, #9b59b6)';
+      case 'government': return '#e67e22';
       default: return 'var(--text-secondary)';
     }
   };
@@ -86,6 +89,7 @@ export const AILogModal: React.FC<AILogModalProps> = ({ isOpen, onClose }) => {
               <option value="tech">🔬 Tecnologia</option>
               <option value="focus">🎯 Foco</option>
               <option value="diplomacy">🤝 Diplomacia</option>
+              <option value="government">🏛️ Governo</option>
             </select>
           </div>
 

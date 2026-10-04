@@ -4,7 +4,7 @@
  * ============================================================
  */
 
-export type AIActionType = 'building' | 'military' | 'tech' | 'focus' | 'diplomacy';
+export type AIActionType = 'building' | 'military' | 'tech' | 'focus' | 'diplomacy' | 'government' | 'other';
 
 export interface AILogEntry {
   id: string;

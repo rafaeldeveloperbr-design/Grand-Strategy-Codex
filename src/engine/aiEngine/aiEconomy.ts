@@ -1,6 +1,7 @@
 import { Country, Province, BuildingType, UnitType, Recruitment, BuildingConstruction } from '../../types';
 import { CountryTechState } from '../../types/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
+import { LAWS } from '../../constants/laws';
 
 import { startBuilding } from '../buildings';
 import { calculateWorkforce, getFoodShortageStatus, getPopulationCapacity, normalizePopulation } from '../population';
@@ -27,9 +28,9 @@ export function processAIEconomicDecisions(
   recruitments: Recruitment[];
   country: Country;
   provinces: Province[],
-  logs: Array<{ actionType: 'building' | 'military' | 'tech' | 'focus'; message: string }>;
+  logs: Array<{ actionType: 'building' | 'military' | 'tech' | 'focus' | 'government'; message: string }>;
 } {
-  const logs: Array<{ actionType: 'building' | 'military' | 'tech' | 'focus'; message: string }> = [];
+  const logs: Array<{ actionType: 'building' | 'military' | 'tech' | 'focus' | 'government'; message: string }> = [];
   let updatedTechState = { ...techState };
   let updatedConstructions = [...buildingConstructions];
   let updatedRecruitments = [...recruitments];
@@ -111,10 +112,33 @@ export function processAIEconomicDecisions(
   }
 
   // Laws are considered after research so policy churn cannot starve Technology V2.
-  const selectedLaw = chooseAILaw(updatedCountry, provinces, {atWar});
+  const selectedLaw = chooseAILaw(updatedCountry, updatedProvinces, { atWar });
+
   if (selectedLaw) {
-    const result = enactLaw(updatedCountry.activeLaws, selectedLaw, updatedCountry.resources.gold, {atWar});
-    if (result.allowed) updatedCountry = {...updatedCountry,activeLaws:result.activeLaws,resources:{...updatedCountry.resources,gold:result.gold}};
+    const result = enactLaw(
+      updatedCountry.activeLaws,
+      selectedLaw,
+      updatedCountry.resources.gold,
+      { atWar }
+    );
+
+    if (result.allowed) {
+      const law = LAWS[selectedLaw];
+
+      updatedCountry = {
+        ...updatedCountry,
+        activeLaws: result.activeLaws,
+        resources: {
+          ...updatedCountry.resources,
+          gold: result.gold,
+        },
+      };
+
+      logs.push({
+        actionType: 'government',
+        message: `Promulgou a lei "${law.name}" (💰 ${result.cost})`,
+      });
+    }
   }
 
   // 3. CONSTRUÇÃO EM PROVÍNCIAS: shortages and real capacity drive the choice.

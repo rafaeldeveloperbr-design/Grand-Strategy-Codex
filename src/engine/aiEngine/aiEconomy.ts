@@ -8,6 +8,7 @@ import { getStorageCapacity, normalizeMarket } from '../market';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
 import { calculateTechBonuses, startTechnologyResearch } from '../technology';
+import { chooseAILaw, enactLaw } from '../government';
 
 const ALL_FINITE = (market: ReturnType<typeof normalizeMarket>) => Object.values(market.goods).every(g => Number.isFinite(g.stock));
 
@@ -18,7 +19,8 @@ export function processAIEconomicDecisions(
   buildingConstructions: BuildingConstruction[],
   recruitments: Recruitment[],
   dateString: string,
-  canRecruitMilitary: boolean = true
+  canRecruitMilitary: boolean = true,
+  atWar: boolean = false,
 ): {
   techState: CountryTechState;
   buildingConstructions: BuildingConstruction[];
@@ -37,7 +39,6 @@ export function processAIEconomicDecisions(
   // 1. SELEÇÃO DE FOCO NACIONAL
   if (!updatedTechState.activeFocusId) {
     const availableFocuses = NATIONAL_FOCUSES.filter(focus => {
-      if (focus.completed) return false;
       if (updatedTechState.completedFocuses.includes(focus.id)) return false;
 
       if (focus.prerequisites && focus.prerequisites.length > 0) {
@@ -49,7 +50,12 @@ export function processAIEconomicDecisions(
     });
 
     if (availableFocuses.length > 0) {
-      const selectedFocus = availableFocuses[0];
+      const ownedProvinces = provinces.filter(province => province.owner === country.tag);
+      const famine = ownedProvinces.some(province => getFoodShortageStatus(normalizeMarket(province.market).goods.food).ratio > 0);
+      const workforce = ownedProvinces.reduce((sum, province) => sum + calculateWorkforce(normalizePopulation(province.population)), 0);
+      const unemployed = ownedProvinces.reduce((sum, province) => sum + normalizePopulation(province.population).unemployed, 0);
+      const categoryPriority = famine ? 'ECONOMY' : atWar ? 'MILITARY' : country.resources.stability < 40 ? 'POLITICS' : workforce > 0 && unemployed / workforce > .2 ? 'ECONOMY' : 'POLITICS';
+      const selectedFocus = [...availableFocuses].sort((a, b) => Number(b.category === categoryPriority) - Number(a.category === categoryPriority))[0];
       updatedTechState = {
         ...updatedTechState,
         activeFocusId: selectedFocus.id,
@@ -102,6 +108,13 @@ export function processAIEconomicDecisions(
         message: `Iniciou a pesquisa tecnológica: ${affordableTech.title} (💰 ${affordableTech.costGold})`,
       });
     }
+  }
+
+  // Laws are considered after research so policy churn cannot starve Technology V2.
+  const selectedLaw = chooseAILaw(updatedCountry, provinces, {atWar});
+  if (selectedLaw) {
+    const result = enactLaw(updatedCountry.activeLaws, selectedLaw, updatedCountry.resources.gold, {atWar});
+    if (result.allowed) updatedCountry = {...updatedCountry,activeLaws:result.activeLaws,resources:{...updatedCountry.resources,gold:result.gold}};
   }
 
   // 3. CONSTRUÇÃO EM PROVÍNCIAS: shortages and real capacity drive the choice.

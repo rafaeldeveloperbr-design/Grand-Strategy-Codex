@@ -1,44 +1,12 @@
-import { NationalFocus } from '../../../types/technology';
-
+import type { NationalFocus } from '../../../types/technology';
 export const POLITICAL_FOCUSES: NationalFocus[] = [
-  {
-    id: 'focus_national_unity',
-    title: 'Unidade Nacional',
-    description: 'Fortalecer a coesão nacional para aumentar a estabilidade e mão de obra.',
-    icon: '🤝',
-    durationDays: 70,
-    currentProgressDays: 0,
-    completed: false,
-    rewardEffect: {
-      type: 'MANPOWER',
-      value: 0.15
-    }
-  },
-  {
-    id: 'focus_kingdom_centralization',
-    title: 'Centralização do Reino',
-    description: 'Consolidação do poder central para maior estabilidade e eficiência.',
-    icon: '👑',
-    durationDays: 80,
-    currentProgressDays: 0,
-    completed: false,
-    rewardEffect: {
-      type: 'STABILITY',
-      value: 0.10
-    }
-  },
-  {
-    id: 'focus_scientific_patronage',
-    title: 'Patronato Científico',
-    description: 'Investimento em pesquisa e desenvolvimento científico.',
-    icon: '🔬',
-    durationDays: 75,
-    currentProgressDays: 0,
-    completed: false,
-    rewardEffect: {
-      type: 'RESEARCH_SPEED',
-      value: 0.20
-    },
-    prerequisites: ['focus_kingdom_centralization']
-  }
+ {id:'focus_national_unity',title:'Unidade Nacional',description:'Uma campanha de coesão fortalece o bem-estar social.',category:'POLITICS',icon:'🤝',durationDays:60,rewardEffects:[{type:'SATISFACTION',value:2},{type:'POPULATION_GROWTH',value:.05}]},
+ {id:'focus_national_identity',title:'Identidade Nacional',description:'Instituições comuns reforçam a coesão e a mobilidade.',category:'POLITICS',icon:'🏳️',durationDays:80,prerequisites:['focus_national_unity'],rewardEffects:[{type:'SATISFACTION',value:2},{type:'MIGRATION_ATTRACTION',value:.1}]},
+ {id:'focus_social_cohesion',title:'Coesão Social',description:'Políticas sociais consolidam satisfação e crescimento.',category:'POLITICS',icon:'🫂',durationDays:105,prerequisites:['focus_national_identity'],rewardEffects:[{type:'SATISFACTION',value:3},{type:'POPULATION_GROWTH',value:.05}]},
+ {id:'focus_kingdom_centralization',title:'Centralização do Reino',description:'Consolida a administração e a capacidade fiscal.',category:'POLITICS',icon:'👑',durationDays:70,rewardEffects:[{type:'STABILITY',value:.05},{type:'GOLD_INCOME',value:.05}]},
+ {id:'focus_central_administration',title:'Administração Central',description:'Uma burocracia estável acelera projetos nacionais.',category:'POLITICS',icon:'🏛️',durationDays:90,prerequisites:['focus_kingdom_centralization'],rewardEffects:[{type:'BUILD_TIME',value:.05},{type:'RESEARCH_SPEED',value:.05}]},
+ {id:'focus_modern_state',title:'Estado Moderno',description:'Instituições maduras sustentam economia e pesquisa.',category:'POLITICS',icon:'⚖️',durationDays:120,prerequisites:['focus_central_administration'],rewardEffects:[{type:'GOLD_INCOME',value:.05},{type:'RESEARCH_SPEED',value:.05},{type:'SATISFACTION',value:2}]},
+ {id:'focus_scientific_patronage',title:'Patronato Científico',description:'Financia estudiosos e acelera a pesquisa.',category:'POLITICS',icon:'🔬',durationDays:75,prerequisites:['focus_kingdom_centralization'],rewardEffects:[{type:'RESEARCH_SPEED',value:.1}]},
+ {id:'focus_national_academies',title:'Academias Nacionais',description:'Organiza uma rede permanente de pesquisa.',category:'POLITICS',icon:'🎓',durationDays:95,prerequisites:['focus_scientific_patronage'],rewardEffects:[{type:'RESEARCH_SPEED',value:.1}]},
+ {id:'focus_scientific_revolution',title:'Revolução Científica',description:'Métodos científicos se difundem pelo Estado.',category:'POLITICS',icon:'🧪',durationDays:125,prerequisites:['focus_national_academies'],rewardEffects:[{type:'RESEARCH_SPEED',value:.15}]},
 ];

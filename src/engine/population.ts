@@ -206,11 +206,12 @@ export interface SatisfactionOptions {
   atWar?: boolean;
   economicMultiplier?: number;
   countryStability?: number;
+  flatModifier?: number;
 }
 
 export function calculateSatisfactionBreakdown(
   province: Province,
-  taxationId: string,
+  _taxationId: string,
   options: SatisfactionOptions = {}
 ): SatisfactionBreakdown {
   const population = recalculateEmployment(province);
@@ -220,11 +221,11 @@ export function calculateSatisfactionBreakdown(
   const food = market?.goods.food;
   const foodStatus = getFoodShortageStatus(food, population.foodShortageDays, population.severeFoodShortageDays);
   const parts = {
-    base: 65,
+    base: 65 + (options.flatModifier ?? 0),
     unemployment: -unemploymentRate * 45,
     food: -foodStatus.ratio * 25 + ((food?.price ?? 1) - 1) * -5
       - (foodStatus.severity === 'severe' ? POPULATION_BALANCE.SEVERE_SHORTAGE_SATISFACTION_PENALTY : 0),
-    taxation: taxationId === 'taxation_high' ? -12 : taxationId === 'taxation_low' ? 8 : 0,
+    taxation: 0,
     economy: (clamp(options.economicMultiplier ?? 1, 0, 1.5) - 1) * 15,
     stability: (clamp(options.countryStability ?? 50, 0, 100) - 50) * 0.12,
     war: options.atWar ? -5 : 0,
@@ -340,7 +341,7 @@ export function getWorkerAvailability(province: Province): number {
   return workforce === 0 ? 0 : clamp(population.employed / workforce, 0, 1);
 }
 
-export function calculateMigrationAttractiveness(province: Province, capacityMultiplier = 1, atWar = false): number {
+export function calculateMigrationAttractiveness(province: Province, capacityMultiplier = 1, atWar = false, attractionMultiplier = 1): number {
   const population = recalculateEmployment(province);
   const workforce = population.employed + population.unemployed;
   const employmentRate = workforce ? population.employed / workforce : 1;
@@ -350,18 +351,18 @@ export function calculateMigrationAttractiveness(province: Province, capacityMul
   const foodStatus = getFoodShortageStatus(food, population.foodShortageDays, population.severeFoodShortageDays);
   const foodPenalty = foodStatus.ratio * POPULATION_BALANCE.MIGRATION_FOOD_SHORTAGE_WEIGHT
     + (foodStatus.severity === 'severe' ? POPULATION_BALANCE.MIGRATION_SEVERE_FAMINE_PENALTY : 0);
-  return employmentRate * 35 + population.satisfaction * 0.35 + freeCapacity * 20 - foodPenalty - (atWar ? 10 : 0);
+  return (employmentRate * 35 + population.satisfaction * 0.35 + freeCapacity * 20 - foodPenalty - (atWar ? 10 : 0)) * attractionMultiplier;
 }
 
 /** Deterministic, internal-only migration. Each country should call this with its own provinces. */
-export function processInternalMigration(provinces: Province[], capacityMultiplier = 1, atWar = false): Province[] {
+export function processInternalMigration(provinces: Province[], capacityMultiplier = 1, atWar = false, attractionMultiplier = 1): Province[] {
   if (provinces.length < 2) return provinces.map(p => ({ ...p, population: { ...normalizePopulation(p.population), migrationNet: 0 } }));
-  const ranked = [...provinces].sort((a, b) => calculateMigrationAttractiveness(a, capacityMultiplier, atWar)
-    - calculateMigrationAttractiveness(b, capacityMultiplier, atWar) || a.id.localeCompare(b.id));
+  const ranked = [...provinces].sort((a, b) => calculateMigrationAttractiveness(a, capacityMultiplier, atWar, attractionMultiplier)
+    - calculateMigrationAttractiveness(b, capacityMultiplier, atWar, attractionMultiplier) || a.id.localeCompare(b.id));
   const origin = ranked[0];
   const destination = ranked[ranked.length - 1];
-  const difference = calculateMigrationAttractiveness(destination, capacityMultiplier, atWar)
-    - calculateMigrationAttractiveness(origin, capacityMultiplier, atWar);
+  const difference = calculateMigrationAttractiveness(destination, capacityMultiplier, atWar, attractionMultiplier)
+    - calculateMigrationAttractiveness(origin, capacityMultiplier, atWar, attractionMultiplier);
   const originPopulation = normalizePopulation(origin.population);
   const destinationPopulation = normalizePopulation(destination.population);
   const room = Math.max(0, Math.floor(getPopulationCapacity(destination, capacityMultiplier) - destinationPopulation.total));

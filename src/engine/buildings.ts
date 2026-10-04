@@ -228,7 +228,8 @@ export function queueBuilding(
  */
 export function processConstructions(
   constructions: BuildingConstruction[],
-  provinces: Province[] = []
+  provinces: Province[] = [],
+  constructionSpeedMultipliers: ReadonlyMap<string, number> = new Map(),
 ): { updatedConstructions: BuildingConstruction[]; completedConstructions: BuildingConstruction[] } {
   const completedConstructions: BuildingConstruction[] = [];
 
@@ -256,7 +257,7 @@ export function processConstructions(
     // Marca que a obra ativa desta província está sendo processada
     processedProvinces.add(item.provinceId);
 
-    const newDays = item.daysRemaining - 1;
+    const newDays = item.daysRemaining - (constructionSpeedMultipliers.get(item.owner) ?? 1);
 
     if (newDays <= 0) {
       completedConstructions.push(item);

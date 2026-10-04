@@ -2,14 +2,14 @@ import { useCallback } from 'react';
 import { startNationalFocus, startTechnologyResearch } from '../../engine/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
 import { LAWS } from '../../constants/laws';
+import { enactLaw } from '../../engine/government';
+import type { LawCategory } from '../../types/government';
 import type { Country } from '../../types';
 import type { CountryTechState } from '../../types/technology';
 import type { ToastType } from '../../types/toast';
 import type { AIDifficulty } from '../../types/difficulty';
 import type { EndGameType, GameStats } from '../../engine/gameConditions';
 
-
-type LawsMap = Record<string, { name: string; costGold: number }>;
 
 export function useTechActions(params: {
   playerCountry: Country;
@@ -28,8 +28,9 @@ export function useTechActions(params: {
   setGameStats: React.Dispatch<React.SetStateAction<GameStats | null>>;
   setGameSpeed: React.Dispatch<React.SetStateAction<number>>;
   setIsPaused: React.Dispatch<React.SetStateAction<boolean>>;
+  playerAtWar: boolean;
 }) {
-  const { playerCountry, playerCountryTag, playerTechState, setPlayerTechState, setAllCountries, addLog, addToast, playerTechStateRef, setAiDifficulty, setEndGameType, setGameSpeed, setIsPaused } = params;
+  const { playerCountry, playerCountryTag, playerTechState, setPlayerTechState, setAllCountries, addLog, addToast, playerTechStateRef, setAiDifficulty, setEndGameType, setGameSpeed, setIsPaused, playerAtWar } = params;
 
   const handleStartFocus = useCallback((focusId: string) => {
     if (!focusId || !playerTechState) return;
@@ -92,13 +93,14 @@ export function useTechActions(params: {
   const handleEndGameContinue = useCallback(() => { setEndGameType(null); setIsPaused(false); }, [setEndGameType, setIsPaused]);
   const handleEndGameRestart = useCallback(() => window.location.reload(), []);
   const handleDifficultyChange = useCallback((newDifficulty: AIDifficulty) => { setAiDifficulty(newDifficulty); addToast(`Dificuldade: ${newDifficulty}`, 'info', 'Configuração'); }, [setAiDifficulty, addToast]);
-  const handleEnactLaw = useCallback((category: string, lawId: string) => {
-    const law = (LAWS as LawsMap)[lawId];
-    if (!law) return;
-    if (playerCountry.resources.gold < law.costGold) { addToast('Ouro insuficiente', 'error', 'Erro'); return; }
-    setAllCountries(prev => prev.map(c => c.tag === playerCountryTag ? { ...c, resources: { ...c.resources, gold: c.resources.gold - law.costGold }, activeLaws: { ...c.activeLaws, [category]: lawId } } : c));
+  const handleEnactLaw = useCallback((category: LawCategory, lawId: string) => {
+    const law = LAWS[lawId];
+    if (!law || law.category !== category) return;
+    const result = enactLaw(playerCountry.activeLaws, lawId, playerCountry.resources.gold, {atWar:playerAtWar});
+    if (!result.allowed) { addToast(result.reason ?? 'Mudança bloqueada', 'error', 'Lei bloqueada'); return; }
+    setAllCountries(prev => prev.map(c => c.tag === playerCountryTag ? { ...c, resources: { ...c.resources, gold: result.gold }, activeLaws: result.activeLaws } : c));
     addToast(`Lei "${law.name}" promulgada!`, 'success', 'Nova Lei');
-  }, [playerCountry, playerCountryTag, addToast, setAllCountries]);
+  }, [playerCountry, playerCountryTag, playerAtWar, addToast, setAllCountries]);
   const handleSpeedChange = useCallback((speed: number) => setGameSpeed(speed), [setGameSpeed]);
 
   return { handleStartFocus, handleStartResearch, handleEndGameContinue, handleEndGameRestart, handleDifficultyChange, handleEnactLaw, handleSpeedChange };

@@ -6,16 +6,10 @@ import { startBuilding, cancelBuilding } from '../../engine/buildings';
 import { generateRecruitmentId, cancelRecruitment } from '../../engine/military';
 import { getRecruitmentCost } from '../../data/units';
 import { normalizeMarket } from '../../engine/market';
-import { LAWS } from '../../constants/laws';
+import { calculateLawModifiers } from '../../engine/government';
 import type { BuildingType, UnitType, Recruitment, Province, Country, BuildingConstruction, GameDate } from '../../types';
 
 import type { ToastType } from '../../types/toast';
-
-type LawWithBonuses = {
-  bonuses: { armyCostMultiplier?: number };
-};
-
-type LawsMap = Record<string, LawWithBonuses>;
 
 export function useEconomyActions(params: {
   provinces: Province[];
@@ -86,10 +80,7 @@ if (result.success) {
     const market = normalizeMarket(province.market);
 
 
-    const conscriptionKey = playerCountry.activeLaws?.conscription || 'conscription_peacetime';
-    const conscriptionLaw = (LAWS as LawsMap)[conscriptionKey];
-    const armyCostMultiplier = conscriptionLaw?.bonuses.armyCostMultiplier ?? 1.0;
-    const adjustedGoldCost = Math.floor(costs.gold * armyCostMultiplier);
+    const adjustedGoldCost = Math.floor(costs.gold * calculateLawModifiers(playerCountry.activeLaws).recruitmentCostMultiplier);
 
     if (playerCountry.resources.gold < adjustedGoldCost || playerCountry.resources.manpower < costs.manpower || market.goods.iron.stock < costs.iron || market.goods.tools.stock < costs.tools) {
       addLog(`❌ Recursos insuficientes para recrutar ${unitType}`);

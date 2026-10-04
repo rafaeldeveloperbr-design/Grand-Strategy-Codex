@@ -13,8 +13,8 @@ import type { AIDifficulty } from '../../types/difficulty';
 // Se seu TECHNOLOGIES estiver vazio, esses testes de start vão retornar null e tudo bem
 vi.mock('../../data/technology', () => ({
   NATIONAL_FOCUSES: [
-    { id: 'focus_1', title: 'Foco 1', durationDays: 10, prerequisites: [], rewardEffect: { type: 'GOLD_INCOME', value: 0.1 } },
-    { id: 'focus_2', title: 'Foco 2', durationDays: 10, prerequisites: ['focus_1'], rewardEffect: { type: 'GOLD_INCOME', value: 0.1 } },
+    { id: 'focus_1', title: 'Foco 1', durationDays: 10, prerequisites: [], rewardEffects: [{ type: 'GOLD_INCOME', value: 0.1 }] },
+    { id: 'focus_2', title: 'Foco 2', durationDays: 10, prerequisites: ['focus_1'], rewardEffects: [{ type: 'GOLD_INCOME', value: 0.1 }] },
   ],
   TECHNOLOGIES: [
     { id: 'tech_1', title: 'Tech 1', durationDays: 30, costGold: 100, prerequisites: [], rewardEffect: { type: 'GOLD_INCOME', value: 0.05 } },

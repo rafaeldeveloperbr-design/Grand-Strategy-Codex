@@ -1,4 +1,13 @@
-import type { ActiveBattle, Army, GameDate, Province, RetreatInfo } from '../../types';
+import type {
+  Army,
+  Province,
+  GameDate,
+  RetreatInfo,
+  BattleSideSnapshot,
+  BattleEndReason,
+  BattleExtended,
+  UnitType,
+} from '../../types';
 import { applyTroopLoss, calculateArmySize } from './combatCalculations';
 import { findRetreatProvince } from './combatRetreats';
 import { getBuildingLevel } from '../../data/buildings';
@@ -12,13 +21,6 @@ import {
   MILITARY_BALANCE
 } from '../military';
 
-export type BattleExtended = ActiveBattle & {
-  reinforcementEntryDay?: Record<string, number>;
-  reinforcementInitialSize?: Record<string, number>;
-  attackerInitialSnapshot?: Army;
-  defenderInitialSnapshot?: Army;
-  retreatInfo?: RetreatInfo | null;
-};
 
 type WarPair = { attacker: string; defender: string };
 
@@ -118,6 +120,78 @@ export function checkAllProvinceCombats(
   return { armies: updatedArmies, newBattles, updatedBattles, reinforcementsAdded };
 }
 
+function getRegimentComposition(
+  armies: Army[]
+): Partial<Record<UnitType, number>> {
+  const composition: Partial<Record<UnitType, number>> = {};
+
+  for (const army of armies) {
+    for (const regiment of army.regiments) {
+      composition[regiment.type] =
+        (composition[regiment.type] ?? 0) + regiment.strength;
+    }
+  }
+
+  return composition;
+}
+
+function createBattleSideSnapshot(
+  armies: Army[],
+  province: Province
+): BattleSideSnapshot {
+  const troops = armies.reduce(
+    (sum, army) => sum + calculateArmySize(army),
+    0
+  );
+
+  const organization =
+    armies.reduce(
+      (sum, army) => sum + calculateArmyOrganization(army),
+      0
+    ) / Math.max(1, armies.length);
+
+  const morale =
+    armies.reduce(
+      (sum, army) => sum + calculateArmyMorale(army),
+      0
+    ) / Math.max(1, armies.length);
+
+  const stats = armies.reduce(
+    (total, army) => {
+      const armyStats = calculateArmyCombatStats(army);
+
+      return {
+        attack: total.attack + armyStats.attack,
+        defense: total.defense + armyStats.defense,
+        shock: total.shock + armyStats.shock,
+      };
+    },
+    { attack: 0, defense: 0, shock: 0 }
+  );
+
+  const siege = armies.reduce(
+    (sum, army) => sum + calculateArmySiege(army),
+    0
+  );
+
+  const supply =
+    armies.length > 0
+      ? getArmySupply(armies[0], province, armies).status
+      : 'good';
+
+  return {
+    troops,
+    organization,
+    morale,
+    supply,
+    attack: stats.attack,
+    defense: stats.defense,
+    shock: stats.shock,
+    siege,
+    regimentComposition: getRegimentComposition(armies),
+  };
+}
+
 export function startContinuousBattle(attackerArmies: Army[], defenderArmies: Army[], province: Province, currentDate: GameDate, battleId: string): BattleExtended {
   const attackerTroops = attackerArmies.reduce((sum, army) => sum + calculateArmySize(army), 0);
   const defenderTroops = defenderArmies.reduce((sum, army) => sum + calculateArmySize(army), 0);
@@ -137,8 +211,19 @@ export function startContinuousBattle(attackerArmies: Army[], defenderArmies: Ar
     attackerCasualties: 0, defenderCasualties: 0, startDate: currentDate,
     attackerInitialSnapshot: { ...attackerArmies[0], regiments: attackerArmies[0].regiments.map(r => ({ ...r })) },
     defenderInitialSnapshot: { ...defenderArmies[0], regiments: defenderArmies[0].regiments.map(r => ({ ...r })) },
+
+    attackerCombatSnapshot: createBattleSideSnapshot(
+      attackerArmies,
+      province
+    ),
+
+    defenderCombatSnapshot: createBattleSideSnapshot(
+      defenderArmies,
+      province
+    ),
     reinforcementEntryDay: {}, reinforcementInitialSize: {},
   };
+
 }
 
 export function addReinforcementsToBattle(battle: BattleExtended, army: Army, side: 'attacker' | 'defender', _province: Province): BattleExtended {
@@ -244,6 +329,26 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
     attackerBroken ||
     defenderBroken ||
     daysRemaining <= 0;
+
+  let endReason: BattleEndReason | undefined;
+
+  if (finished) {
+    if (attackerDestroyed || defenderDestroyed || !next) {
+      endReason = 'annihilation';
+    } else if (
+      attackerOrganizationBroken ||
+      defenderOrganizationBroken
+    ) {
+      endReason = 'organization';
+    } else if (
+      attackerMoraleBroken ||
+      defenderMoraleBroken
+    ) {
+      endReason = 'morale';
+    } else {
+      endReason = 'duration';
+    }
+  }
 
   let winner: 'attacker' | 'defender';
 
@@ -375,16 +480,49 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
     'defender',
   );
 
+  const finalAttackerArmies = participants(
+    synced,
+    updatedArmies,
+    'attacker'
+  );
+
+  const finalDefenderArmies = participants(
+    synced,
+    updatedArmies,
+    'defender'
+  );
+
+  const attackerFinalCombatSnapshot =
+    createBattleSideSnapshot(
+      finalAttackerArmies,
+      province
+    );
+
+  const defenderFinalCombatSnapshot =
+    createBattleSideSnapshot(
+      finalDefenderArmies,
+      province
+    );
+
   const finalBattle: BattleExtended = {
     ...(next ?? synced),
+
     daysRemaining,
+
     attackerCurrentTroops: finalAttacker,
     defenderCurrentTroops: finalDefender,
+
     attackerCasualties:
       synced.attackerCasualties + attackerLoss,
+
     defenderCasualties:
       synced.defenderCasualties + defenderLoss,
+
     retreatInfo,
+    endReason,
+
+    attackerFinalCombatSnapshot,
+    defenderFinalCombatSnapshot,
   };
 
   return {
@@ -394,7 +532,6 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
     winner,
     retreatInfo,
   };
-  return { battle: finalBattle, armies: updatedArmies, finished, winner: finalAttacker > finalDefender ? 'attacker' as const : 'defender' as const, retreatInfo };
 }
 
 // Compatibility wrapper for older direct callers.

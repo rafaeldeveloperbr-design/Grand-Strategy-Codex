@@ -135,7 +135,7 @@ export interface RetreatInfo {
 }
 
 export interface BattleParticipantDetail {
-   id: string;
+  id: string;
   side: 'attacker' | 'defender';
   final: number;
 }
@@ -172,4 +172,62 @@ export interface CombatResult {
   attackerCurrentTroops?: number;
   defenderCurrentTroops?: number;
   province?: BattleProvinceInfo;
+  combatReport?: BattleCombatReport;
 }
+
+export type BattleEndReason =
+  | 'organization'
+  | 'morale'
+  | 'annihilation'
+  | 'duration'
+  | 'retreat'
+  | 'no_retreat';
+
+export interface BattleSideReport {
+  initialTroops: number;
+  finalTroops: number;
+  casualties: number;
+
+  initialOrganization: number;
+  finalOrganization: number;
+
+  initialMorale: number;
+  finalMorale: number;
+
+  initialSupply: SupplyStatus;
+  finalSupply: SupplyStatus;
+
+  attack: number;
+  defense: number;
+  shock: number;
+  siege: number;
+
+  regimentComposition: Partial<Record<UnitType, {
+    initial: number;
+    final: number;
+  }>>;
+}
+
+export interface BattleCombatReport {
+  attacker: BattleSideReport;
+  defender: BattleSideReport;
+
+  endReason: BattleEndReason;
+
+  fortLevel: number;
+  fortDefenseBonus: number;
+}
+
+export type BattleSideSnapshot = {
+  troops: number;
+  organization: number;
+  morale: number;
+  supply: SupplyStatus;
+
+  attack: number;
+  defense: number;
+  shock: number;
+  siege: number;
+
+  regimentComposition: Partial<Record<UnitType, number>>;
+};

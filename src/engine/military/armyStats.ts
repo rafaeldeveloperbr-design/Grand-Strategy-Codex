@@ -1,6 +1,7 @@
 import { UNIT_DEFINITIONS } from '../../data/units';
 import type { Army, Regiment } from '../../types';
 
+
 const weightedAverage = (army: Army, read: (regiment: Regiment) => number): number => {
   const size = calculateArmySize(army);
   return size <= 0 ? 0 : army.regiments.reduce((sum, regiment) => sum + read(regiment) * regiment.strength, 0) / size;

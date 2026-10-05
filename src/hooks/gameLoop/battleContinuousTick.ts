@@ -9,10 +9,14 @@ import type {
   Province,
   Country,
   War,
-  ActiveBattle,
+  BattleExtended,
   Recruitment,
-  BuildingConstruction, CombatResult,
-  RetreatInfo
+  BuildingConstruction,
+  CombatResult,
+  RetreatInfo,
+  BattleCombatReport,
+  BattleSideReport,
+  BattleSideSnapshot,
 } from '../../types';
 import type { GameDate } from '../../types/date';
 import type { ToastType } from '../../types/toast';
@@ -21,19 +25,8 @@ import { transferProvince } from '../../engine/territoryTransfer';
 import { applyMilitaryCasualties } from '../../engine/population';
 import type { CountryTechState } from '../../types/technology';
 import { calculateTechBonuses } from '../../engine/technology';
+import { getBuildingLevel } from '../../data/buildings';
 
-
-// ===== TIPOS QUE FALTAVAM =====
-type BattleExtended = ActiveBattle & {
-  participantArmyIds: string[];
-  reinforcementEntryDay?: Record<string, number>;
-  reinforcementInitialSize?: Record<string, number>;
-  attackerInitialSnapshot?: Army;
-  defenderInitialSnapshot?: Army;
-  retreatInfo?: RetreatInfo | null;
-  attackerCurrentTroops: number;
-  defenderCurrentTroops: number;
-};
 
 
 type ArmyWithMovement = Army & {
@@ -104,6 +97,47 @@ type Params = {
   cancelProvinceActivities: (provinceId: string, oldOwner: string, newOwner: string, rec: Recruitment[], cons: BuildingConstruction[], provs: Province[]) => { recruitments: Recruitment[]; constructions: BuildingConstruction[]; provinces: Province[] };
 };
 
+function buildBattleSideReport(
+  initial: BattleSideSnapshot,
+  final: BattleSideSnapshot
+): BattleSideReport {
+  const regimentTypes = new Set([
+    ...Object.keys(initial.regimentComposition),
+    ...Object.keys(final.regimentComposition),
+  ] as Array<keyof typeof initial.regimentComposition>);
+
+  const regimentComposition: BattleSideReport['regimentComposition'] = {};
+
+  for (const type of regimentTypes) {
+    regimentComposition[type] = {
+      initial: initial.regimentComposition[type] ?? 0,
+      final: final.regimentComposition[type] ?? 0,
+    };
+  }
+
+  return {
+    initialTroops: initial.troops,
+    finalTroops: final.troops,
+    casualties: Math.max(0, initial.troops - final.troops),
+
+    initialOrganization: initial.organization,
+    finalOrganization: final.organization,
+
+    initialMorale: initial.morale,
+    finalMorale: final.morale,
+
+    initialSupply: initial.supply,
+    finalSupply: final.supply,
+
+    attack: initial.attack,
+    defense: initial.defense,
+    shock: initial.shock,
+    siege: initial.siege,
+
+    regimentComposition,
+  };
+}
+
 export function processBattleContinuous(p: Params) {
   let { armies, provinces, countries, wars, currentActiveBattles, recruitments, buildingConstructions } = p;
   const { snapshot, playerCountryTag, addLog, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef } = p;
@@ -168,7 +202,7 @@ export function processBattleContinuous(p: Params) {
     if (retreatInfo?.retreated) {
       console.log(`🏃 Processando recuo: ${retreatInfo.owner} com ${retreatInfo.troops} para ${retreatInfo.toName}`);
 
-      
+
       finalResult = {
         attacker,
         defender,
@@ -326,6 +360,32 @@ export function processBattleContinuous(p: Params) {
       else realAttackerFinal = retreatInfo.troops;
     }
 
+    let combatReport: BattleCombatReport | undefined;
+
+    if (
+      fb.attackerCombatSnapshot &&
+      fb.defenderCombatSnapshot &&
+      fb.attackerFinalCombatSnapshot &&
+      fb.defenderFinalCombatSnapshot
+    ) {
+      combatReport = {
+        attacker: buildBattleSideReport(
+          fb.attackerCombatSnapshot,
+          fb.attackerFinalCombatSnapshot
+        ),
+
+        defender: buildBattleSideReport(
+          fb.defenderCombatSnapshot,
+          fb.defenderFinalCombatSnapshot
+        ),
+
+        endReason: fb.endReason ?? 'duration',
+
+        fortLevel: getBuildingLevel(province, 'fortress'),
+        fortDefenseBonus: 0,
+      };
+    }
+
     const enrichedResult: FinalResultEnriched = {
       ...finalResult,
       totalAttackerInitial,
@@ -337,6 +397,7 @@ export function processBattleContinuous(p: Params) {
       participantDetails,
       reinforcementInitialSize: reinfSizes,
       retreatInfo,
+      combatReport,
     };
 
     const updatedArmies = rawUpdatedArmies.filter(a => {

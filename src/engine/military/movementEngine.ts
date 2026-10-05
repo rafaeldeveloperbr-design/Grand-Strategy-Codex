@@ -1,6 +1,7 @@
 import { Army, Province } from '../../types';
 import { DiplomaticRelation } from '../../types/diplomacy';
 import { calculateArmySpeed, generateArmyId } from './militaryUtils';
+import { getArmySupply } from './supplyEngine';
 
 export function canMoveToProvince(
   armyCountryId: string,
@@ -174,7 +175,9 @@ export function processArmyMovement(
       return army;
     }
 
-    const nextProgress = army.movementProgress + army.movementSpeed;
+    const currentProvince = provinces.find(province => province.id === army.location);
+    const colocated = armies.filter(item => item.location === army.location && item.owner === army.owner);
+    const nextProgress = army.movementProgress + army.movementSpeed * getArmySupply(army, currentProvince, colocated).movementMultiplier;
 
     if (nextProgress < 1.0) {
       const originProvince = provinces.find((p) => p.id === army.location);

@@ -215,7 +215,7 @@ export function processDailyTick(
 
   // Calcula despesas
   const baseExpenses = calculateCountryExpenses(country, updatedProvinces);
-  const militaryMaintenance = updatedProvinces.reduce((sum, province) => sum + (province.stationedTroops ?? 0) / 1000 * 0.1, 0)
+  const militaryMaintenance = updatedProvinces.reduce((sum, province) => sum + (province.stationedMilitaryMaintenance ?? (province.stationedTroops ?? 0) / 1000 * 0.1), 0)
     * (techBonuses?.militaryMaintenanceMultiplier ?? 1) * lawModifiers.militaryMaintenanceMultiplier;
   const expenses = baseExpenses + militaryMaintenance;
   const goldBalance = totalGoldIncome - expenses;

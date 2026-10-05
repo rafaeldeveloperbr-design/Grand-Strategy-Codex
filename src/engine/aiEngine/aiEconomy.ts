@@ -10,6 +10,7 @@ import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
 import { calculateTechBonuses, startTechnologyResearch } from '../technology';
 import { chooseAILaw, enactLaw } from '../government';
+import { getRecruitmentBlockReason, queueRecruitment } from '../military/recruitmentEngine';
 
 const ALL_FINITE = (market: ReturnType<typeof normalizeMarket>) => Object.values(market.goods).every(g => Number.isFinite(g.stock));
 
@@ -207,53 +208,23 @@ export function processAIEconomicDecisions(
       const aiProvinces = provinces.filter(p => p.owner === country.tag);
 
       if (aiProvinces.length > 0) {
-        const targetProvince = aiProvinces[Math.floor(Math.random() * aiProvinces.length)];
+        const targetProvince = [...aiProvinces].sort((a, b) => b.development - a.development || a.id.localeCompare(b.id))[0];
         const unitTypes = Object.keys(UNIT_DEFINITIONS) as UnitType[];
-        const chosenUnit = unitTypes[Math.floor(Math.random() * unitTypes.length)];
-        const def = UNIT_DEFINITIONS[chosenUnit];
-        const recruitmentMarket = normalizeMarket(targetProvince.market);
-        if (updatedCountry.resources.gold >= def.cost && updatedCountry.resources.manpower >= def.manpowerCost
-          && recruitmentMarket.goods.iron.stock >= def.ironCost && recruitmentMarket.goods.tools.stock >= def.toolsCost) {
-          recruitmentMarket.goods.iron.stock -= def.ironCost;
-          recruitmentMarket.goods.tools.stock -= def.toolsCost;
-          targetProvince.market = recruitmentMarket;
-          updatedCountry = {
-            ...updatedCountry,
-            resources: {
-              ...updatedCountry.resources,
-              gold: updatedCountry.resources.gold - def.cost,
-              manpower: updatedCountry.resources.manpower - def.manpowerCost,
-            },
-          };
-
-          const existingRecruitment = updatedRecruitments.find(
-            r => r.owner === country.tag &&
-              r.provinceId === targetProvince.id &&
-              r.unitType === chosenUnit &&
-              r.daysRemaining === def.trainingTime
-          );
-
-          if (existingRecruitment) {
-            updatedRecruitments = updatedRecruitments.map(r =>
-              r.id === existingRecruitment.id ? { ...r, count: r.count + 1 } : r
-            );
-          } else {
-            const newRecruitment: Recruitment = {
-              id: `rec_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-              provinceId: targetProvince.id,
-              owner: country.tag,
-              unitType: chosenUnit,
-              daysRemaining: def.trainingTime,
-              count: 1,
-            };
-            updatedRecruitments = [...updatedRecruitments, newRecruitment];
+        const existingCounts = new Map<UnitType, number>();
+        for (const recruitment of updatedRecruitments.filter(item => item.owner === country.tag)) existingCounts.set(recruitment.unitType, (existingCounts.get(recruitment.unitType) ?? 0) + recruitment.count);
+        const desiredWeight: Record<UnitType, number> = { infantry: 6, archers: 2, cavalry: 2, artillery: atWar ? 2 : 1, heavy_cavalry: 1, elite_guard: 1, siege_engine: atWar ? 1 : 0 };
+        const available = unitTypes.filter(type => desiredWeight[type] > 0 && getRecruitmentBlockReason(type, { country: updatedCountry, province: targetProvince, technology: updatedTechState }) === null);
+        const chosenUnit = available.sort((a, b) => ((existingCounts.get(a) ?? 0) + 1) / desiredWeight[a] - ((existingCounts.get(b) ?? 0) + 1) / desiredWeight[b] || a.localeCompare(b))[0];
+        if (chosenUnit) {
+          const result = queueRecruitment(chosenUnit, { country: updatedCountry, province: targetProvince, technology: updatedTechState }, `ai_rec_${country.tag}_${dateString}_${updatedRecruitments.length}`);
+          if (result.success) {
+            updatedCountry = result.country;
+            updatedProvinces = updatedProvinces.map(province => province.id === result.province.id ? result.province : province);
+            updatedRecruitments = [...updatedRecruitments, result.recruitment];
+            const def = UNIT_DEFINITIONS[chosenUnit];
+            const translatedUnit = getUnitName(chosenUnit);
+            logs.push({ actionType: 'military', message: `Iniciou treinamento de ${translatedUnit} em ${targetProvince.name} (💰 ${def.cost})` });
           }
-
-          const translatedUnit = getUnitName(chosenUnit);
-          logs.push({
-            actionType: 'military',
-            message: `Iniciou treinamento de ${translatedUnit} em ${targetProvince.name} (💰 ${def.cost})`,
-          });
         }
       }
     }

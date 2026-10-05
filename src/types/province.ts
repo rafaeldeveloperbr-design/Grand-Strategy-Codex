@@ -75,6 +75,8 @@ export interface Province {
   originalOwner?: string; // Rastreia o país que perdeu a província originalmente
   /** Transient total used by the market tick for garrison food demand. */
   stationedTroops?: number;
+  /** Custo diário derivado da composição, preenchido pelo loop militar. */
+  stationedMilitaryMaintenance?: number;
 }
 
 /**

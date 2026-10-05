@@ -129,6 +129,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
                 province={province}
                 playerCountry={playerCountry}
                 armiesHere={armiesHere}
+                technology={playerTechState}
                 onRecruit={onRecruit}
               />
             )}

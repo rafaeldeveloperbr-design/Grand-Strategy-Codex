@@ -1,5 +1,11 @@
-import type { Army } from './army'
-import type { GameDate } from './date'
+import type {
+  Army,
+  BattleSideSnapshot,
+  BattleEndReason,
+  RetreatInfo,
+} from './army';
+
+import type { GameDate } from './date';
 
 /**
  * Representa uma batalha ativa em andamento
@@ -48,3 +54,16 @@ export interface ActiveBattle {
 }
 
 
+export type BattleExtended = ActiveBattle & {
+  reinforcementEntryDay?: Record<string, number>;
+  reinforcementInitialSize?: Record<string, number>;
+
+  attackerCombatSnapshot?: BattleSideSnapshot;
+  defenderCombatSnapshot?: BattleSideSnapshot;
+
+  attackerFinalCombatSnapshot?: BattleSideSnapshot;
+  defenderFinalCombatSnapshot?: BattleSideSnapshot;
+
+  retreatInfo?: RetreatInfo | null;
+  endReason?: BattleEndReason;
+};

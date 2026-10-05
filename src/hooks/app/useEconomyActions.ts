@@ -3,13 +3,11 @@
  */
 import { useCallback } from 'react';
 import { startBuilding, cancelBuilding } from '../../engine/buildings';
-import { generateRecruitmentId, cancelRecruitment } from '../../engine/military';
-import { getRecruitmentCost } from '../../data/units';
-import { normalizeMarket } from '../../engine/market';
-import { calculateLawModifiers } from '../../engine/government';
+import { cancelRecruitment, queueRecruitment } from '../../engine/military';
 import type { BuildingType, UnitType, Recruitment, Province, Country, BuildingConstruction, GameDate } from '../../types';
 
 import type { ToastType } from '../../types/toast';
+import type { CountryTechState } from '../../types/technology';
 
 export function useEconomyActions(params: {
   provinces: Province[];
@@ -27,6 +25,7 @@ export function useEconomyActions(params: {
   addToast: (message: string, type?: ToastType, title?: string, dateString?: string, duration?: number) => void; formatGameDate: (d: GameDate) => string;
   dateRef: React.MutableRefObject<GameDate>;
   recruitments: Recruitment[];
+  playerTechState: CountryTechState;
 }) {
   const { provinces, playerCountry, playerCountryTag, buildingConstructions, setBuildingConstructions, setProvinces, setAllCountries, setRecruitments, addLog, addToast, formatGameDate, dateRef } = params;
 
@@ -76,27 +75,12 @@ if (result.success) {
   const handleRecruit = useCallback((provinceId: string, unitType: UnitType) => {
     const province = provinces.find((p) => p.id === provinceId);
     if (!province || province.owner !== playerCountryTag) return;
-    const costs = getRecruitmentCost(unitType);
-    const market = normalizeMarket(province.market);
-
-
-    const adjustedGoldCost = Math.floor(costs.gold * calculateLawModifiers(playerCountry.activeLaws).recruitmentCostMultiplier);
-
-    if (playerCountry.resources.gold < adjustedGoldCost || playerCountry.resources.manpower < costs.manpower || market.goods.iron.stock < costs.iron || market.goods.tools.stock < costs.tools) {
-      addLog(`❌ Recursos insuficientes para recrutar ${unitType}`);
-      return;
-    }
-    market.goods.iron.stock -= costs.iron;
-    market.goods.tools.stock -= costs.tools;
-    setProvinces(prev => prev.map(item => item.id === provinceId ? { ...item, market } : item));
-    setAllCountries((prev) => prev.map((c) => c.tag === playerCountryTag ? { ...c, resources: { ...c.resources, gold: c.resources.gold - adjustedGoldCost, manpower: c.resources.manpower - costs.manpower } } : c));
-    setRecruitments((prev) => {
-      const existing = prev.find((r) => r.owner === playerCountryTag && r.provinceId === provinceId && r.unitType === unitType && r.daysRemaining === costs.days);
-      if (existing) return prev.map((r) => r.id === existing.id ? { ...r, count: r.count + 1 } : r);
-      const newRecruitment: Recruitment = { id: generateRecruitmentId(), provinceId, owner: playerCountryTag, unitType, daysRemaining: costs.days, count: 1 };
-      return [...prev, newRecruitment];
-    });
-  }, [provinces, playerCountryTag, playerCountry, addLog, setAllCountries, setRecruitments, setProvinces]);
+    const result = queueRecruitment(unitType, { country: playerCountry, province, technology: params.playerTechState });
+    if (!result.success) { addLog(`❌ ${result.reason}`); return; }
+    setProvinces(prev => prev.map(item => item.id === provinceId ? result.province : item));
+    setAllCountries(prev => prev.map(country => country.tag === playerCountryTag ? result.country : country));
+    setRecruitments(prev => [...prev, result.recruitment]);
+  }, [provinces, playerCountryTag, playerCountry, params.playerTechState, addLog, setAllCountries, setRecruitments, setProvinces]);
 
   const handleCancelRecruitment = useCallback((recruitmentId: string) => {
     const rec = params.recruitments.find((r) => r.id === recruitmentId);

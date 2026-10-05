@@ -24,6 +24,7 @@ export function finalizeBattle(
   allProvinces: Province[] = [],
   allCountries: Country[] = []
 ): { result: CombatResult; updatedArmies: Army[] } {
+  void allProvinces;
 
   const defenderParticipants = allArmies.filter(a =>
     battle.participantArmyIds.includes(a.id) && a.owner === defender.owner

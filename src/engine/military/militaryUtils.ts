@@ -12,10 +12,14 @@ export function generateRecruitmentId(): string {
 }
 
 export function createRegiment(type: UnitType, originProvinceId?: string): Regiment {
+  const definition = UNIT_DEFINITIONS[type];
   return {
     type,
-    strength: 1000,
-    morale: 100,
+    strength: definition.maxStrength,
+    maxStrength: definition.maxStrength,
+    morale: definition.maxMorale,
+    organization: definition.maxOrganization,
+    experience: 0,
     originProvinceId,
   };
 }

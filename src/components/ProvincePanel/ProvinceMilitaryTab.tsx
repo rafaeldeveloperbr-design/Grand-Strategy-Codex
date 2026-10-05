@@ -1,13 +1,14 @@
 import React from 'react';
 import { Province, Country, Army, UnitType } from '../../types';
 import { UNIT_DEFINITIONS } from '../../data/units';
-import { calculateArmySize } from '../../engine/combat';
-import { normalizeMarket } from '../../engine/market';
+import { calculateArmyMorale, calculateArmyOrganization, calculateArmySize, getArmySupply, getEffectiveRecruitmentCost, getRecruitmentBlockReason } from '../../engine/military';
+import type { CountryTechState } from '../../types/technology';
 
 interface ProvinceMilitaryTabProps {
   province: Province;
   playerCountry: Country;
   armiesHere: Army[];
+  technology: CountryTechState;
   onRecruit: (provinceId: string, unitType: UnitType) => void;
 }
 
@@ -15,6 +16,7 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
   province,
   playerCountry,
   armiesHere,
+  technology,
   onRecruit,
 }) => {
   return (
@@ -36,11 +38,11 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
               <div className="province-panel__army-card-regiments">
                 {army.regiments.map((reg, i) => (
                   <span key={i} className="province-panel__regiment-badge">
-                    {reg.type === 'infantry' ? '🗡️' : reg.type === 'cavalry' ? '🐎' : '💣'}
-                    {Math.floor(reg.strength)}
+                    {UNIT_DEFINITIONS[reg.type].icon} {Math.floor(reg.strength)} · ORG {Math.round(reg.organization ?? UNIT_DEFINITIONS[reg.type].maxOrganization)}
                   </span>
                 ))}
               </div>
+              <div className="province-panel__build-desc">Moral {Math.round(calculateArmyMorale(army))} · Organização {Math.round(calculateArmyOrganization(army))} · Supply {getArmySupply(army, province, armiesHere).status}</div>
               {army.destination && (
                 <div className="province-panel__army-card-moving">
                   🚶 Marchando... ({Math.round(army.movementProgress * 100)}%)
@@ -57,15 +59,10 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
         <div className="province-panel__build-options">
           {(Object.keys(UNIT_DEFINITIONS) as UnitType[]).map((type) => {
             const def = UNIT_DEFINITIONS[type];
-            const canAffordGold = playerCountry.resources.gold >= def.cost;
-            const canAffordManpower = playerCountry.resources.manpower >= def.manpowerCost;
-            const market = normalizeMarket(province.market);
-            const hasIron = market.goods.iron.stock >= def.ironCost;
-            const hasTools = market.goods.tools.stock >= def.toolsCost;
-            const canRecruit = canAffordGold && canAffordManpower && hasIron && hasTools;
-            const cantRecruitReason = !canAffordGold
-              ? 'Ouro insuficiente'
-              : !canAffordManpower ? 'Manpower insuficiente' : !hasIron ? 'IRON insuficiente' : !hasTools ? 'TOOLS insuficiente' : null;
+            const context = { country: playerCountry, province, technology };
+            const cost = getEffectiveRecruitmentCost(type, context);
+            const cantRecruitReason = getRecruitmentBlockReason(type, context);
+            const canRecruit = cantRecruitReason === null;
 
             return (
               <div
@@ -79,16 +76,16 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
                   <div className="province-panel__build-info">
                     <span className="province-panel__build-name">{def.name}</span>
                     <span className="province-panel__build-desc">
-                      ATK:{def.attack} DEF:{def.defense} MOB:{def.mobility}
+                      {def.role} ATK {def.attack} · DEF {def.defense} · CHOQUE {def.shock} · CERCO {def.siege}
                     </span>
                   </div>
                 </div>
                 <div className="province-panel__build-costs">
-                  <span className="province-panel__build-cost">💰 {def.cost}</span>
-                  <span className="province-panel__build-cost">👥 {def.manpowerCost}</span>
-                  <span className="province-panel__build-cost">⛓️ {def.ironCost}</span>
-                  <span className="province-panel__build-cost">🔧 {def.toolsCost}</span>
-                  <span className="province-panel__build-cost">📅 {def.trainingTime}d</span>
+                  <span className="province-panel__build-cost">💰 {cost.gold}</span>
+                  <span className="province-panel__build-cost">👥 {cost.manpower}</span>
+                  <span className="province-panel__build-cost">⛓️ {cost.iron}</span>
+                  <span className="province-panel__build-cost">🔧 {cost.tools}</span>
+                  <span className="province-panel__build-cost">📅 {cost.days}d</span>
                 </div>
                 <button
                   className="province-panel__build-btn"

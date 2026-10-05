@@ -1,7 +1,7 @@
 /**
  * battleContinuousTick.ts - FIX RECUO - TYPED
  */
-import { processBattleDay, finalizeBattle, synchronizeBattle } from '../../engine/combat';
+import { processBattleDay, synchronizeBattle } from '../../engine/combat';
 import { checkRebelTerritoryReturn } from '../../engine/rebellions';
 import { applyStabilityPrestigeChanges } from '../../engine/stability';
 import type {
@@ -108,7 +108,11 @@ export function processBattleContinuous(p: Params) {
   let { armies, provinces, countries, wars, currentActiveBattles, recruitments, buildingConstructions } = p;
   const { snapshot, playerCountryTag, addLog, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef } = p;
 
-  const finishedBattles: Array<{ battle: BattleExtended; retreatInfo: RetreatInfo | null }> = [];
+  const finishedBattles: Array<{
+    battle: BattleExtended;
+    retreatInfo: RetreatInfo | null;
+    winner: 'attacker' | 'defender';
+  }> = [];
   const stillActiveBattles: BattleExtended[] = [];
 
   for (const battle of currentActiveBattles) {
@@ -121,7 +125,7 @@ export function processBattleContinuous(p: Params) {
     const armiesBeforeCombat = armies;
     const combatMultipliers = new Map(p.countries.map(country => {
       const state = country.tag === p.playerCountryTag ? p.playerTechState : p.botTechStates.get(country.tag);
-      const bonuses = state ? calculateTechBonuses(state).combatPowerBonus : { infantry:0, cavalry:0, artillery:0 };
+      const bonuses = state ? calculateTechBonuses(state).combatPowerBonus : { infantry: 0, cavalry: 0, artillery: 0 };
       return [country.tag, 1 + Math.max(bonuses.infantry, bonuses.cavalry, bonuses.artillery)];
     }));
     const fortificationMultipliers = new Map(p.countries.map(country => {
@@ -133,7 +137,11 @@ export function processBattleContinuous(p: Params) {
     provinces = applyMilitaryCasualties(provinces, armiesBeforeCombat, armies);
 
     if (result.finished) {
-      finishedBattles.push({ battle: result.battle, retreatInfo: result.retreatInfo });
+      finishedBattles.push({
+        battle: result.battle,
+        retreatInfo: result.retreatInfo,
+        winner: result.winner
+      });
     } else {
       stillActiveBattles.push(result.battle);
     }
@@ -147,6 +155,8 @@ export function processBattleContinuous(p: Params) {
     const fb = fbWrapper.battle;
     const retreatInfo = fbWrapper.retreatInfo || fb.retreatInfo || null;
 
+    const winner = fbWrapper.winner;
+
     const province = provinces.find(pr => pr.id === fb.provinceId);
     const attacker = armies.find(a => a.id === fb.attackerArmyId) || fb.attackerInitialSnapshot;
     const defender = armies.find(a => a.id === fb.defenderArmyId) || fb.defenderInitialSnapshot;
@@ -154,12 +164,11 @@ export function processBattleContinuous(p: Params) {
 
     let finalResult: Omit<FinalResultEnriched, 'totalAttackerInitial' | 'totalDefenderInitial' | 'attackerReinfInitial' | 'defenderReinfInitial' | 'attackerCurrentTroops' | 'defenderCurrentTroops' | 'participantDetails' | 'reinforcementInitialSize'>;
     let rawUpdatedArmies: Army[];
-    const armiesBeforeFinalization = armies;
 
     if (retreatInfo?.retreated) {
       console.log(`🏃 Processando recuo: ${retreatInfo.owner} com ${retreatInfo.troops} para ${retreatInfo.toName}`);
 
-      const winner = fb.attackerCurrentTroops > fb.defenderCurrentTroops ? 'attacker' as const : 'defender' as const;
+      
       finalResult = {
         attacker,
         defender,
@@ -206,11 +215,63 @@ export function processBattleContinuous(p: Params) {
         return a;
       });
     } else {
-      const res = finalizeBattle(fb, attacker, defender, province, snapshot.date, armies, provinces, countries);
-      finalResult = res.result as typeof finalResult;
-      rawUpdatedArmies = res.updatedArmies;
+
+      finalResult = {
+        attacker,
+        defender,
+
+        attackerOriginal: fb.attackerInitialSnapshot || attacker,
+        defenderOriginal: fb.defenderInitialSnapshot || defender,
+
+        attackerCasualties: Math.max(
+          0,
+          fb.attackerInitialTroops - fb.attackerCurrentTroops
+        ),
+
+        defenderCasualties: Math.max(
+          0,
+          fb.defenderInitialTroops - fb.defenderCurrentTroops
+        ),
+
+        winner,
+
+        provinceId: province.id,
+        provinceName: province.name,
+        duration: fb.daysTotal,
+
+        territoryChanged: false,
+        territorialDefenseBonus: province.owner === defender.owner,
+
+        powerRatio:
+          Math.round(
+            (
+              Math.max(
+                fb.attackerCurrentTroops,
+                fb.defenderCurrentTroops
+              ) /
+              Math.max(
+                1,
+                Math.min(
+                  fb.attackerCurrentTroops,
+                  fb.defenderCurrentTroops
+                )
+              )
+            ) * 100
+          ) / 100,
+
+        date: snapshot.date,
+
+        retreatInfo: null,
+        isStackwipe:
+          fb.attackerCurrentTroops <= 0 ||
+          fb.defenderCurrentTroops <= 0,
+      };
+
+      // O Combat V2 já alterou os exércitos.
+      // Não aplique baixas novamente aqui.
+      rawUpdatedArmies = [...armies];
     }
-    provinces = applyMilitaryCasualties(provinces, armiesBeforeFinalization, rawUpdatedArmies);
+
 
     const reinfSizes = fb.reinforcementInitialSize || {};
     let attackerReinfInitial = 0;

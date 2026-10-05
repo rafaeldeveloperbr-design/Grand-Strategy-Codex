@@ -2,7 +2,15 @@ import type { ActiveBattle, Army, GameDate, Province, RetreatInfo } from '../../
 import { applyTroopLoss, calculateArmySize } from './combatCalculations';
 import { findRetreatProvince } from './combatRetreats';
 import { getBuildingLevel } from '../../data/buildings';
-import { calculateArmyCombatStats, calculateArmyOrganization, calculateArmySiege, getArmySupply, getRegimentOrganization, MILITARY_BALANCE } from '../military';
+import {
+  calculateArmyCombatStats,
+  calculateArmyOrganization,
+  calculateArmyMorale,
+  calculateArmySiege,
+  getArmySupply,
+  getRegimentOrganization,
+  MILITARY_BALANCE
+} from '../military';
 
 export type BattleExtended = ActiveBattle & {
   reinforcementEntryDay?: Record<string, number>;
@@ -37,11 +45,14 @@ function applySideLoss(armies: Army[], sideArmies: Army[], loss: number, organiz
     const armyLoss = Math.min(calculateArmySize(army), remaining);
     remaining -= armyLoss;
     const damaged = applyTroopLoss(army, armyLoss);
-    return { ...damaged, regiments: damaged.regiments.map(regiment => ({ ...regiment,
-      organization: Math.max(0, getRegimentOrganization(regiment) - organizationDamage),
-      morale: Math.max(0, regiment.morale - organizationDamage * .35),
-      experience: Math.min(100, (regiment.experience ?? 0) + MILITARY_BALANCE.experienceGainPerDay),
-    })) };
+    return {
+      ...damaged, regiments: damaged.regiments.map(regiment => ({
+        ...regiment,
+        organization: Math.max(0, getRegimentOrganization(regiment) - organizationDamage),
+        morale: Math.max(0, regiment.morale - organizationDamage * .35),
+        experience: Math.min(100, (regiment.experience ?? 0) + MILITARY_BALANCE.experienceGainPerDay),
+      }))
+    };
   });
 }
 
@@ -83,8 +94,8 @@ export function checkAllProvinceCombats(
     for (const army of updatedArmies.filter(a => a.location === province.id && !a.inCombat)) {
       const side = army.owner === battle.attackerCountryId ? 'attacker'
         : army.owner === battle.defenderCountryId ? 'defender'
-        : atWar(army.owner, battle.defenderCountryId, wars) ? 'attacker'
-        : atWar(army.owner, battle.attackerCountryId, wars) ? 'defender' : null;
+          : atWar(army.owner, battle.defenderCountryId, wars) ? 'attacker'
+            : atWar(army.owner, battle.attackerCountryId, wars) ? 'defender' : null;
       if (!side) continue;
       battle = addReinforcementsToBattle(battle, army, side, province);
       updatedArmies = updatedArmies.map(a => a.id === army.id ? { ...a, inCombat: true } : a);
@@ -176,38 +187,212 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
   let next = synchronizeBattle(synced, updatedArmies);
   const attackerAfter = next?.attackerCurrentTroops ?? sideTotal(synced, updatedArmies, 'attacker');
   const defenderAfter = next?.defenderCurrentTroops ?? sideTotal(synced, updatedArmies, 'defender');
-  const attackerOrganization = participants(synced, updatedArmies, 'attacker').reduce((sum, army) => sum + calculateArmyOrganization(army), 0) / Math.max(1, participants(synced, updatedArmies, 'attacker').length);
-  const defenderOrganization = participants(synced, updatedArmies, 'defender').reduce((sum, army) => sum + calculateArmyOrganization(army), 0) / Math.max(1, participants(synced, updatedArmies, 'defender').length);
-  const finished = daysRemaining <= 0 || attackerOrganization <= MILITARY_BALANCE.organizationRetreatThreshold || defenderOrganization <= MILITARY_BALANCE.organizationRetreatThreshold || attackerAfter <= 50 || defenderAfter <= 50 || !next;
-  const loserSide: 'attacker' | 'defender' = attackerOrganization <= defenderOrganization ? 'attacker' : 'defender';
+  const attackerParticipants = participants(synced, updatedArmies, 'attacker');
+  const defenderParticipants = participants(synced, updatedArmies, 'defender');
+
+  const attackerOrganization =
+    attackerParticipants.reduce(
+      (sum, army) => sum + calculateArmyOrganization(army),
+      0,
+    ) / Math.max(1, attackerParticipants.length);
+
+  const defenderOrganization =
+    defenderParticipants.reduce(
+      (sum, army) => sum + calculateArmyOrganization(army),
+      0,
+    ) / Math.max(1, defenderParticipants.length);
+
+  const attackerMorale =
+    attackerParticipants.reduce(
+      (sum, army) => sum + calculateArmyMorale(army),
+      0,
+    ) / Math.max(1, attackerParticipants.length);
+
+  const defenderMorale =
+    defenderParticipants.reduce(
+      (sum, army) => sum + calculateArmyMorale(army),
+      0,
+    ) / Math.max(1, defenderParticipants.length);
+
+  const attackerDestroyed = attackerAfter <= 50;
+  const defenderDestroyed = defenderAfter <= 50;
+
+  const attackerOrganizationBroken =
+    attackerOrganization <= MILITARY_BALANCE.organizationRetreatThreshold;
+
+  const defenderOrganizationBroken =
+    defenderOrganization <= MILITARY_BALANCE.organizationRetreatThreshold;
+
+  const attackerMoraleBroken =
+    attackerMorale <= MILITARY_BALANCE.moraleRetreatThreshold;
+
+  const defenderMoraleBroken =
+    defenderMorale <= MILITARY_BALANCE.moraleRetreatThreshold;
+
+  const attackerBroken =
+    attackerDestroyed ||
+    attackerOrganizationBroken ||
+    attackerMoraleBroken;
+
+  const defenderBroken =
+    defenderDestroyed ||
+    defenderOrganizationBroken ||
+    defenderMoraleBroken;
+
+  const finished =
+    !next ||
+    attackerBroken ||
+    defenderBroken ||
+    daysRemaining <= 0;
+
+  let winner: 'attacker' | 'defender';
+
+  // Um único lado colapsou.
+  if (attackerBroken && !defenderBroken) {
+    winner = 'defender';
+  } else if (defenderBroken && !attackerBroken) {
+    winner = 'attacker';
+  } else {
+    // Ambos colapsaram no mesmo dia ou a duração terminou.
+    // Decide pela condição militar restante.
+    const attackerStrengthRatio =
+      attackerAfter / Math.max(1, synced.attackerInitialTroops);
+
+    const defenderStrengthRatio =
+      defenderAfter / Math.max(1, synced.defenderInitialTroops);
+
+    const attackerCondition =
+      attackerOrganization * 0.5 +
+      attackerMorale * 0.3 +
+      attackerStrengthRatio * 100 * 0.2;
+
+    const defenderCondition =
+      defenderOrganization * 0.5 +
+      defenderMorale * 0.3 +
+      defenderStrengthRatio * 100 * 0.2;
+
+    winner =
+      attackerCondition > defenderCondition
+        ? 'attacker'
+        : 'defender';
+  }
+
+  const loserSide: 'attacker' | 'defender' =
+    winner === 'attacker' ? 'defender' : 'attacker';
+
   let retreatInfo: RetreatInfo | null = null;
 
   if (finished) {
-    const loserTroops = loserSide === 'attacker' ? attackerAfter : defenderAfter;
-    if (loserTroops > 0 && loserTroops <= 1500) {
+    const loserTroops =
+      loserSide === 'attacker'
+        ? attackerAfter
+        : defenderAfter;
+
+    // Qualquer força derrotada que ainda possua homens tenta recuar.
+    if (loserTroops > 0) {
       const losers = participants(synced, updatedArmies, loserSide);
+
       let retreatedTroops = 0;
-      let firstDestination: Province | null = null;
+
+      const loserIds = new Set(losers.map(army => army.id));
+
+      const retreatDestinations = new Map<string, Province>();
+
+      for (const loser of losers) {
+        const destination = findRetreatProvince(
+          loser.owner,
+          province,
+          allProvinces,
+        );
+
+        if (destination) {
+          retreatDestinations.set(loser.id, destination);
+        }
+      }
+
       updatedArmies = updatedArmies.map(army => {
-        if (!losers.some(loser => loser.id === army.id)) return army;
-        const destination = findRetreatProvince(army.owner, province, allProvinces);
-        if (!destination) return { ...army, regiments: [], inCombat: false, destination: null, targetDestination: null, path: [] };
-        firstDestination ??= destination;
+        if (!loserIds.has(army.id)) {
+          return army;
+        }
+
+        const destination = retreatDestinations.get(army.id);
+
+        // Sem rota válida: exército destruído.
+        if (!destination) {
+          return {
+            ...army,
+            regiments: [],
+            inCombat: false,
+            destination: null,
+            targetDestination: null,
+            path: [],
+          };
+        }
+
         retreatedTroops += calculateArmySize(army);
-        return { ...army, location: destination.id, inCombat: false, destination: null, targetDestination: null, path: [], movementProgress: 0 };
+
+        return {
+          ...army,
+          location: destination.id,
+          inCombat: false,
+          destination: null,
+          targetDestination: null,
+          path: [],
+          movementProgress: 0,
+        };
       });
-      const retreatDestination = firstDestination as Province | null;
-      if (retreatDestination) retreatInfo = { retreated: true, to: retreatDestination.id, toName: retreatDestination.name, troops: retreatedTroops, owner: losers[0]?.owner ?? '' };
+
+      const firstRetreatDestination =
+        retreatDestinations.values().next().value;
+
+      if (firstRetreatDestination) {
+        retreatInfo = {
+          retreated: true,
+          to: firstRetreatDestination.id,
+          toName: firstRetreatDestination.name,
+          troops: retreatedTroops,
+          owner: losers[0]?.owner ?? '',
+        };
+      }
     }
-    updatedArmies = updatedArmies.map(a => synced.participantArmyIds.includes(a.id) ? { ...a, inCombat: false } : a);
+
+    updatedArmies = updatedArmies.map(army =>
+      synced.participantArmyIds.includes(army.id)
+        ? { ...army, inCombat: false }
+        : army,
+    );
   }
-  const finalAttacker = sideTotal(synced, updatedArmies, 'attacker');
-  const finalDefender = sideTotal(synced, updatedArmies, 'defender');
+
+  const finalAttacker = sideTotal(
+    synced,
+    updatedArmies,
+    'attacker',
+  );
+
+  const finalDefender = sideTotal(
+    synced,
+    updatedArmies,
+    'defender',
+  );
+
   const finalBattle: BattleExtended = {
-    ...(next ?? synced), daysRemaining,
-    attackerCurrentTroops: finalAttacker, defenderCurrentTroops: finalDefender,
-    attackerCasualties: synced.attackerCasualties + attackerLoss,
-    defenderCasualties: synced.defenderCasualties + defenderLoss, retreatInfo,
+    ...(next ?? synced),
+    daysRemaining,
+    attackerCurrentTroops: finalAttacker,
+    defenderCurrentTroops: finalDefender,
+    attackerCasualties:
+      synced.attackerCasualties + attackerLoss,
+    defenderCasualties:
+      synced.defenderCasualties + defenderLoss,
+    retreatInfo,
+  };
+
+  return {
+    battle: finalBattle,
+    armies: updatedArmies,
+    finished,
+    winner,
+    retreatInfo,
   };
   return { battle: finalBattle, armies: updatedArmies, finished, winner: finalAttacker > finalDefender ? 'attacker' as const : 'defender' as const, retreatInfo };
 }
@@ -215,6 +400,8 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
 // Compatibility wrapper for older direct callers.
 export function processDailyBattle(battle: BattleExtended, attacker: Army, defender: Army, province: Province, allProvinces: Province[] = []) {
   const result = processBattleDay(battle, [attacker, defender], province, allProvinces);
-  return { ...result, attacker: result.armies.find(a => a.id === attacker.id) ?? attacker, defender: result.armies.find(a => a.id === defender.id) ?? defender,
-    attackerCurrentTroops: result.battle.attackerCurrentTroops, defenderCurrentTroops: result.battle.defenderCurrentTroops };
+  return {
+    ...result, attacker: result.armies.find(a => a.id === attacker.id) ?? attacker, defender: result.armies.find(a => a.id === defender.id) ?? defender,
+    attackerCurrentTroops: result.battle.attackerCurrentTroops, defenderCurrentTroops: result.battle.defenderCurrentTroops
+  };
 }

@@ -366,15 +366,30 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
     const defenderStrengthRatio =
       defenderAfter / Math.max(1, synced.defenderInitialTroops);
 
+    const totalRemaining =
+      attackerAfter + defenderAfter;
+
+    const attackerTroopShare =
+      totalRemaining > 0
+        ? attackerAfter / totalRemaining
+        : 0;
+
+    const defenderTroopShare =
+      totalRemaining > 0
+        ? defenderAfter / totalRemaining
+        : 0;
+
     const attackerCondition =
-      attackerOrganization * 0.5 +
-      attackerMorale * 0.3 +
-      attackerStrengthRatio * 100 * 0.2;
+      attackerOrganization * 0.35 +
+      attackerMorale * 0.20 +
+      attackerStrengthRatio * 100 * 0.15 +
+      attackerTroopShare * 100 * 0.30;
 
     const defenderCondition =
-      defenderOrganization * 0.5 +
-      defenderMorale * 0.3 +
-      defenderStrengthRatio * 100 * 0.2;
+      defenderOrganization * 0.35 +
+      defenderMorale * 0.20 +
+      defenderStrengthRatio * 100 * 0.15 +
+      defenderTroopShare * 100 * 0.30;
 
     winner =
       attackerCondition > defenderCondition

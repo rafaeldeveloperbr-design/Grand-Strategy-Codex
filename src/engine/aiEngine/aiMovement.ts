@@ -15,7 +15,6 @@ import {
   isBorderProvince,
   isAtWarWithNeighbor,
   isAtWarWith,
-  findNearestEnemyArmy,
 } from './aiHelpers';
 
 function createArmyWithRoute(
@@ -92,6 +91,11 @@ function calculateEffectiveArmyPower(
     stats.defense * 0.65 +
     stats.shock * 0.45;
 
+  const troopFactor = Math.max(
+    0.25,
+    Math.sqrt(size / 1000)
+  );
+
   let defenseMultiplier = 1;
 
   if (defending && province.owner === army.owner) {
@@ -102,7 +106,12 @@ function calculateEffectiveArmyPower(
       fortLevel * 0.10;
   }
 
-  return combatPower * readiness * defenseMultiplier;
+  return (
+    combatPower *
+    readiness *
+    troopFactor *
+    defenseMultiplier
+  );
 }
 
 
@@ -293,6 +302,19 @@ function scoreEnemyArmyTarget(
   if (
     aiArmy.location !== enemyArmy.location &&
     path.length === 0
+  ) {
+    return -Infinity;
+  }
+
+  if (
+    !isOffensiveRouteSafe(
+      aiArmy,
+      path,
+      botCountryId,
+      provinces,
+      armies,
+      diplomacy
+    )
   ) {
     return -Infinity;
   }
@@ -675,7 +697,6 @@ function calculateRouteDanger(
       continue;
     }
 
-    // Território inimigo em guerra
     if (
       province.owner !== botCountryId &&
       isAtWarWith(
@@ -717,6 +738,77 @@ function calculateRouteDanger(
   }
 
   return danger;
+}
+
+
+function isOffensiveRouteSafe(
+  army: Army,
+  path: string[],
+  botCountryId: string,
+  provinces: Province[],
+  armies: Army[],
+  diplomacy: DiplomaticRelation[]
+): boolean {
+  if (!army.location) return false;
+
+  const currentProvince = provinces.find(
+    province => province.id === army.location
+  );
+
+  if (!currentProvince) return false;
+
+  const armyPower = calculateEffectiveArmyPower(
+    army,
+    currentProvince,
+    armies,
+    currentProvince.owner === botCountryId
+  );
+
+  // Não verifica o último nó:
+  // o último é justamente o alvo que queremos atacar.
+  const intermediatePath = path.slice(0, -1);
+
+  for (const provinceId of intermediatePath) {
+    const province = provinces.find(
+      p => p.id === provinceId
+    );
+
+    if (!province) return false;
+
+    const hostileArmies = armies.filter(
+      other =>
+        other.owner !== botCountryId &&
+        other.location === province.id &&
+        isAtWarWith(
+          botCountryId,
+          other.owner,
+          diplomacy
+        )
+    );
+
+    if (hostileArmies.length === 0) {
+      continue;
+    }
+
+    const hostilePower = hostileArmies.reduce(
+      (sum, hostileArmy) =>
+        sum +
+        calculateEffectiveArmyPower(
+          hostileArmy,
+          province,
+          armies,
+          province.owner === hostileArmy.owner
+        ),
+      0
+    );
+
+    // Não atravessa uma força que possa bloquear o caminho.
+    if (armyPower < hostilePower * 1.20) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export function processAI(
@@ -846,9 +938,18 @@ export function processAI(
   let reservedCapitalDefense = 0;
 
   return armies.map(army => {
-    if (army.owner !== botCountryId || army.destination !== null) {
+    // Ignora exércitos de outros países ou que já estejam se movendo.
+    if (
+      army.owner !== botCountryId ||
+      army.destination !== null ||
+      army.inCombat
+    ) {
       return army;
     }
+
+    // =========================================================
+    // PRIORIDADE 1 — DEFENDER CAPITAL AMEAÇADA
+    // =========================================================
 
     if (
       threatenedCapital &&
@@ -859,11 +960,11 @@ export function processAI(
       const desiredDefense =
         capitalDefense.enemyThreat * 1.25;
 
-      const currentProjectedDefense =
+      const projectedDefense =
         capitalDefense.friendlyDefense +
         reservedCapitalDefense;
 
-      if (currentProjectedDefense < desiredDefense) {
+      if (projectedDefense < desiredDefense) {
         const armyProvince = provinces.find(
           province => province.id === army.location
         );
@@ -896,6 +997,10 @@ export function processAI(
       }
     }
 
+    // =========================================================
+    // PRIORIDADE 2 — CUMPRIR ORDEM DE REAGRUPAMENTO
+    // =========================================================
+
     const reinforcementDestination =
       reinforcementOrders.get(army.id);
 
@@ -916,131 +1021,142 @@ export function processAI(
       );
     }
 
-    const currentProv = provinces.find(p => p.id === army.location);
-    if (!currentProv || !currentProv.neighbors || currentProv.neighbors.length === 0) {
+    const currentProv = provinces.find(
+      province => province.id === army.location
+    );
+
+    if (
+      !currentProv ||
+      !currentProv.neighbors ||
+      currentProv.neighbors.length === 0
+    ) {
       return army;
     }
 
-    const isAtWar = isAtWarWithNeighbor(botCountryId, currentProv, provinces, diplomacy);
+    const isAtWar = isAtWarWithNeighbor(
+      botCountryId,
+      currentProv,
+      provinces,
+      diplomacy
+    );
+
+    // =========================================================
+    // GUERRA
+    // =========================================================
 
     if (isAtWar) {
-      const enemyCountries = wars
-        .filter(w => w.attacker === botCountryId || w.defender === botCountryId)
-        .map(w => w.attacker === botCountryId ? w.defender : w.attacker);
-
-      const enemyArmies = armies.filter(a =>
-        enemyCountries.includes(a.owner) && a.location !== null
+      const relevantEnemyArmies = enemyArmies.filter(
+        enemy => enemy.location !== null
       );
 
-      const aiArmyPower = calculateEffectiveArmyPower(
-        army,
-        currentProv,
-        armies,
-        currentProv.owner === botCountryId
-      );
+      // =======================================================
+      // PRIORIDADE 3/4/5 — AVALIAR EXÉRCITO INIMIGO
+      // =======================================================
 
-      if (enemyArmies.length > 0) {
-        const nearestEnemy = findNearestEnemyArmy(army, enemyArmies, provinces);
+      if (relevantEnemyArmies.length > 0) {
+        const bestEnemy = findBestEnemyArmyTarget(
+          army,
+          relevantEnemyArmies,
+          provinces,
+          armies,
+          botCountryId,
+          diplomacy
+        );
 
-        if (nearestEnemy && nearestEnemy.location) {
+        if (bestEnemy?.location) {
           const enemyProvince = provinces.find(
-            p => p.id === nearestEnemy.location
+            province => province.id === bestEnemy.location
           );
 
-          if (!enemyProvince) {
-            return army;
-          }
+          if (enemyProvince) {
+            const aiArmyPower =
+              calculateEffectiveArmyPower(
+                army,
+                currentProv,
+                armies,
+                currentProv.owner === botCountryId
+              );
 
-          const enemyArmyPower = calculateEffectiveArmyPower(
-            nearestEnemy,
-            enemyProvince,
-            armies,
-            enemyProvince.owner === nearestEnemy.owner
-          );
+            const enemyArmyPower =
+              calculateEffectiveArmyPower(
+                bestEnemy,
+                enemyProvince,
+                armies,
+                enemyProvince.owner === bestEnemy.owner
+              );
 
-          const attackRatio =
-            aiArmyPower / Math.max(1, enemyArmyPower);
+            const attackRatio =
+              aiArmyPower /
+              Math.max(1, enemyArmyPower);
 
-          if (attackRatio >= 1.20) {
+            // ===============================================
+            // PRIORIDADE 3 — SOBREVIVER / RECUAR
+            // ===============================================
+
+            if (attackRatio < 0.85) {
+              const defensiveProvince =
+                chooseDefensiveProvince(
+                  army,
+                  botCountryId,
+                  provinces,
+                  armies,
+                  diplomacy
+                );
+
+              if (
+                defensiveProvince &&
+                army.location !== defensiveProvince.id
+              ) {
+                console.log(
+                  `🛡️ [IA DEFENSIVA] ${botCountryId} evitando combate desfavorável ${attackRatio.toFixed(2)}:1 e recuando para ${defensiveProvince.name}`
+                );
+
+                return createArmyWithRoute(
+                  army,
+                  defensiveProvince.id,
+                  provinces,
+                  botCountryId,
+                  diplomacy
+                );
+              }
+
+              return army;
+            }
+
+            // ===============================================
+            // PRIORIDADE 4 — ESPERAR REFORÇOS
+            // ===============================================
+
+            if (attackRatio < 1.20) {
+              console.log(
+                `⏸️ [IA CAUTELOSA] ${botCountryId} segurando posição contra ${bestEnemy.owner} (${attackRatio.toFixed(2)}:1)`
+              );
+
+              return army;
+            }
+
+            // ===============================================
+            // PRIORIDADE 5 — ATAQUE FAVORÁVEL
+            // ===============================================
+
             console.log(
-              `🎯 [IA OFENSIVA] ${botCountryId} atacando com vantagem ${attackRatio.toFixed(2)}:1`
+              `🎯 [IA OFENSIVA] ${botCountryId} atacando ${bestEnemy.owner} com vantagem ${attackRatio.toFixed(2)}:1`
             );
 
             return createArmyWithRoute(
               army,
-              nearestEnemy.location,
+              bestEnemy.location,
               provinces,
               botCountryId,
               diplomacy
             );
           }
-
-          if (attackRatio < 0.85) {
-            const defensiveProvince = chooseDefensiveProvince(
-              army,
-              botCountryId,
-              provinces,
-              armies,
-              diplomacy
-            );
-
-            if (
-              defensiveProvince &&
-              army.location !== defensiveProvince.id
-            ) {
-              console.log(
-                `🛡️ [IA DEFENSIVA] ${botCountryId} evitando combate desfavorável ${attackRatio.toFixed(2)}:1 e recuando para ${defensiveProvince.name}`
-              );
-
-              return createArmyWithRoute(
-                army,
-                defensiveProvince.id,
-                provinces,
-                botCountryId,
-                diplomacy
-              );
-            }
-
-            return army;
-          }
-
-          const reinforcementArmy = findReinforcementArmy(
-            army,
-            botCountryId,
-            armies,
-            provinces,
-            diplomacy
-          );
-
-          if (
-            reinforcementArmy &&
-            reinforcementArmy.location &&
-            army.location
-          ) {
-            console.log(
-              `🤝 [IA REAGRUPANDO] ${botCountryId} aguardando reforço de ${reinforcementArmy.name}`
-            );
-
-            return army;
-          }
-
-          console.log(
-            `⏸️ [IA CAUTELOSA] ${botCountryId} segurando posição contra ${nearestEnemy.owner} (${attackRatio.toFixed(2)}:1)`
-          );
-
-          return army;
         }
       }
 
-      const validNeighbors = currentProv.neighbors.filter(neighborId => {
-        const prov = provinces.find(p => p.id === neighborId);
-        if (!prov) return false;
-        return canMoveToProvince(botCountryId, prov.owner, diplomacy);
-      });
-
-      if (validNeighbors.length === 0) {
-        return army;
-      }
+      // =======================================================
+      // PRIORIDADE 6 — OBJETIVO TERRITORIAL
+      // =======================================================
 
       const bestProvinceTarget =
         findBestProvinceTarget(
@@ -1066,32 +1182,92 @@ export function processAI(
         );
       }
 
-      if (isBorderProvince(army.location!, provinces, botCountryId)) {
-        return army;
-      }
-
-      const borderNeighbors = currentProv.neighbors.filter(neighborId => {
-        const prov = provinces.find(p => p.id === neighborId);
-        if (!prov) return false;
-        return prov.owner === botCountryId && isBorderProvince(neighborId, provinces, botCountryId);
-      });
-
-      if (borderNeighbors.length > 0) {
-        const chosenDestination = borderNeighbors[Math.floor(Math.random() * borderNeighbors.length)];
-        return createArmyWithRoute(army, chosenDestination, provinces, botCountryId, diplomacy);
-      }
-
-      const ownNeighbors = currentProv.neighbors.filter(neighborId => {
-        const prov = provinces.find(p => p.id === neighborId);
-        return prov && prov.owner === botCountryId;
-      });
-
-      if (ownNeighbors.length > 0) {
-        const chosenDestination = ownNeighbors[Math.floor(Math.random() * ownNeighbors.length)];
-        return createArmyWithRoute(army, chosenDestination, provinces, botCountryId, diplomacy);
-      }
-
+      // Está em guerra, mas não existe nenhuma ação útil.
       return army;
-    } return army;
+    }
+
+    // =========================================================
+    // PAZ — MANTER FRONTEIRA
+    // =========================================================
+
+    if (
+      isBorderProvince(
+        army.location!,
+        provinces,
+        botCountryId
+      )
+    ) {
+      return army;
+    }
+
+    const borderNeighbors = currentProv.neighbors.filter(
+      neighborId => {
+        const province = provinces.find(
+          p => p.id === neighborId
+        );
+
+        if (!province) return false;
+
+        return (
+          province.owner === botCountryId &&
+          isBorderProvince(
+            neighborId,
+            provinces,
+            botCountryId
+          )
+        );
+      }
+    );
+
+    if (borderNeighbors.length > 0) {
+      const chosenDestination =
+        borderNeighbors[
+        Math.floor(
+          Math.random() * borderNeighbors.length
+        )
+        ];
+
+      return createArmyWithRoute(
+        army,
+        chosenDestination,
+        provinces,
+        botCountryId,
+        diplomacy
+      );
+    }
+
+    // Se não consegue alcançar a fronteira diretamente,
+    // continua se deslocando por território próprio.
+    const ownNeighbors = currentProv.neighbors.filter(
+      neighborId => {
+        const province = provinces.find(
+          p => p.id === neighborId
+        );
+
+        return (
+          province &&
+          province.owner === botCountryId
+        );
+      }
+    );
+
+    if (ownNeighbors.length > 0) {
+      const chosenDestination =
+        ownNeighbors[
+        Math.floor(
+          Math.random() * ownNeighbors.length
+        )
+        ];
+
+      return createArmyWithRoute(
+        army,
+        chosenDestination,
+        provinces,
+        botCountryId,
+        diplomacy
+      );
+    }
+
+    return army;
   });
 }

@@ -78,7 +78,12 @@ export function processAiTick(p: Params) {
     }
 
     const armiesBefore = armies.filter(a => a.owner === country.tag);
-    armies = processAI(country.tag, armies, provinces, relations, wars);
+    armies = processAI(country.tag,
+      armies,
+      provinces,
+      relations,
+      wars,
+      countries);
     const armiesAfter = armies.filter(a => a.owner === country.tag);
     armiesAfter.forEach(armyAfter => {
       const armyBefore = armiesBefore.find(a => a.id === armyAfter.id);
@@ -102,7 +107,33 @@ export function processAiTick(p: Params) {
   }
   for (const [, armiesInProvince] of armiesToMerge) {
     if (armiesInProvince.length < 2) continue;
-    const [primaryArmy, ...secondaryArmies] = armiesInProvince;
+
+    const owner = armiesInProvince[0].owner;
+
+    const countryAtWar = wars.some(
+      war =>
+        war.attacker === owner ||
+        war.defender === owner
+    );
+
+
+
+    const totalTroops = armiesInProvince.reduce(
+      (sum, army) => sum + calculateArmySize(army),
+      0
+    );
+
+    const MAX_AI_STACK = countryAtWar
+      ? 12000
+      : 6000;
+
+    if (totalTroops > MAX_AI_STACK) {
+      continue;
+    }
+
+    const [primaryArmy, ...secondaryArmies] =
+      armiesInProvince;
+
     let mergedArmy = primaryArmy;
     for (const secondaryArmy of secondaryArmies) {
       mergedArmy = mergeArmies(mergedArmy, secondaryArmy);

@@ -68,8 +68,8 @@ export function processBattleArrival(p: Params) {
       const aRebel = ownerA.startsWith('rebel_');
       const bRebel = ownerB.startsWith('rebel_');
       if (aRebel && bRebel) return false;
-      if (aRebel) return ownerB !== (origA || '');
-      if (bRebel) return ownerA !== (origB || '');
+      if (aRebel) return ownerA.startsWith('rebel_v2_') ? ownerB === origA : ownerB !== (origA || '');
+      if (bRebel) return ownerB.startsWith('rebel_v2_') ? ownerA === origB : ownerA !== (origB || '');
       return wars.some(
         w => (w.attacker === ownerA && w.defender === ownerB) ||
           (w.defender === ownerA && w.attacker === ownerB)

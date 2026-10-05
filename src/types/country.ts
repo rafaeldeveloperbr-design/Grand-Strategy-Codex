@@ -4,6 +4,7 @@
 import type { ActiveLaws } from './government';
 
 export interface Country {
+  rebellions?: import('../engine/rebellion/types').RebellionFaction[];
   /** Tag única do país (ex: "BRA", "FRA", "GER") */
   tag: string;
   /** Nome completo do país */

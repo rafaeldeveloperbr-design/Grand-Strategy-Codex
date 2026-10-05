@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { Province, Country, Recruitment, BuildingConstruction } from '../../types';
 import { BUILDING_DEFINITIONS } from '../../data/buildings';
 import { UNIT_DEFINITIONS } from '../../data/units';
+import { getProvinceRebellion, REBEL_TYPE_LABELS } from '../../engine/rebellion';
 
 interface ProvinceLayerProps {
   provinces: Province[];
@@ -80,6 +81,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
         const hasActivities = activities.hasConstructions || activities.hasRecruitments;
 
         const unrest = province.unrest ?? 0;
+        const faction = getProvinceRebellion(province, countries);
         const iconY = province.center.y - 12;
         const iconX = province.center.x - 8;
 
@@ -205,6 +207,11 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
               </g>
             )}
 
+            {faction && <g aria-label={`Província envolvida na revolta de ${REBEL_TYPE_LABELS[faction.type]} em ${province.name}`}>
+              <text x={province.center.x - 35} y={province.center.y - 25} fontSize="12" pointerEvents="none">🏴</text>
+              <title>{`Revolta de ${REBEL_TYPE_LABELS[faction.type]} ativa. Origem: ${provinces.find(p => p.id === faction.originProvince)?.name ?? faction.originProvince}. As tropas podem estar em outra província da região.`}</title>
+            </g>}
+
             {/* Indicador de agitação provincial (unrest) */}
             {unrest > 0 && (() => {
               // Desloca para o canto superior direito da província
@@ -246,7 +253,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
                   </text>
                   <title>
                     {`Agitação: ${getUnrestDescription(unrest)} (${Math.round(unrest)}%)\n`}
-                    {unrest >= 80 ? '⚠️ Revolta iminente!' : ''}
+                    {`Organização rebelde: ${Math.round(province.rebellion?.progress ?? 0)}%`}
                   </title>
                 </g>
               );

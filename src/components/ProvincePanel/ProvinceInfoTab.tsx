@@ -1,4 +1,5 @@
 import React from 'react';
+import { REBELLION_BALANCE, REBEL_TYPE_LABELS, OBJECTIVE_LABELS, UNREST_SOURCE_LABELS, type RebellionAction, type RebellionFaction } from '../../engine/rebellion';
 import { Province, Country, Army } from '../../types';
 import { calculateArmySize } from '../../engine/combat';
 import { getUnrestDescription, getUnrestColor, isProvincePacified } from '../../engine/unrest';
@@ -9,6 +10,10 @@ import type { CountryTechState } from '../../types/technology';
 import { ProvinceMarketSection } from './ProvinceMarketSection';
 
 interface ProvinceInfoTabProps {
+  faction?: RebellionFaction;
+  factionArmies?: Army[];
+  provinces?: Province[];
+  onRebellionAction?: (provinceId: string, action: RebellionAction) => void;
   province: Province;
   ownerCountry?: Country;
   armiesHere: Army[];
@@ -27,6 +32,10 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
   neighborProvinces,
   onProvinceClick,
   techState,
+  onRebellionAction,
+  faction,
+  factionArmies = [],
+  provinces = [],
 }) => {
   const unrest = province.unrest ?? 0;
   const isPacified = isProvincePacified(province);
@@ -120,24 +129,27 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
             }}
           />
         </div>
-        {!isPacified && (
-          <div className="province-panel__info-row" style={{ marginTop: '8px' }}>
-            <span className="province-panel__label" style={{ fontSize: '10px' }}>
-              {unrest >= 80
-                ? '⚠️ Revolta iminente!'
-                : unrest >= 60
-                ? '⚠️ Alta instabilidade'
-                : '📉 Decaindo naturalmente...'}
-            </span>
-          </div>
-        )}
-        {province.buildings.some((b) => b.type === 'housing') && (
-          <div className="province-panel__info-row" style={{ marginTop: '4px' }}>
-            <span className="province-panel__label" style={{ fontSize: '10px', color: '#2ecc71' }}>
-              ⛪ Templo ativo: pacificação acelerada
-            </span>
-          </div>
-        )}
+        <div className="province-panel__info-row"><span>Organização rebelde:</span><strong>{Math.round(province.rebellion?.progress ?? 0)}%</strong></div>
+        <div className="province-panel__info-row"><span>Autonomia / ressentimento:</span><strong>{Math.round(province.rebellion?.autonomy ?? 0)} / {Math.round(province.rebellion?.resentment ?? 0)}</strong></div>
+        {faction?.status === 'active' && <p>{REBEL_TYPE_LABELS[faction.type]}: {OBJECTIVE_LABELS[faction.objective.kind]} · {faction.militaryStrength.toLocaleString()} tropas · Controle {faction.objective.heldDays}/{faction.objective.requiredDays} dias</p>}
+        {faction?.status === 'active' && <div>
+          <p>Província envolvida na revolta. Origem: {provinces.find(p => p.id === faction.originProvince)?.name ?? faction.originProvince}.</p>
+          {factionArmies.map(army => <p key={army.id}>Exército rebelde: {calculateArmySize(army).toLocaleString()} tropas em {provinces.find(p => p.id === army.location)?.name ?? 'movimento'}{army.destination ? ` → ${provinces.find(p => p.id === army.destination)?.name ?? army.destination}` : ''}.</p>)}
+        </div>}
+        <details><summary>Causas da pressão social (alvo {Math.round(province.unrestExplanation?.total ?? unrest)}%)</summary>
+          {province.unrestExplanation?.modifiers.map(m => <div key={m.source}>{UNREST_SOURCE_LABELS[m.source] ?? m.source}: {m.value > 0 ? '+' : ''}{m.value.toFixed(1)}</div>)}
+        </details>
+        {onRebellionAction && <div className="province-panel__neighbors">
+          {([
+            ['repression', 'Reprimir', 'Exige tropas; aumenta ressentimento, custa vidas e prestígio.'],
+            ['tax_relief', 'Alívio fiscal', 'Receita local −20% por 180 dias.'],
+            ['concessions', 'Concessões', 'Alívio temporário; reduz receita e ressentimento.'],
+            ['autonomy', 'Autonomia', 'Reduz pressão, receita e manpower.'],
+            ['investment', 'Investir', 'Melhora pressão social por 360 dias.'],
+            ['negotiate', 'Negociar', 'Encerra facção camponesa ou separatista com concessões.'],
+          ] satisfies [RebellionAction, string, string][]).map(([action, label, explanation]) => <button className="province-panel__neighbor-btn" key={action} title={explanation} onClick={() => onRebellionAction(province.id, action)}>{label} ({REBELLION_BALANCE.costs[action]} ouro)</button>)}
+        </div>}
+
       </div>
 
       {/* Exércitos presentes (resumo) */}

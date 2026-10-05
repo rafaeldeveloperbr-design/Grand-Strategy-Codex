@@ -3,6 +3,7 @@
  * Batalhas pendentes rebeldes + Guerra separatista + Fim de jogo
  */
 import { startContinuousBattle } from '../../engine/combat';
+import { processRebellionObjectives } from '../../engine/rebellion';
 import { ensureSeparatistWars, cleanupSeparatistWars } from '../../engine/rebellions';
 import { checkEndGameConditions, calculateGameStats } from '../../engine/gameConditions';
 import type { Army, Province, Country, War, ActiveBattle, CombatResult } from '../../types';
@@ -12,6 +13,8 @@ import type { GameStats, EndGameType } from '../../engine/gameConditions';
 import type { ToastType } from '../../types/toast';
 
 type Params = {
+  recruitments: import('../../types').Recruitment[];
+  buildingConstructions: import('../../types').BuildingConstruction[];
   provinces: Province[];
   armies: Army[];
   countries: Country[];
@@ -62,7 +65,7 @@ type Params = {
 };
 
 export function processRebelTick(p: Params) {
-  let { provinces, armies, countries, wars, relations, currentActiveBattles } = p;
+  let { provinces, armies, countries, wars, relations, currentActiveBattles, recruitments, buildingConstructions } = p;
   const { snapshot, playerCountryTag, hasTriggeredEndGame, battleHistory, dateRef, addLog, addToast, setActiveBattles, activeBattlesRef } = p;
 
   for (const prov of provinces) {
@@ -73,7 +76,7 @@ export function processRebelTick(p: Params) {
     const existingBattle = currentActiveBattles.find(b => b.provinceId === prov.id);
     if (existingBattle) continue;
     const origOwner = rebelSide[0].originalOwner;
-    const hostileSide = armiesHere.filter(a => !a.owner.startsWith('rebel_') && a.owner !== origOwner);
+    const hostileSide = armiesHere.filter(a => !a.owner.startsWith('rebel_') && (rebelSide[0].rebellionFactionId ? a.owner === origOwner : a.owner !== origOwner));
     if (hostileSide.length === 0) continue;
     const battleId = `battle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newBattle = startContinuousBattle(rebelSide, hostileSide, prov, snapshot.date, battleId);
@@ -87,6 +90,11 @@ export function processRebelTick(p: Params) {
   }
   setActiveBattles(currentActiveBattles);
   activeBattlesRef.current = currentActiveBattles;
+
+  const objectives = processRebellionObjectives(provinces, countries, armies, wars, relations, snapshot.date, recruitments, buildingConstructions);
+  ({ provinces, countries, armies, wars, relations } = objectives);
+  recruitments = objectives.recruitments; buildingConstructions = objectives.constructions;
+  objectives.logs.forEach(addLog);
 
   const warResult = ensureSeparatistWars(armies, provinces, wars, relations, snapshot.date);
   if (warResult.newConflicts.length > 0) {
@@ -111,7 +119,8 @@ export function processRebelTick(p: Params) {
     const playerCountryData = countries.find(c => c.tag === playerCountryTag);
     if (playerCountryData) {
       const endGameResult = checkEndGameConditions(playerCountryData, provinces);
-      if (endGameResult !== null) {
+      const ongoingCivilWar = playerCountryData.rebellions?.some(f => f.status === 'active');
+      if (endGameResult !== null && !(endGameResult === 'defeat' && ongoingCivilWar)) {
         const stats = calculateGameStats({ year: 1444, month: 11, day: 11 }, dateRef.current, battleHistory, playerCountryTag, provinces);
         endGameType = endGameResult; gameStats = stats; endGameTriggered = true;
         addLog(`🏁 ${endGameResult === 'victory' ? 'VITÓRIA!' : 'DERROTA!'} Jogo encerrado.`);
@@ -119,5 +128,5 @@ export function processRebelTick(p: Params) {
     }
   }
 
-  return { provinces, armies, countries, wars, relations, currentActiveBattles, endGameTriggered, endGameType, gameStats };
+  return { provinces, armies, countries, wars, relations, recruitments, buildingConstructions, currentActiveBattles, endGameTriggered, endGameType, gameStats };
 }

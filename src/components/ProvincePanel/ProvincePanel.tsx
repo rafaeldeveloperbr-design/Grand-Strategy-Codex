@@ -6,9 +6,11 @@ import { ProvinceInfoTab } from './ProvinceInfoTab';
 import { ProvinceBuildingsTab } from './ProvinceBuildingsTab';
 import { ProvinceMilitaryTab } from './ProvinceMilitaryTab';
 import { ProvinceSidebar } from './ProvinceSidebar';
+import { getProvinceRebellion, type RebellionAction } from '../../engine/rebellion';
 import type { CountryTechState } from '../../types/technology';
 
 export interface ProvincePanelProps {
+  onRebellionAction?: (provinceId: string, action: RebellionAction) => void;
   province: Province;
   provinces: Province[];
   countries: Country[];
@@ -44,11 +46,13 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
   onRecruit,
   onCancelRecruitment,
   onCancelBuilding,
+  onRebellionAction,
 }) => {
   const [activeTab, setActiveTab] = useState<PanelTab>('info');
-  const ownerCountry = getCountryByTag(province.owner);
+  const ownerCountry = countries.find(c => c.tag === province.owner);
   const isPlayerOwned = province.owner === playerCountry.tag;
   const ownerTechState = isPlayerOwned ? playerTechState : botTechStates.get(province.owner);
+  const faction = getProvinceRebellion(province, countries);
 
   const armiesHere = armies.filter((a) => a.location === province.id);
   const recruitmentsHere = recruitments.filter((r) => r.provinceId === province.id);
@@ -106,6 +110,10 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
             {activeTab === 'info' && (
               <ProvinceInfoTab
                 province={province}
+                faction={faction}
+                factionArmies={armies.filter(army => army.rebellionFactionId === faction?.id && army.owner === faction?.id)}
+                provinces={provinces}
+                onRebellionAction={isPlayerOwned || playerCountry.rebellions?.some(f => f.id === province.owner && f.status === 'active') ? onRebellionAction : undefined}
                 ownerCountry={ownerCountry}
                 armiesHere={armiesHere}
                 neighborProvinces={neighborProvinces}

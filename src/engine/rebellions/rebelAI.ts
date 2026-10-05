@@ -16,7 +16,9 @@ export function processSeparatistAI(
   armies: Army[],
   provinces: Province[]
 ): Army[] {
-  let updatedArmies = mergeRebelArmies([...armies]);
+  const isModern = (a: Army) => !!a.rebellionFactionId || a.owner.startsWith('rebel_v2_');
+  const modern = armies.filter(isModern);
+  let updatedArmies = mergeRebelArmies(armies.filter(a => !isModern(a)));
   updatedArmies = integrateLiberatedRebels(updatedArmies, provinces);
 
   const separatistArmies = updatedArmies.filter(
@@ -183,11 +185,11 @@ export function processSeparatistAI(
     console.log(`🛡️ ${army.name}: aguardando em ${currentProvince.name} (nenhum território histórico ocupado)`);
   }
 
-  return updatedArmies;
+  return [...updatedArmies, ...modern];
 }
 
 export function checkRebelTerritoryReturn(winnerArmy: Army): string | null {
-  if (isRebelArmy(winnerArmy) && winnerArmy.originalOwner) {
+  if (isRebelArmy(winnerArmy) && winnerArmy.originalOwner && !winnerArmy.rebellionFactionId && !winnerArmy.owner.startsWith('rebel_v2_')) {
     return winnerArmy.originalOwner;
   }
   return null;
@@ -252,7 +254,7 @@ export function cleanupSeparatistWars(
   const pacifiedProvinces: string[] = [];
 
   const rebelWars = currentWars.filter(
-    w => w.attacker.startsWith('rebel_') || w.defender.startsWith('rebel_')
+    w => (w.attacker.startsWith('rebel_') || w.defender.startsWith('rebel_')) && !w.attacker.startsWith('rebel_v2_') && !w.defender.startsWith('rebel_v2_')
   );
 
   for (const war of rebelWars) {

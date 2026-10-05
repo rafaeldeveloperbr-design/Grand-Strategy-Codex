@@ -1,28 +1,12 @@
 import { Army, Province } from '../../types';
 
 
-export const REBEL_ACCUMULATION_RATE = 1000;
-export const SEPARATIST_THRESHOLD = 5000;
-
-export interface RebelProcessingResult {
-  updatedArmies: Army[];
-  updatedProvinces: Province[];
-  notifications: string[];
-  logs: string[];
-}
-
 export function isRebelArmy(army: Army): boolean {
   return army.owner.startsWith('rebel_');
 }
 
 export function getArmyTotalTroops(army: Army): number {
   return army.regiments.reduce((sum, r) => sum + Math.floor(r.strength), 0);
-}
-
-let rebelArmyIdCounter = 0;
-export function generateRebelArmyId(): string {
-  rebelArmyIdCounter++;
-  return `rebel_army_${Date.now()}_${rebelArmyIdCounter}`;
 }
 
 /**

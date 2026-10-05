@@ -7,6 +7,7 @@ import { useGameRefs } from './hooks/useGameRefs';
 import { useGameLoop } from './hooks/useGameLoop';
 import { TopBar } from './components/TopBar';
 import { GameMap } from './components/GameMap';
+import { applyRebellionAction, type RebellionAction } from './engine/rebellion';
 import { ProvincePanel } from './components/ProvincePanel';
 import { DiplomacyPanel } from './components/DiplomacyPanel';
 import { WarPanel } from './components/WarPanel';
@@ -201,6 +202,15 @@ const App: React.FC = () => {
   useGameLoop({ provincesRef, countriesRef, armiesRef, recruitmentsRef, warsRef, diplomaticRelationsRef, dateRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, aiDifficultyRef, activeBattlesRef, ceilingLogRef, gameLoopRef, playerCountryTag, battleHistory, hasTriggeredEndGame, gameSpeed, isPaused: modals.isPaused, allCountries, setProvinces, setAllCountries, setArmies, setWars, setDiplomaticRelations, setRecruitments, setBuildingConstructions, setPlayerTechState, setBotTechStates, setDate, setActiveBattles, setEndGameType, setGameStats, setHasTriggeredEndGame, setIsPaused: modals.setIsPaused, setBattleHistory, setBattleReport: modals.setBattleReport, addLog, addToast, addAILog, formatGameDate });
 
   const economy = useEconomyActions({ provinces, playerCountry, playerCountryTag, playerTechState, buildingConstructions, setBuildingConstructions, setProvinces, setAllCountries, recruitments, setRecruitments, addLog, addToast, formatGameDate, dateRef });
+  const handleRebellionAction = (provinceId: string, action: RebellionAction) => {
+    const result = applyRebellionAction(provincesRef.current, countriesRef.current, armiesRef.current, playerCountryTag, provinceId, action, dateRef.current);
+    if (result.accepted) {
+      provincesRef.current = result.provinces; countriesRef.current = result.countries; armiesRef.current = result.armies;
+      setProvinces(result.provinces); setAllCountries(result.countries); setArmies(result.armies);
+      addLog(result.reason);
+    }
+    addToast(result.reason, result.accepted ? 'success' : 'warning', 'Resposta à rebelião');
+  };
   const armyActions = useArmyActions({ selectedArmy: selection.selectedArmy, setSelectedArmy: selection.setSelectedArmy, setSelectedProvince: selection.setSelectedProvince, setIsPanelOpen: selection.setIsPanelOpen, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection: selection.splitSelection, setSplitSelection: selection.setSplitSelection, setShowSplitModal: selection.setShowSplitModal });
   const diplomacy = useDiplomacyActions({ diplomacyTarget: modals.diplomacyTarget, setDiplomacyTarget: modals.setDiplomacyTarget, playerCountry, playerCountryTag, allCountries, setAllCountries, diplomaticRelations, setDiplomaticRelations, wars, setWars, date, addLog });
   const playerAtWar = wars.some(war => war.attacker === playerCountryTag || war.defender === playerCountryTag);
@@ -270,7 +280,7 @@ const App: React.FC = () => {
         onGovernmentClick={() => modals.setShowGovernmentModal(true)}
       />      <div className="game__main">
         <GameMap provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} onProvinceHover={selection.handleProvinceHover} onProvinceClick={selection.handleProvinceClick} onArmyClick={selection.handleArmyClick} onProvinceRightClick={armyActions.handleProvinceRightClick} />
-        {selection.isPanelOpen && selectedProvinceData && <ProvincePanel province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
+        {selection.isPanelOpen && selectedProvinceData && <ProvincePanel onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
         {selectedArmyData && (
           <div className="army-info-panel">
             <div className="army-info-panel__header"><h3>{selectedArmyData.name}</h3><button onClick={() => selection.setSelectedArmy(null)}>✕</button></div>

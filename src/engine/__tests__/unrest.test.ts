@@ -70,7 +70,7 @@ describe('UNREST', () => {
     expect(conquered.unrest!).toBe(50);
   });
 
-  it('crescimento - unrest aumenta 0.3 por dia sem templo', () => {
+  it('pressão converge às causas sociais, sem crescimento incondicional', () => {
     const provinces: Province[] = [
       createProvince({
         unrest: 10,
@@ -86,7 +86,7 @@ describe('UNREST', () => {
 
     expect(
       result.updatedProvinces[0].unrest!
-    ).toBeCloseTo(10.2, 1);
+    ).toBeLessThan(10);
   });
 
   it('pacificação - templo reduz unrest', () => {
@@ -161,7 +161,7 @@ describe('UNREST', () => {
     );
   });
 
-  it('revolta - unrest 100 gera revolta e reseta para 30', () => {
+  it('unrest extremo sozinho não gera revolta nem reseta pressão', () => {
     const provinces: Province[] = [
       createProvince({
         unrest: 99.9,
@@ -174,11 +174,11 @@ describe('UNREST', () => {
       []
     );
 
-    expect(result.revoltedProvinces.length).toBe(1);
-    expect(result.updatedProvinces[0].unrest!).toBe(30);
+    expect(result.revoltedProvinces.length).toBe(0);
+    expect(result.updatedProvinces[0].unrest!).toBeGreaterThan(90);
   });
 
-  it('tamanho rebelde - limitado a 3000', () => {
+  it('tamanho rebelde - escala dentro dos limites configurados', () => {
     const small = calculateRebelArmySize(
       createProvince({
         population: { total: 1000, growthRate: 0.002, employed: 500, unemployed: 100, satisfaction: 60 },
@@ -207,7 +207,7 @@ describe('UNREST', () => {
     expect(high.manpowerMultiplier).toBe(0.7);
   });
 
-  it('pacificada - unrest 0 é pacificada', () => {
+  it('pacificada - exige pressão estável e ausência de organização', () => {
     expect(
       isProvincePacified(
         createProvince({
@@ -219,7 +219,7 @@ describe('UNREST', () => {
     expect(
       isProvincePacified(
         createProvince({
-          unrest: 10,
+          unrest: 50,
         })
       )
     ).toBe(false);

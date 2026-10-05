@@ -295,6 +295,9 @@ export function splitArmy(
   const newArmy: Army = {
     id: generateArmyId(),
     owner: sourceArmy.owner,
+    rebellionFactionId: sourceArmy.rebellionFactionId,
+    originalOwner: sourceArmy.originalOwner,
+    separatistMode: sourceArmy.separatistMode,
     name: newName,
     regiments: transferredRegiments,
     location: sourceArmy.location,

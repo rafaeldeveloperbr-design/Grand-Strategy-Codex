@@ -67,6 +67,7 @@ export interface Regiment {
  * Representa um exército (coleção de regimentos)
  */
 export interface Army {
+  rebellionFactionId?: string;
   /** ID único do exército */
   id: string;
   /** País dono do exército */

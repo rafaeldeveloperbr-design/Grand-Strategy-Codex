@@ -2,6 +2,7 @@
 import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../types';
 import type { CountryTechState } from '../types/technology';
 import type { DiplomaticRelation, War } from '../types/diplomacy';
+import { normalizeSavedFactions, normalizeSavedRebellion, migrateLegacyRebels } from './rebellion';
 import { normalizePopulation } from './population';
 import { normalizeMarket } from './market';
 import { normalizeTechState } from './technology';
@@ -103,7 +104,7 @@ function deserializeV2(raw: SerializedSaveGameV2): SaveGameV2 {
   };
 }
 function normalizeSavedCountry(country: Country): Country {
-  return { ...country, activeLaws: normalizeActiveLaws(country.activeLaws) };
+  return { ...country, rebellions: normalizeSavedFactions(country.rebellions), activeLaws: normalizeActiveLaws(country.activeLaws) };
 }
 export function migrateLegacyBuildings(buildings: Province['buildings']): Province['buildings'] {
   const aliases: Record<string, Province['buildings'][number]['type']> = {
@@ -120,6 +121,8 @@ export function migrateLegacyBuildings(buildings: Province['buildings']): Provin
 function normalizeSavedProvince(province: Province): Province {
   return {
     ...province,
+    rebellion: normalizeSavedRebellion(province.rebellion),
+    unrestExplanation: undefined,
     buildings: migrateLegacyBuildings(province.buildings),
     population: normalizePopulation(province.population as Province['population'] | number),
     market: normalizeMarket(province.market),
@@ -137,6 +140,23 @@ function migrateV1ToV2(v1: SaveGameV1): SaveGameV2 {
   };
 }
 
+function migrateRebellionSave(save: SaveGameV2): SaveGameV2 {
+  const migrated = migrateLegacyRebels(save.world.provinces, save.world.countries, save.military.armies, save.date);
+  const tags = new Map<string, string>();
+  save.military.armies.forEach((army, index) => {
+    if (typeof army.owner === 'string' && army.owner !== migrated.armies[index].owner) tags.set(army.owner, migrated.armies[index].owner);
+  });
+  const rename = (tag: string): string => tags.get(tag) ?? tag;
+  const snapshot = (army?: Army): Army | undefined => army ? { ...army, owner: rename(army.owner) } : undefined;
+  return { ...save, world: { provinces: migrated.provinces, countries: migrated.countries },
+    military: { ...save.military, armies: migrated.armies,
+      wars: save.military.wars.map(war => ({ ...war, attacker: rename(war.attacker), defender: rename(war.defender) })),
+      activeBattles: save.military.activeBattles.map(battle => ({ ...battle,
+        attackerCountryId: rename(battle.attackerCountryId), defenderCountryId: rename(battle.defenderCountryId),
+        attackerInitialSnapshot: snapshot(battle.attackerInitialSnapshot), defenderInitialSnapshot: snapshot(battle.defenderInitialSnapshot) })) },
+    diplomacy: { relations: save.diplomacy.relations.map(relation => ({ ...relation, countryA: rename(relation.countryA), countryB: rename(relation.countryB) })) } };
+}
+
 // ============ LOAD COM DETECÇÃO DE VERSÃO + UNKNOWN ============
 function parseRawSave(rawString: string): SaveGameV2 | null {
   try {
@@ -145,12 +165,12 @@ function parseRawSave(rawString: string): SaveGameV2 | null {
     // V1 - legado sem version ou version 1
     if (isSaveGameV1(parsed)) {
       if (!parsed.version || parsed.version === 1) {
-        return migrateV1ToV2(parsed);
+        return migrateRebellionSave(migrateV1ToV2(parsed));
       }
     }
     // V2
     if (isSerializedV2(parsed)) {
-      return deserializeV2(parsed);
+      return migrateRebellionSave(deserializeV2(parsed));
     }
 
     console.warn(`Save com formato desconhecido ou corrompido`);

@@ -42,6 +42,8 @@ export interface BuildingConstruction {
  * Cada província é uma entidade territorial básica.
  */
 export interface Province {
+  rebellion?: import('../engine/rebellion/types').ProvincialRebellion;
+  unrestExplanation?: import('../engine/rebellion/types').UnrestExplanation;
   /** Identificador único da província */
   id: string;
   /** Nome exibido da província */
@@ -68,7 +70,7 @@ export interface Province {
   center: { x: number; y: number };
   /** Path SVG da província */
   path: string;
-  /** Nível de agitação/instabilidade local (0-100, onde 100 = revolta iminente) */
+  /** Nível de agitação/instabilidade local (0-100; organização rebelde é armazenada separadamente) */
   unrest?: number;
   /** Data da última conquista (para calcular decaimento de unrest) */
   lastConquestDate?: number;

@@ -113,7 +113,7 @@ export function calculateDailyPopulationGrowthBreakdown(
   techBonuses?: TechnologyBonuses,
   atWar = false
 ): PopulationGrowthBreakdown {
-  const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0);
+  const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0, province.rebellion?.progress, province.rebellion?.autonomy, province.rebellion?.reliefDays);
   const lawModifiers = calculateLawModifiers(country.activeLaws);
   const effectiveStability = Math.min(100, country.resources.stability + (techBonuses?.stabilityModifier ?? 0) * 100);
   return calculatePopulationGrowthBreakdown(province, effectiveStability, {
@@ -186,7 +186,7 @@ export function processDailyTick(
     return {
       ...province,
       population: recalculateEmployment(province),
-      market: processProvinceMarket({ ...province, population: recalculateEmployment(province) }, productionMultipliers, lawModifiers.purchasingPowerMultiplier),
+      market: processProvinceMarket({ ...province, population: recalculateEmployment(province) }, Object.fromEntries(Object.entries(productionMultipliers).map(([good, multiplier]) => [good, multiplier * calculateUnrestEconomicImpact(province.unrest ?? 0, province.rebellion?.progress).productionMultiplier])), lawModifiers.purchasingPowerMultiplier),
       buildings: updatedBuildings,
     };
   });
@@ -194,7 +194,7 @@ export function processDailyTick(
   // Local production/consumption is followed by deterministic domestic
   // redistribution, then market-sensitive satisfaction is finalized.
   updatedProvinces = processInternalTrade(updatedProvinces, (techBonuses?.internalTradeMultiplier ?? 1) * lawModifiers.internalTradeMultiplier, lawModifiers.purchasingPowerMultiplier).map(province => {
-    const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0);
+    const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0, province.rebellion?.progress, province.rebellion?.autonomy, province.rebellion?.reliefDays);
     const growth = calculateDailyPopulationGrowth(province, country, techBonuses, atWar);
     return processProvincePopulation(province, 1, country.activeLaws?.taxation || 'taxation_normal', {
       atWar,
@@ -208,7 +208,7 @@ export function processDailyTick(
   updatedProvinces = processInternalMigration(updatedProvinces, capacityMultiplier, atWar, (techBonuses?.migrationAttractionMultiplier ?? 1) * lawModifiers.migrationAttractionMultiplier);
 
   for (const province of updatedProvinces) {
-    const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0);
+    const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0, province.rebellion?.progress, province.rebellion?.autonomy, province.rebellion?.reliefDays);
     totalGoldIncome += calculateProvinceGoldIncome(province, goldIncomeMultiplier * unrestImpact.goldMultiplier);
     totalManpowerGain += calculateProvinceManpowerGain(province) * manpowerMultiplier * unrestImpact.manpowerMultiplier;
   }

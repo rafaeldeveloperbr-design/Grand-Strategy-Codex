@@ -21,6 +21,7 @@ import { processDiplomacyTechTick } from './gameLoop/diplomacyTechTick';
 import { processAiTick } from './gameLoop/aiTick';
 import { processRebelTick } from './gameLoop/rebelTick';
 import { saveGame, isAutoSaveEnabled } from '../engine/saveSystem';
+import { collectRebellionFormationFeedback, collectRebellionResolutionFeedback } from '../engine/rebellion';
 
 /**
  * ORDEM OFICIAL DO GAME LOOP - src/engine/gameLoop/order.ts
@@ -214,8 +215,8 @@ export function useGameLoop(props: Props) {
     armies = cont.armies; provinces = cont.provinces; countries = cont.countries; currentActiveBattles = cont.currentActiveBattles; wars = cont.wars; recruitments = cont.recruitments; buildingConstructions = cont.buildingConstructions;
 
     // 10. REBELLION - por último, depende de stability + combat
-    const reb = processRebelTick({ provinces, armies, countries, wars, relations, currentActiveBattles, snapshot, playerCountryTag, hasTriggeredEndGame, battleHistory, dateRef, addLog, addToast, setActiveBattles, activeBattlesRef, setEndGameType, setGameStats, setHasTriggeredEndGame, setIsPaused });
-    provinces = reb.provinces; armies = reb.armies; countries = reb.countries; wars = reb.wars; relations = reb.relations; currentActiveBattles = reb.currentActiveBattles;
+    const reb = processRebelTick({ recruitments, buildingConstructions, provinces, armies, countries, wars, relations, currentActiveBattles, snapshot, playerCountryTag, hasTriggeredEndGame, battleHistory, dateRef, addLog, addToast, setActiveBattles, activeBattlesRef, setEndGameType, setGameStats, setHasTriggeredEndGame, setIsPaused });
+    provinces = reb.provinces; armies = reb.armies; countries = reb.countries; wars = reb.wars; relations = reb.relations; currentActiveBattles = reb.currentActiveBattles; recruitments = reb.recruitments; buildingConstructions = reb.buildingConstructions;
     if (reb.endGameTriggered) { setEndGameType(reb.endGameType); setGameStats(reb.gameStats); setHasTriggeredEndGame(true); setIsPaused(true); }
 
     setArmies(armies); setProvinces(provinces); setAllCountries(countries); setWars(wars);
@@ -226,6 +227,17 @@ export function useGameLoop(props: Props) {
     warsRef.current = wars; diplomaticRelationsRef.current = relations; recruitmentsRef.current = recruitments;
     activeBattlesRef.current = currentActiveBattles; buildingConstructionsRef.current = buildingConstructions;
     playerTechStateRef.current = currentPlayerTechState; botTechStatesRef.current = currentBotTechStates;
+
+    // Announcements observe the same final state as the UI and save system.
+    for (const feedback of collectRebellionResolutionFeedback(snapshot.countries, countries, provinces)) {
+      // Objective resolution already writes the military/victory log. AI negotiation needs a public log too.
+      if (feedback.status === 'negotiated') addLog(feedback.message);
+      if (feedback.owner === playerCountryTag) addToast(feedback.message, feedback.status === 'victorious' ? 'warning' : 'info', 'Rebelião resolvida', formatGameDate(snapshot.date));
+    }
+    for (const feedback of collectRebellionFormationFeedback(unr.createdFactionIds, provincesRef.current, countriesRef.current, armiesRef.current)) {
+      if (feedback.log) addLog(feedback.log);
+      if (feedback.owner === playerCountryTag) addToast(feedback.message, feedback.type, feedback.title, formatGameDate(snapshot.date));
+    }
 
     // AUTOSAVE - todo dia 1 - FIX: agora com slotId
     if (dateRef.current.day === 1 && isAutoSaveEnabled()) {

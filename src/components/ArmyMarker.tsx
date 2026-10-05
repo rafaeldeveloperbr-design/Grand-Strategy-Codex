@@ -31,6 +31,7 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
   onClick,
   onHover,
 }) => {
+  const isRebellionArmy = !!army.rebellionFactionId;
   const effectiveTag = army.owner.startsWith('rebel_') && army.originalOwner 
     ? army.originalOwner 
     : army.owner;
@@ -94,7 +95,7 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
         width="32"
         height="20"
         rx="4"
-        fill={country?.color ?? '#555'}
+        fill={isRebellionArmy ? '#702d3e' : country?.color ?? '#555'}
         stroke={isSelected ? '#FFD700' : isHovered ? '#FFFFFF' : '#000'}
         strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1}
         className="army-marker__body"
@@ -109,7 +110,7 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
         textAnchor="middle"
         dominantBaseline="middle"
       >
-        {country?.flag ?? '⚔️'}
+        {isRebellionArmy ? '🏴' : country?.flag ?? '⚔️'}
       </text>
       
       {/* Número de tropas */}

@@ -4,6 +4,7 @@
  */
 import { processAI, processAIEconomicDecisions } from '../../engine/aiEngine';
 import { processSeparatistAI } from '../../engine/rebellions';
+import { planRebelMovement, respondToRebellions } from '../../engine/rebellion';
 import { calculateArmySize } from '../../engine/combat';
 import { mergeArmies } from '../../engine/military';
 import type { Army, Province, Country, War, Recruitment, BuildingConstruction } from '../../types';
@@ -41,6 +42,9 @@ export function processAiTick(p: Params) {
   let { countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates } = p;
   const { playerCountryTag, ceilingLogRef, snapshot, addAILog, formatGameDate } = p;
 
+  const rebellionResponse = respondToRebellions(provinces, countries, armies, relations, p.snapshot.date, p.playerCountryTag);
+  ({ provinces, countries, armies } = rebellionResponse);
+  rebellionResponse.logs.forEach(message => addAILog('Rebeliões', 'government', message, formatGameDate(snapshot.date), '#e67e22'));
   const activeBots = countries.filter(c => c && c.tag !== playerCountryTag);
   const dateString = formatGameDate(snapshot.date);
 
@@ -145,6 +149,7 @@ export function processAiTick(p: Params) {
   }
 
   armies = processSeparatistAI(armies, provinces);
+  armies = planRebelMovement(armies, provinces, countries, relations);
 
   return { countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates };
 }

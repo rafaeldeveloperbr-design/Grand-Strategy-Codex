@@ -29,7 +29,8 @@ export function processMovementTick(p: Params) {
   if (provinces.some(prov => prov.owner.startsWith('rebel_'))) {
     const changes: { id: string; name: string; newOwner: string }[] = [];
 
-    for (const pr of provinces.filter(item => item.owner.startsWith('rebel_'))) {
+    const modernIds = new Set(countries.flatMap(c => c.rebellions ?? []).map(f => f.id));
+    for (const pr of provinces.filter(item => item.owner.startsWith('rebel_') && !item.owner.startsWith('rebel_v2_') && !modernIds.has(item.owner))) {
       const rebelArmy = armies.find(a => a.owner === pr.owner);
       const liberator = rebelArmy?.originalOwner || pr.originalOwner;
       if (!liberator) continue;

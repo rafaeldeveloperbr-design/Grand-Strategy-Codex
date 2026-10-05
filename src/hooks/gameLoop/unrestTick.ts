@@ -2,8 +2,7 @@
  * unrestTick.ts - 65 linhas - PASSO 4.5 
  * Agitação provincial e revoltas + Paz automática por anexação
  */
-import { processDailyUnrestDecay } from '../../engine/unrest';
-import { processRebelAccumulation, processSeparatistAI } from '../../engine/rebellions';
+import { processProvincialPressure, spawnRebellions, recoverRebelArmies } from '../../engine/rebellion';
 import type { Army, Province, Country, War } from '../../types';
 import type { GameDate } from '../../types/date';
 import type { DiplomaticRelation } from '../../types/diplomacy';
@@ -36,33 +35,20 @@ export function processUnrestTick(p: Params) {
   let { provinces, armies, countries, wars, relations } = p;
   const { snapshot, playerCountryTag, addLog, addToast } = p;
 
-  const { updatedProvinces: provincesWithDecay, revoltedProvinces } =
-    processDailyUnrestDecay(provinces, snapshot.date, armies);
-  provinces = provincesWithDecay;
+  armies = recoverRebelArmies(armies, provinces, countries);
 
-  if (revoltedProvinces.length > 0) {
-    const revoltedProvIds = revoltedProvinces.map(pr => pr.id);
-    const rebelResult = processRebelAccumulation(provinces, armies, revoltedProvIds);
-    armies = rebelResult.updatedArmies;
-    provinces = rebelResult.updatedProvinces;
-    armies = processSeparatistAI(armies, provinces);
-
-    for (const revoltedProv of revoltedProvinces) {
-      addLog(`🔥 Revolta em ${revoltedProv.name}! Tropas rebeldes surgiram!`);
-      if (revoltedProv.owner === playerCountryTag) {
-        addToast(`Revolta em ${revoltedProv.name}!`, 'error', 'Revolta!');
-      }
-    }
-    rebelResult.notifications.forEach((notif: string) => {
-      addToast(notif, 'warning', 'Separatismo Ativado');
-      addLog(notif);
-    });
-  }
+  const pressure = processProvincialPressure(provinces, snapshot.date, armies, countries, wars);
+  provinces = pressure.updatedProvinces;
+  const spawned = spawnRebellions(provinces, countries, armies, wars, relations, snapshot.date);
+  ({ provinces, countries, armies, wars, relations } = spawned);
+  pressure.logs.forEach(addLog);
+  // Formation feedback is published only after the full tick commits. Combat
+  // and AI can resolve a newly created faction before that commit.
 
   const countriesWithoutProvinces = countries.filter(c => {
     if (c.isAnnexed) return false;
     const ownedProvinces = provinces.filter(pr => pr.owner === c.tag);
-    return ownedProvinces.length === 0 && c.tag !== playerCountryTag;
+    return ownedProvinces.length === 0 && !c.rebellions?.some(f => f.status === 'active') && c.tag !== playerCountryTag;
   });
 
   if (countriesWithoutProvinces.length > 0) {
@@ -75,5 +61,5 @@ export function processUnrestTick(p: Params) {
     }
   }
 
-  return { provinces, armies, countries, wars, relations };
+  return { provinces, armies, countries, wars, relations, createdFactionIds: spawned.createdFactionIds };
 }

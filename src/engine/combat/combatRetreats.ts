@@ -118,12 +118,6 @@ export function retreatArmyManually(
     return a;
   });
 
-  // Verifica se todos os exércitos de um lado recuaram
-  const remainingAttackerArmies = updatedBattle.participantArmyIds.filter(id => {
-    const participantArmy = updatedArmies.find(a => a.id === id);
-    return participantArmy && participantArmy.owner === (isAttackerSide ? army.owner : undefined);
-  });
-
   // Se não há mais exércitos de um lado, finaliza a batalha
   if (updatedBattle.participantArmyIds.length === 0) {
     console.log(`🏁 Batalha ${battleId} finalizada - todos os exércitos recuaram`);

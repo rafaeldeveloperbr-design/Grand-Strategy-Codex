@@ -1,9 +1,55 @@
 import { Army, Province, Country, Recruitment, Regiment } from '../../types';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { BUILDING_DEFINITIONS } from '../../data/buildings';
-import { createArmy, createRegiment } from './militaryUtils';
+import { createArmy, createRegiment, generateRecruitmentId } from './militaryUtils';
 import { normalizeMarket } from '../market';
 import type { UnitType } from '../../types';
+import { calculateLawModifiers } from '../government';
+import type { CountryTechState } from '../../types/technology';
+import { calculateTechBonuses } from '../technology';
+
+export interface RecruitmentContext { country: Country; province: Province; technology?: CountryTechState }
+export interface RecruitmentCost { gold: number; manpower: number; iron: number; tools: number; days: number }
+
+export function getEffectiveRecruitmentCost(unitType: UnitType, context: RecruitmentContext): RecruitmentCost {
+  const definition = UNIT_DEFINITIONS[unitType];
+  const laws = calculateLawModifiers(context.country.activeLaws);
+  const technology = context.technology ? calculateTechBonuses(context.technology) : undefined;
+  const barracks = context.province.buildings.filter(building => building.type === 'barracks' && building.daysRemaining <= 0).reduce((sum, building) => sum + building.level, 0);
+  return {
+    gold: Math.ceil(definition.cost * laws.recruitmentCostMultiplier), manpower: definition.manpowerCost,
+    iron: definition.ironCost, tools: definition.toolsCost,
+    days: Math.max(5, Math.ceil(definition.trainingTime * laws.recruitmentTimeMultiplier * (technology?.recruitmentTimeMultiplier ?? 1) / (1 + barracks * .1))),
+  };
+}
+
+export function getRecruitmentBlockReason(unitType: UnitType, context: RecruitmentContext): string | null {
+  if (context.province.owner !== context.country.tag) return 'A província não é controlada pelo país';
+  const definition = UNIT_DEFINITIONS[unitType];
+  if (definition.requiredTechnology && !context.technology?.completedTechnologies.includes(definition.requiredTechnology)) return `Requer tecnologia: ${definition.requiredTechnology}`;
+  const cost = getEffectiveRecruitmentCost(unitType, context);
+  const market = normalizeMarket(context.province.market);
+  if (context.country.resources.gold < cost.gold) return 'Ouro insuficiente';
+  if (context.country.resources.manpower < cost.manpower) return 'Manpower insuficiente';
+  if (market.goods.iron.stock < cost.iron) return 'Ferro insuficiente';
+  if (market.goods.tools.stock < cost.tools) return 'Ferramentas insuficientes';
+  return null;
+}
+
+export const canRecruit = (unitType: UnitType, context: RecruitmentContext): boolean => getRecruitmentBlockReason(unitType, context) === null;
+
+export function queueRecruitment(unitType: UnitType, context: RecruitmentContext, id = generateRecruitmentId()): { success: true; country: Country; province: Province; recruitment: Recruitment } | { success: false; reason: string } {
+  const reason = getRecruitmentBlockReason(unitType, context);
+  if (reason) return { success: false, reason };
+  const cost = getEffectiveRecruitmentCost(unitType, context);
+  const market = normalizeMarket(context.province.market);
+  market.goods.iron.stock -= cost.iron; market.goods.tools.stock -= cost.tools;
+  return { success: true,
+    country: { ...context.country, resources: { ...context.country.resources, gold: context.country.resources.gold - cost.gold, manpower: context.country.resources.manpower - cost.manpower } },
+    province: { ...context.province, market },
+    recruitment: { id, provinceId: context.province.id, owner: context.country.tag, unitType, daysRemaining: cost.days, count: 1, paidCost: { gold: cost.gold, manpower: cost.manpower, iron: cost.iron, tools: cost.tools } },
+  };
+}
 
 export function payRecruitmentCost(province: Province, country: Country, unitType: UnitType, goldCost = UNIT_DEFINITIONS[unitType].cost) {
   const def = UNIT_DEFINITIONS[unitType]; const market = normalizeMarket(province.market);

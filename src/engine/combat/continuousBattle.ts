@@ -2,7 +2,7 @@ import type { ActiveBattle, Army, GameDate, Province, RetreatInfo } from '../../
 import { applyTroopLoss, calculateArmySize } from './combatCalculations';
 import { findRetreatProvince } from './combatRetreats';
 import { getBuildingLevel } from '../../data/buildings';
-import { COMBAT_BALANCE } from './combatCalculations';
+import { calculateArmyCombatStats, calculateArmyOrganization, calculateArmySiege, getArmySupply, getRegimentOrganization, MILITARY_BALANCE } from '../military';
 
 export type BattleExtended = ActiveBattle & {
   reinforcementEntryDay?: Record<string, number>;
@@ -30,13 +30,18 @@ function sideTotal(battle: BattleExtended, armies: Army[], side: 'attacker' | 'd
   return participants(battle, armies, side).reduce((sum, army) => sum + calculateArmySize(army), 0);
 }
 
-function applySideLoss(armies: Army[], sideArmies: Army[], loss: number): Army[] {
+function applySideLoss(armies: Army[], sideArmies: Army[], loss: number, organizationDamage: number): Army[] {
   let remaining = Math.min(loss, sideArmies.reduce((sum, army) => sum + calculateArmySize(army), 0));
   return armies.map(army => {
     if (!sideArmies.some(item => item.id === army.id) || remaining <= 0) return army;
     const armyLoss = Math.min(calculateArmySize(army), remaining);
     remaining -= armyLoss;
-    return applyTroopLoss(army, armyLoss);
+    const damaged = applyTroopLoss(army, armyLoss);
+    return { ...damaged, regiments: damaged.regiments.map(regiment => ({ ...regiment,
+      organization: Math.max(0, getRegimentOrganization(regiment) - organizationDamage),
+      morale: Math.max(0, regiment.morale - organizationDamage * .35),
+      experience: Math.min(100, (regiment.experience ?? 0) + MILITARY_BALANCE.experienceGainPerDay),
+    })) };
   });
 }
 
@@ -154,16 +159,27 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
   const defenderPower = combatMultipliers.get(defenderOwner) ?? 1;
   const effectiveDefense = province.defense + getBuildingLevel(province, 'fortress') * 2;
   const fortificationMultiplier = fortificationMultipliers.get(defenderOwner) ?? 1;
-  const defensivePosition = 1 + effectiveDefense * COMBAT_BALANCE.FORTIFICATION_BONUS_PER_LEVEL * fortificationMultiplier;
-  const attackerLoss = Math.min(attackerBefore, Math.floor(defenderBefore / Math.max(1, synced.daysTotal) * defenderPower * defensivePosition));
-  const defenderLoss = Math.min(defenderBefore, Math.floor((defenderBefore / Math.max(1, synced.daysTotal)) * 0.95 * attackerPower));
-  let updatedArmies = applySideLoss(armies, participants(synced, armies, 'attacker'), attackerLoss);
-  updatedArmies = applySideLoss(updatedArmies, participants(synced, updatedArmies, 'defender'), defenderLoss);
+  const attackerArmies = participants(synced, armies, 'attacker');
+  const defenderArmies = participants(synced, armies, 'defender');
+  const attackerStats = attackerArmies.reduce((total, army) => { const stats = calculateArmyCombatStats(army); return { attack: total.attack + stats.attack, defense: total.defense + stats.defense, shock: total.shock + stats.shock }; }, { attack: 0, defense: 0, shock: 0 });
+  const defenderStats = defenderArmies.reduce((total, army) => { const stats = calculateArmyCombatStats(army); return { attack: total.attack + stats.attack, defense: total.defense + stats.defense, shock: total.shock + stats.shock }; }, { attack: 0, defense: 0, shock: 0 });
+  const attackerSupply = attackerArmies.reduce((sum, army) => sum + getArmySupply(army, province, attackerArmies).combatMultiplier, 0) / attackerArmies.length;
+  const defenderSupply = defenderArmies.reduce((sum, army) => sum + getArmySupply(army, province, defenderArmies).combatMultiplier, 0) / defenderArmies.length;
+  const siege = attackerArmies.reduce((sum, army) => sum + calculateArmySiege(army), 0);
+  const fortBonus = Math.min(MILITARY_BALANCE.maximumFortDefense, effectiveDefense * MILITARY_BALANCE.fortDefensePerLevel / (1 + siege / 20)) * fortificationMultiplier;
+  const attackerPressure = (attackerStats.attack + attackerStats.shock * .45) * attackerPower * attackerSupply;
+  const defenderPressure = (defenderStats.attack + defenderStats.defense * .35) * defenderPower * defenderSupply * (1 + fortBonus);
+  const attackerLoss = Math.min(attackerBefore, Math.max(1, Math.floor(attackerBefore * MILITARY_BALANCE.dailyBaseCasualtyRate * defenderPressure / Math.max(1, attackerPressure))));
+  const defenderLoss = Math.min(defenderBefore, Math.max(1, Math.floor(defenderBefore * MILITARY_BALANCE.dailyBaseCasualtyRate * attackerPressure / Math.max(1, defenderPressure))));
+  let updatedArmies = applySideLoss(armies, attackerArmies, attackerLoss, MILITARY_BALANCE.dailyBaseOrganizationDamage * defenderPressure / Math.max(1, attackerPressure));
+  updatedArmies = applySideLoss(updatedArmies, participants(synced, updatedArmies, 'defender'), defenderLoss, MILITARY_BALANCE.dailyBaseOrganizationDamage * attackerPressure / Math.max(1, defenderPressure));
   let next = synchronizeBattle(synced, updatedArmies);
   const attackerAfter = next?.attackerCurrentTroops ?? sideTotal(synced, updatedArmies, 'attacker');
   const defenderAfter = next?.defenderCurrentTroops ?? sideTotal(synced, updatedArmies, 'defender');
-  const finished = daysRemaining <= 0 || attackerAfter <= 50 || defenderAfter <= 50 || !next;
-  const loserSide: 'attacker' | 'defender' = attackerAfter <= defenderAfter ? 'attacker' : 'defender';
+  const attackerOrganization = participants(synced, updatedArmies, 'attacker').reduce((sum, army) => sum + calculateArmyOrganization(army), 0) / Math.max(1, participants(synced, updatedArmies, 'attacker').length);
+  const defenderOrganization = participants(synced, updatedArmies, 'defender').reduce((sum, army) => sum + calculateArmyOrganization(army), 0) / Math.max(1, participants(synced, updatedArmies, 'defender').length);
+  const finished = daysRemaining <= 0 || attackerOrganization <= MILITARY_BALANCE.organizationRetreatThreshold || defenderOrganization <= MILITARY_BALANCE.organizationRetreatThreshold || attackerAfter <= 50 || defenderAfter <= 50 || !next;
+  const loserSide: 'attacker' | 'defender' = attackerOrganization <= defenderOrganization ? 'attacker' : 'defender';
   let retreatInfo: RetreatInfo | null = null;
 
   if (finished) {

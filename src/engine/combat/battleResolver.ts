@@ -96,21 +96,6 @@ export function resolveBattle(
   console.log(`   Defensor: ${defenderOriginalSize} → ${finalDefenderSize} tropas (${exactDefenderCasualties} baixas)`);
   console.log(`   Vencedor: ${winner === 'attacker' ? 'Atacante' : 'Defensor'} (ratio: ${powerRatio.toFixed(2)})`);
 
-  // Aplica regra de cerco/aniquilação para o perdedor
-  const loser = winner === 'attacker' ? finalDefender : finalAttacker;
-  const loserOwner = winner === 'attacker' ? defender.owner : attacker.owner;
-  
-  // Verifica se o perdedor está cercado (sem províncias próprias vizinhas)
-  const hasEscapeRoute = province.neighbors.some(neighborId => {
-    const neighborProvince = province.neighbors.includes(neighborId);
-    // Precisamos acessar o array de províncias, mas não temos aqui
-    // Esta lógica será movida para uma função separada
-    return false; // Placeholder - será implementado na função de recuo
-  });
-
-  // Se não houver rota de fuga, aplica aniquilação total (100% de baixas)
-  // Esta lógica será aplicada no App.tsx onde temos acesso ao array de províncias
-
   return {
     attacker: finalAttacker,
     defender: finalDefender,

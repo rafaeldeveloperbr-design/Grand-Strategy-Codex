@@ -5,6 +5,7 @@
 import { processAI, processAIEconomicDecisions } from '../../engine/aiEngine';
 import { processSeparatistAI } from '../../engine/rebellions';
 import { calculateArmySize } from '../../engine/combat';
+import { mergeArmies } from '../../engine/military';
 import type { Army, Province, Country, War, Recruitment, BuildingConstruction } from '../../types';
 import type { CountryTechState } from '../../types/technology';
 import type { DiplomaticRelation } from '../../types/diplomacy';
@@ -46,12 +47,13 @@ export function processAiTick(p: Params) {
   activeBots.forEach((country: Country) => {
     const botTechState = currentBotTechStates.get(country.tag);
     if (botTechState) {
-      const playerTroops = armies.filter(a => a.owner === playerCountryTag).reduce((sum, a) => sum + calculateArmySize(a), 0);
       const botTroops = armies.filter(a => a.owner === country.tag).reduce((sum, a) => sum + calculateArmySize(a), 0);
       const botAtWar = wars.some(w => w.attacker === country.tag || w.defender === country.tag);
-      const multiplier = botAtWar ? 3 : 2;
-      const ceiling = Math.max(12000, playerTroops * multiplier);
-      const canRecruitMilitary = botTroops < ceiling;
+      const affordableDailyMaintenance = Math.max(0, country.economy.goldIncome - country.economy.goldExpense) * (botAtWar ? 18 : 12);
+      const populationCapacity = country.resources.maxManpower * (botAtWar ? .6 : .35);
+      const economicCapacity = Math.max(3000, affordableDailyMaintenance * 1000);
+      const forceTarget = Math.min(populationCapacity, economicCapacity);
+      const canRecruitMilitary = botTroops < forceTarget && country.resources.manpower >= 400 && country.resources.gold >= (botAtWar ? 80 : 180);
 
       if (!canRecruitMilitary) {
         if (!ceilingLogRef.current.has(country.tag)) ceilingLogRef.current.add(country.tag);
@@ -101,19 +103,11 @@ export function processAiTick(p: Params) {
   for (const [, armiesInProvince] of armiesToMerge) {
     if (armiesInProvince.length < 2) continue;
     const [primaryArmy, ...secondaryArmies] = armiesInProvince;
-    const mergedRegiments = [...primaryArmy.regiments];
+    let mergedArmy = primaryArmy;
     for (const secondaryArmy of secondaryArmies) {
-      for (const regiment of secondaryArmy.regiments) {
-        const existingRegiment = mergedRegiments.find(r => r.type === regiment.type);
-        if (existingRegiment) {
-          existingRegiment.strength += regiment.strength;
-          existingRegiment.morale = (existingRegiment.morale + regiment.morale) / 2;
-        } else {
-          mergedRegiments.push({ ...regiment });
-        }
-      }
+      mergedArmy = mergeArmies(mergedArmy, secondaryArmy);
     }
-    const updatedPrimaryArmy = { ...primaryArmy, regiments: mergedRegiments, targetArmyId: null };
+    const updatedPrimaryArmy = { ...mergedArmy, targetArmyId: null };
     const secondaryIds = secondaryArmies.map(a => a.id);
     armies = armies.filter(a => !secondaryIds.includes(a.id));
     armies = armies.map(a => a.id === primaryArmy.id ? updatedPrimaryArmy : a);

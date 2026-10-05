@@ -3,7 +3,7 @@
  * Recrutamento + Construção + Economia diária
  * Extraído do useGameLoop.ts - 100% compilável
  */
-import { processRecruitments } from '../../engine/military';
+import { calculateArmyMaintenance, processRecruitments, recoverArmy } from '../../engine/military';
 import { processConstructions } from '../../engine/buildings';
 import { processDailyTick } from '../../engine/economy';
 import { getBuildingName, getUnitName } from '../../utils/translations';
@@ -129,6 +129,7 @@ export function processEconomyTick(p: Params) {
   provinces = provinces.map(province => ({
     ...province,
     stationedTroops: armies.filter(army => army.location === province.id).flatMap(army => army.regiments).reduce((sum, regiment) => sum + regiment.strength, 0),
+    stationedMilitaryMaintenance: armies.filter(army => army.location === province.id).reduce((sum, army) => sum + calculateArmyMaintenance(army), 0),
   }));
   countries = countries.map(country => {
     const countryProvinces = provinces.filter(pr => pr.owner === country.tag);
@@ -145,44 +146,18 @@ export function processEconomyTick(p: Params) {
     }
     return updatedCountry;
   });
- // DEBUG TEMPORÁRIO
-  console.log(`[ECONOMY END] ${formatGameDate(date)}`);
-
-  console.table(
-    provinces
-      .filter(province => province.owner === playerCountryTag)
-      .map(province => ({
-        provincia: province.name,
-
-        food: province.market?.goods.food.stock ?? 0,
-        foodProd: province.market?.goods.food.production ?? 0,
-        foodDemand: province.market?.goods.food.demand ?? 0,
-        foodCons: province.market?.goods.food.consumption ?? 0,
-        foodImp: province.market?.goods.food.imported ?? 0,
-        foodExp: province.market?.goods.food.exported ?? 0,
-
-        wood: province.market?.goods.wood.stock ?? 0,
-        woodProd: province.market?.goods.wood.production ?? 0,
-        woodDemand: province.market?.goods.wood.demand ?? 0,
-        woodCons: province.market?.goods.wood.consumption ?? 0,
-        woodImp: province.market?.goods.wood.imported ?? 0,
-        woodExp: province.market?.goods.wood.exported ?? 0,
-
-        iron: province.market?.goods.iron.stock ?? 0,
-        ironProd: province.market?.goods.iron.production ?? 0,
-        ironCons: province.market?.goods.iron.consumption ?? 0,
-        ironImp: province.market?.goods.iron.imported ?? 0,
-        ironExp: province.market?.goods.iron.exported ?? 0,
-
-        tools: province.market?.goods.tools.stock ?? 0,
-        toolsProd: province.market?.goods.tools.production ?? 0,
-        toolsCons: province.market?.goods.tools.consumption ?? 0,
-        toolsImp: province.market?.goods.tools.imported ?? 0,
-        toolsExp: province.market?.goods.tools.exported ?? 0,
-
-        poderCompra: province.market?.purchasingPower ?? 0,
-      }))
-  );
+  // Recovery happens once, after production/trade, and consumes canonical
+  // manpower, gold and the local iron/tools stocks.
+  for (const originalArmy of armies) {
+    const armyIndex = armies.findIndex(army => army.id === originalArmy.id);
+    const countryIndex = countries.findIndex(country => country.tag === originalArmy.owner);
+    const provinceIndex = provinces.findIndex(province => province.id === originalArmy.location);
+    if (armyIndex < 0 || countryIndex < 0 || provinceIndex < 0) continue;
+    const result = recoverArmy(armies[armyIndex], countries[countryIndex], provinces[provinceIndex]);
+    armies = armies.map((army, index) => index === armyIndex ? result.army : army);
+    countries = countries.map((country, index) => index === countryIndex ? result.country : country);
+    provinces = provinces.map((province, index) => index === provinceIndex ? result.province : province);
+  }
 
   return { recruitments, armies, provinces, buildingConstructions, countries };
 }

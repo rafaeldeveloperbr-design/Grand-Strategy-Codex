@@ -33,6 +33,15 @@ export interface UnitDefinition {
   defense: number;
   /** Mobilidade (províncias por dia) */
   mobility: number;
+  role: string;
+  maxStrength: number;
+  maxMorale: number;
+  maxOrganization: number;
+  shock: number;
+  siege: number;
+  supplyUse: number;
+  maintenance: number;
+  requiredTechnology?: string;
 }
 
 /**
@@ -44,6 +53,12 @@ export interface Regiment {
   strength: number;
   /** Moral (0-100) */
   morale: number;
+  /** Coesão tática imediata (0-100); uma unidade rompe antes de ser exterminada. */
+  organization?: number;
+  /** Qualidade adquirida em campanha (0-100). */
+  experience?: number;
+  /** Limite tipado, preservado para regimentos parciais e futuros upgrades. */
+  maxStrength?: number;
   /** Province where this regiment was raised; used to attribute fatal losses. */
   originProvinceId?: string;
 }
@@ -101,7 +116,15 @@ export interface Recruitment {
   daysRemaining: number;
   /** Quantidade de unidades sendo recrutadas (agrupamento) */
   count: number;
+  /** Custo efetivamente pago; permite cancelamento sem recalcular regras futuras. */
+  paidCost?: { gold: number; manpower: number; iron: number; tools: number };
 }
+
+export type SupplyStatus = 'good' | 'low' | 'critical';
+
+/** Ponto de extensão neutro: terreno não participa do gameplay nesta versão. */
+export type TerrainType = 'neutral';
+export interface TerrainCombatModifiers { attack: 1; defense: 1; movement: 1; supply: 1 }
 
 export interface RetreatInfo {
   retreated: boolean;

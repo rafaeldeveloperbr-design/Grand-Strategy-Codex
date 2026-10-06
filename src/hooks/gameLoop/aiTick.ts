@@ -149,7 +149,7 @@ export function processAiTick(p: Params) {
   }
 
   armies = processSeparatistAI(armies, provinces);
-  armies = planRebelMovement(armies, provinces, countries, relations);
+  armies = planRebelMovement(armies, provinces, countries, relations, snapshot.date);
 
   return { countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates };
 }

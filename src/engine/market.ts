@@ -116,48 +116,48 @@ export function processProvinceMarket(province: Province, multipliers: Partial<R
   const market = { goods, purchasingPower: 50 };
 market.purchasingPower = Math.max(0, Math.min(100, calculatePurchasingPower(province, goods) * purchasingPowerMultiplier));
 
-if (province.name === 'Mons Ferrum') {
-  console.log(`[MARKET] ${province.name}`, {
-    population: normalizePopulation(province.population).total,
-    purchasingPower: market.purchasingPower,
+// if (province.name === 'Mons Ferrum') {
+//   console.log(`[MARKET] ${province.name}`, {
+//     population: normalizePopulation(province.population).total,
+//     purchasingPower: market.purchasingPower,
 
-    food: {
-      stock: goods.food.stock,
-      production: goods.food.production,
-      demand: goods.food.demand,
-      consumption: goods.food.consumption,
-      shortage: goods.food.shortage,
-      price: goods.food.price,
-    },
+//     food: {
+//       stock: goods.food.stock,
+//       production: goods.food.production,
+//       demand: goods.food.demand,
+//       consumption: goods.food.consumption,
+//       shortage: goods.food.shortage,
+//       price: goods.food.price,
+//     },
 
-    wood: {
-      stock: goods.wood.stock,
-      production: goods.wood.production,
-      demand: goods.wood.demand,
-      consumption: goods.wood.consumption,
-      shortage: goods.wood.shortage,
-      price: goods.wood.price,
-    },
+//     wood: {
+//       stock: goods.wood.stock,
+//       production: goods.wood.production,
+//       demand: goods.wood.demand,
+//       consumption: goods.wood.consumption,
+//       shortage: goods.wood.shortage,
+//       price: goods.wood.price,
+//     },
 
-    iron: {
-      stock: goods.iron.stock,
-      production: goods.iron.production,
-      demand: goods.iron.demand,
-      consumption: goods.iron.consumption,
-      shortage: goods.iron.shortage,
-      price: goods.iron.price,
-    },
+//     iron: {
+//       stock: goods.iron.stock,
+//       production: goods.iron.production,
+//       demand: goods.iron.demand,
+//       consumption: goods.iron.consumption,
+//       shortage: goods.iron.shortage,
+//       price: goods.iron.price,
+//     },
 
-    tools: {
-      stock: goods.tools.stock,
-      production: goods.tools.production,
-      demand: goods.tools.demand,
-      consumption: goods.tools.consumption,
-      shortage: goods.tools.shortage,
-      price: goods.tools.price,
-    },
-  });
-}
+//     tools: {
+//       stock: goods.tools.stock,
+//       production: goods.tools.production,
+//       demand: goods.tools.demand,
+//       consumption: goods.tools.consumption,
+//       shortage: goods.tools.shortage,
+//       price: goods.tools.price,
+//     },
+//   });
+// }
 
 return market;
 }

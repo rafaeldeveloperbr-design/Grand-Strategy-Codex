@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect } from 'react';
 import { UNIT_DEFINITIONS } from '../../data/units';
+import { REBELLION_BALANCE } from '../../engine/rebellion/balance';
 
 import type {
   Army,
@@ -30,6 +31,10 @@ type CheatAPI = {
   winBattles: () => void;
   fastForward: (days?: number) => void;
   godMode: () => void;
+
+  triggerPretenderCrisis: () => void;
+  triggerRevolutionaryCrisis: () => void;
+
   togglePanel?: () => void;
 };
 
@@ -566,6 +571,88 @@ export function useCheats(params: Params) {
     addToast,
   ]);
 
+  const triggerPretenderCrisis = useCallback(() => {
+    setAllCountries(prev =>
+      prev.map(country =>
+        country.tag === playerCountryTag
+          ? {
+            ...country,
+            resources: {
+              ...country.resources,
+
+              stability: 0,
+              prestige: -100,
+            },
+
+            // Importante:
+            // não deixar centralizado para não cair
+            // primeiro em revolutionaries.
+            activeLaws: {
+              ...country.activeLaws,
+              governance: 'governance_balanced',
+            },
+          }
+          : country
+      )
+    );
+
+    addToast(
+      `👑 CHEAT: crise de Pretendentes — estabilidade 0, prestígio -100, governança equilibrada`
+    );
+
+    addLog(
+      '👑 CHEAT: condições para rebelião de Pretendentes ativadas'
+    );
+  }, [
+    playerCountryTag,
+    setAllCountries,
+    addToast,
+    addLog,
+  ]);
+
+  const triggerRevolutionaryCrisis = useCallback(() => {
+    setAllCountries(prev =>
+      prev.map(country =>
+        country.tag === playerCountryTag
+          ? {
+            ...country,
+
+            resources: {
+              ...country.resources,
+
+              stability: Math.max(
+                0,
+                REBELLION_BALANCE.revolutionaryStability - 5
+              ),
+            },
+
+            activeLaws: {
+              ...country.activeLaws,
+              governance: 'governance_centralized',
+            },
+          }
+          : country
+      )
+    );
+
+    addToast(
+      '🔥 Crise Revolucionária preparada! Governança centralizada e estabilidade crítica.',
+      'warning',
+      'Cheat'
+    );
+
+    addLog(
+      '🔥 CHEAT: condições para rebelião Revolucionária ativadas'
+    );
+  }, [
+    playerCountryTag,
+    setAllCountries,
+    addToast,
+    addLog,
+  ]);
+
+
+
   useEffect(() => {
     const handler = (
       event: KeyboardEvent
@@ -644,6 +731,8 @@ export function useCheats(params: Params) {
       fastForward,
       godMode,
       winBattles,
+      triggerPretenderCrisis,
+      triggerRevolutionaryCrisis,
     };
 
     console.log(
@@ -661,6 +750,8 @@ export function useCheats(params: Params) {
     fastForward,
     godMode,
     winBattles,
+    triggerPretenderCrisis,
+    triggerRevolutionaryCrisis,
   ]);
 
   return {
@@ -675,5 +766,7 @@ export function useCheats(params: Params) {
     winBattles,
     fastForward,
     godMode,
+    triggerPretenderCrisis,
+    triggerRevolutionaryCrisis,
   };
 }

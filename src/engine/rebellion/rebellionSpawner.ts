@@ -7,10 +7,47 @@ import { clamp, troopCount } from './rebellionUtils';
 import type { RebelType, RebellionFaction, RebellionObjective } from './types';
 
 /** No religion/culture inference: unsupported types are deliberately never selected. */
-export function selectRebelType(p: Province, country?: Country): RebelType {
-  if (p.originalOwner && p.originalOwner !== p.owner && p.lastConquestDate !== undefined) return 'separatists';
-  if (country && country.resources.stability < B.revolutionaryStability && country.activeLaws.governance === 'governance_centralized') return 'revolutionaries';
-  if (country && country.resources.stability < B.pretenderStability && country.resources.prestige < 0) return 'pretenders';
+export function selectRebelType(
+  p: Province,
+  country?: Country
+): RebelType {
+  console.log(
+  `[REBELLION TYPE] province=${p.name} ` +
+  `country=${country?.tag ?? 'NONE'} ` +
+  `stability=${country?.resources.stability ?? 'NONE'} ` +
+  `prestige=${country?.resources.prestige ?? 'NONE'} ` +
+  `governance=${country?.activeLaws.governance ?? 'NONE'} ` +
+  `originalOwner=${p.originalOwner ?? 'NONE'} ` +
+  `owner=${p.owner}`
+);
+
+  if (
+    p.originalOwner &&
+    p.originalOwner !== p.owner &&
+    p.lastConquestDate !== undefined
+  ) {
+    return 'separatists';
+  }
+
+  if (
+    country &&
+    country.resources.stability <
+      B.revolutionaryStability &&
+    country.activeLaws.governance ===
+      'governance_centralized'
+  ) {
+    return 'revolutionaries';
+  }
+
+  if (
+    country &&
+    country.resources.stability <
+      B.pretenderStability &&
+    country.resources.prestige <= 0
+  ) {
+    return 'pretenders';
+  }
+
   return 'peasants';
 }
 export function createObjective(type: RebelType, involved: Province[], country: Country, provinces: Province[]): RebellionObjective {

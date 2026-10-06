@@ -29,4 +29,8 @@ export const REBELLION_BALANCE = {
   actionProgress: { repression: 15, tax_relief: 8, concessions: 20, autonomy: 25, investment: 5, negotiate: 35 },
   autonomyGrant: 50, concessionResentment: 8, victoryStability: 55,
   defeatProgress: 20, victoryProgress: 10, aiAdvantage: 1.25,
+  reinforcements: { minimumSupport: 25, controlledMinimumSupport: 0.25, supportPopulationRate: 0.001, controlledPopulationRate: 0.002,
+    dailyCap: 100, populationPoolRatio: 0.3, maximumStrength: 40000 },
+  escalation: { blockedDays: 90, minimumPowerRatio: 1.05 },
+  projectedPower: { attackShockWeight: 0.45, defenseWeight: 0.35 },
 } as const;

@@ -132,9 +132,10 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
         <div className="province-panel__info-row"><span>Organização rebelde:</span><strong>{Math.round(province.rebellion?.progress ?? 0)}%</strong></div>
         <div className="province-panel__info-row"><span>Autonomia / ressentimento:</span><strong>{Math.round(province.rebellion?.autonomy ?? 0)} / {Math.round(province.rebellion?.resentment ?? 0)}</strong></div>
         {faction?.status === 'active' && <p>{REBEL_TYPE_LABELS[faction.type]}: {OBJECTIVE_LABELS[faction.objective.kind]} · {faction.militaryStrength.toLocaleString()} tropas · Controle {faction.objective.heldDays}/{faction.objective.requiredDays} dias</p>}
+        {faction?.status === 'active' && <p>Reforços: +{faction.reinforcementRate ?? 0}/dia · Mobilizados: {faction.recruitedTroops ?? 0}</p>}
         {faction?.status === 'active' && <div>
           <p>Província envolvida na revolta. Origem: {provinces.find(p => p.id === faction.originProvince)?.name ?? faction.originProvince}.</p>
-          {factionArmies.map(army => <p key={army.id}>Exército rebelde: {calculateArmySize(army).toLocaleString()} tropas em {provinces.find(p => p.id === army.location)?.name ?? 'movimento'}{army.destination ? ` → ${provinces.find(p => p.id === army.destination)?.name ?? army.destination}` : ''}.</p>)}
+          {factionArmies.map(army => <p key={army.id}>Exército rebelde: {calculateArmySize(army).toLocaleString()} tropas em {provinces.find(p => p.id === army.location)?.name ?? 'movimento'}{army.destination ? ` → ${provinces.find(p => p.id === army.destination)?.name ?? army.destination}` : ''}.{army.rebellionMovement && ` ${army.rebellionMovement.reason}`}{army.rebellionMovement?.powerRatio !== undefined && ` Proporção de força: ${army.rebellionMovement.powerRatio.toFixed(2)} / ${army.rebellionMovement.requiredRatio?.toFixed(2)}.`}</p>)}
         </div>}
         <details><summary>Causas da pressão social (alvo {Math.round(province.unrestExplanation?.total ?? unrest)}%)</summary>
           {province.unrestExplanation?.modifiers.map(m => <div key={m.source}>{UNREST_SOURCE_LABELS[m.source] ?? m.source}: {m.value > 0 ? '+' : ''}{m.value.toFixed(1)}</div>)}

@@ -28,7 +28,10 @@ export function isRebellionFaction(v: unknown): v is RebellionFaction {
     && finite(objective.requiredDays) && objective.requiredDays > 0;
 }
 export function normalizeSavedFactions(value: unknown): RebellionFaction[] {
-  return Array.isArray(value) ? value.filter(isRebellionFaction).map(f => ({ ...f, support: clamp(f.support), militaryStrength: clamp(f.militaryStrength, 1000000), objective: { ...f.objective } })) : [];
+  return Array.isArray(value) ? value.filter(isRebellionFaction).map(f => ({ ...f, support: clamp(f.support), militaryStrength: clamp(f.militaryStrength, 1000000),
+    lastReinforcementDay: finite(f.lastReinforcementDay) ? f.lastReinforcementDay : undefined,
+    reinforcementRate: finite(f.reinforcementRate) ? clamp(f.reinforcementRate, 1000000) : 0,
+    recruitedTroops: finite(f.recruitedTroops) ? clamp(f.recruitedTroops, 1000000) : 0, objective: { ...f.objective } })) : [];
 }
 /** Convert legacy armies without losing troops, or violating regiment maximums. */
 export function migrateLegacyRebels(provinces: Province[], countries: Country[], armies: Army[], date: GameDate) {

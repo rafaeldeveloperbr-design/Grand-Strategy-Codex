@@ -7,7 +7,7 @@ import { DEFAULT_LAWS } from '../../constants/laws';
 import { provincesData } from '../../data/provinces';
 import { createArmy, createRegiment, splitArmy } from '../military';
 import { createInitialTechState } from '../technology';
-import { advanceObjective, applyRebellionAction, collectRebellionFormationFeedback, collectRebellionResolutionFeedback, getProvinceRebellion, migrateLegacyRebels, normalizeSavedFactions, normalizeRebellion, processRebellionObjectives, resolveRebellion, spawnRebellions, troopCount } from '../rebellion';
+import { advanceObjective, applyRebellionAction, collectRebellionFormationFeedback, collectRebellionResolutionFeedback, createRebelArmy, getProvinceRebellion, migrateLegacyRebels, normalizeSavedFactions, normalizeRebellion, planRebelMovement, processRebellionObjectives, REBELLION_BALANCE as B, rebellionDay, reinforceRebellions, resolveRebellion, spawnRebellions, troopCount } from '../rebellion';
 import { processMovementTick } from '../../hooks/gameLoop/movementTick';
 import { processUnrestTick } from '../../hooks/gameLoop/unrestTick';
 import { useGameRefs } from '../../hooks/useGameRefs';
@@ -27,7 +27,7 @@ const country = (tag: string, provinces: string[]): Country => ({ tag, provinces
 const fixture = (): { provinces: Province[]; countries: Country[]; armies: Army[] } => ({ provinces: [ready('p'), province('q'), province('far', { owner: 'B' })], countries: [country('A', ['p','q']), country('B', ['far'])], armies: [] });
 const ignore = () => undefined;
 
-function mountGame(initial: ReturnType<typeof fixture>, onToast: (message: string, type?: ToastType, title?: string, dateString?: string) => void = ignore) {
+function mountGame(initial: ReturnType<typeof fixture>, onToast: (message: string, type?: ToastType, title?: string, dateString?: string) => void = ignore, pauseOnBattle = true) {
   const log = vi.fn();
   const game = renderHook(() => {
     const [provinces, setProvinces] = useState(initial.provinces), [allCountries, setAllCountries] = useState(initial.countries), [armies, setArmies] = useState(initial.armies);
@@ -40,7 +40,7 @@ function mountGame(initial: ReturnType<typeof fixture>, onToast: (message: strin
       activeBattles, playerTechState, botTechStates, aiDifficulty: 'medium' });
     useGameLoop({ ...refs, playerCountryTag: 'A', allCountries, battleHistory: [], hasTriggeredEndGame: false, gameSpeed: 1, isPaused,
       setProvinces, setAllCountries, setArmies, setRecruitments, setWars, setDiplomaticRelations, setBuildingConstructions, setActiveBattles,
-      setDate, setPlayerTechState, setBotTechStates, setIsPaused, setEndGameType: ignore, setGameStats: ignore, setHasTriggeredEndGame: ignore,
+      setDate, setPlayerTechState, setBotTechStates, setIsPaused: pauseOnBattle ? setIsPaused : ignore, setEndGameType: ignore, setGameStats: ignore, setHasTriggeredEndGame: ignore,
       setBattleHistory: ignore, setBattleReport: ignore, addLog: log, addToast: onToast, addAILog: ignore, formatGameDate: d => `${d.day}/${d.month}/${d.year}` });
     return { provinces, countries: allCountries, armies, activeBattles, refs };
   });
@@ -50,6 +50,119 @@ function mountGame(initial: ReturnType<typeof fixture>, onToast: (message: strin
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe('rebellion announcement lifecycle', () => {
+  it('mobilizes finite population, respects daily/faction caps and does not duplicate reinforcements on the same date', () => {
+    const initial = fixture();
+    initial.provinces[0] = ready('p', { population: { ...initial.provinces[0].population, total: 1000000 } });
+    const born = spawnRebellions(initial.provinces, initial.countries, [], [], [], date), f = born.countries[0].rebellions![0];
+    const provinces = born.provinces.map(p => p.id === 'p' ? { ...p, owner: f.id } : p);
+    const armies = [createRebelArmy({ ...f, militaryStrength: B.reinforcements.maximumStrength - 50 }, provinces[0])];
+    const result = reinforceRebellions(provinces, born.countries, armies, date);
+    expect(result.countries[0].rebellions![0].reinforcementRate).toBe(50);
+    expect(troopCount(result.armies[0])).toBe(B.reinforcements.maximumStrength);
+    expect(provinces[0].population.total - result.provinces[0].population.total).toBe(50);
+    expect(result.armies[0].regiments.every(r => r.strength <= (r.maxStrength ?? 1000))).toBe(true);
+    const twice = reinforceRebellions(result.provinces, result.countries, result.armies, date);
+    expect(twice).toEqual(result);
+    const capped = reinforceRebellions(result.provinces, result.countries, result.armies, { ...date, day: 3 });
+    expect(capped.countries[0].rebellions![0].reinforcementRate).toBe(0);
+    const daily = reinforceRebellions(provinces, born.countries, [createRebelArmy({ ...f, militaryStrength: 1000 }, provinces[0])], date);
+    expect(daily.countries[0].rebellions![0].reinforcementRate).toBe(B.reinforcements.dailyCap);
+    const exhaustedCountries = born.countries.map(c => ({ ...c, rebellions: c.rebellions?.map(item => ({ ...item, recruitedTroops: provinces[0].population.total * B.reinforcements.populationPoolRatio })) }));
+    expect(reinforceRebellions(provinces, exhaustedCountries, daily.armies, date).countries[0].rebellions![0].reinforcementRate).toBe(0);
+  });
+
+  it('scales reinforcements with support, involved population and occupied territory; never revives a force without armies and territory', () => {
+    const initial = fixture();
+    initial.provinces[0] = ready('p', { population: { ...initial.provinces[0].population, total: 10000 } });
+    const born = spawnRebellions(initial.provinces, initial.countries, [], [], [], date), f = born.countries[0].rebellions![0];
+    const withSupport = (support: number) => born.countries.map(c => ({ ...c, rebellions: c.rebellions?.map(item => ({ ...item, support })) }));
+    const high = reinforceRebellions(born.provinces, withSupport(100), born.armies, date);
+    const low = reinforceRebellions(born.provinces, withSupport(30), born.armies, date);
+    expect(high.countries[0].rebellions![0].reinforcementRate!).toBeGreaterThan(low.countries[0].rebellions![0].reinforcementRate!);
+    const small = reinforceRebellions(born.provinces.map(p => ({ ...p, population: { ...p.population, total: p.population.total / 2 } })), withSupport(100), born.armies, date);
+    expect(high.countries[0].rebellions![0].reinforcementRate!).toBeGreaterThan(small.countries[0].rebellions![0].reinforcementRate!);
+    const controlled = born.provinces.map(p => p.id === 'p' ? { ...p, owner: f.id } : p);
+    expect(reinforceRebellions(controlled, withSupport(100), born.armies, date).countries[0].rebellions![0].reinforcementRate!).toBeGreaterThan(high.countries[0].rebellions![0].reinforcementRate!);
+    expect(reinforceRebellions(born.provinces, withSupport(0), born.armies, date).countries[0].rebellions![0].reinforcementRate).toBe(0);
+    const gone = reinforceRebellions(born.provinces, withSupport(100), [], date);
+    expect(gone.armies).toEqual([]);
+    expect(processRebellionObjectives(gone.provinces, gone.countries, gone.armies, born.wars, born.relations, date).countries[0].rebellions![0].status).toBe('defeated');
+    const territorial = reinforceRebellions(controlled, withSupport(0), [], date);
+    expect(territorial.armies).toHaveLength(1);
+    expect(territorial.countries[0].rebellions![0].reinforcementRate!).toBeGreaterThan(0);
+  });
+
+  it('escalates a prolonged capital blockade only with a positive projected advantage, never blindly', () => {
+    const initial = fixture();
+    initial.provinces = [ready('p', { neighbors: ['q'] }), province('q', { neighbors: ['p'], development: 30 }), initial.provinces[2]];
+    initial.countries[0] = { ...country('A', ['q', 'p']), resources: { ...country('A', []).resources, stability: 10, prestige: -100 } };
+    const born = spawnRebellions(initial.provinces, initial.countries, [], [], [], date), f = born.countries[0].rebellions![0];
+    const defender = { ...createArmy('A', 'Guard', 'q'), regiments: Array.from({ length: 6 }, () => createRegiment('infantry')) };
+    const army = createRebelArmy({ ...f, militaryStrength: 9000 }, born.provinces[0]);
+    const normal = planRebelMovement([army, defender], born.provinces, born.countries, born.relations, date)[0];
+    expect(normal.destination).toBeNull();
+    const blocked = { ...normal, rebellionMovement: { ...normal.rebellionMovement!, blockedSinceDay: rebellionDay(date) - B.escalation.blockedDays } };
+    const escalated = planRebelMovement([blocked, defender], born.provinces, born.countries, born.relations, date)[0];
+    expect(escalated.destination).toBe('q');
+    expect(escalated.rebellionMovement?.requiredRatio).toBe(B.escalation.minimumPowerRatio);
+    const weak = { ...createRebelArmy({ ...f, militaryStrength: 5000 }, born.provinces[0]), rebellionMovement: blocked.rebellionMovement };
+    expect(planRebelMovement([weak, defender], born.provinces, born.countries, born.relations, date)[0].destination).toBeNull();
+  });
+  it.each(['pretenders', 'revolutionaries'] as const)('%s regroups with 5k against 6k, reinforces, attacks and starts capital control in the real loop', type => {
+    vi.useFakeTimers();
+    const initial = fixture();
+    const pop = { total: 15000, growthRate: 0, employed: 7500, unemployed: 1500, satisfaction: 60 };
+    initial.provinces = [ready('p', { neighbors: ['mid'], population: { ...pop } }), province('mid', { neighbors: ['p', 'q'], population: { ...pop } }),
+      province('q', { neighbors: ['mid'], population: { ...pop }, development: 20 }), initial.provinces[2]];
+    initial.countries[0] = { ...country('A', ['q', 'mid', 'p']), resources: { ...country('A', []).resources, stability: 10, prestige: -100 },
+      activeLaws: { ...DEFAULT_LAWS, governance: type === 'pretenders' ? 'governance_balanced' : 'governance_centralized' } };
+    const born = spawnRebellions(initial.provinces, initial.countries, [], [], [], date);
+    const f = { ...born.countries[0].rebellions![0], militaryStrength: 5000 };
+    initial.provinces = born.provinces;
+    initial.countries = born.countries.map(c => c.tag === 'A' ? { ...c, rebellions: [f] } : c);
+    initial.armies = [createRebelArmy(f, initial.provinces[0]), { ...createArmy('A', 'Capital guard', 'q'), regiments: Array.from({ length: 6 }, () => createRegiment('infantry')) }];
+    const game = mountGame(initial, ignore, false);
+    act(() => vi.advanceTimersByTime(1000));
+    expect(game.result.current.armies.find(a => a.owner === f.id)?.destination).not.toBe('q');
+    let reinforced = false, regrouped = false, attacked = false, controlled = false, controlledIntermediate = false;
+    for (let tick = 0; tick < 250; tick++) {
+      act(() => vi.advanceTimersByTime(1000));
+      const current = game.result.current.countries[0].rebellions![0];
+      const army = game.result.current.armies.find(a => a.owner === f.id);
+      if (game.result.current.provinces.find(p => p.id === 'mid')?.owner === f.id) controlledIntermediate = true;
+      if ((current.reinforcementRate ?? 0) > 0 && current.militaryStrength > 5000) reinforced = true;
+      if (army?.rebellionMovement?.reason.includes('Reagrupando')) regrouped = true;
+      if (army?.destination === 'q' || game.result.current.activeBattles.some(b => b.provinceId === 'q')) attacked = true;
+      if (current.objective.heldDays > 0) { controlled = true; break; }
+      if (current.status !== 'active') break;
+    }
+    expect({ reinforced, regrouped, attacked, controlled }).toEqual({ reinforced: true, regrouped: true, attacked: true, controlled: true });
+    expect(controlledIntermediate).toBe(true);
+    expect(game.result.current.provinces.find(p => p.id === 'q')?.owner).toBe(f.id);
+  });
+  it.each(['pretenders', 'revolutionaries'] as const)('%s marches from outside the capital and completes continuous capital control in the real loop', type => {
+    vi.useFakeTimers();
+    const initial = fixture();
+    initial.provinces = [ready('p', { neighbors: ['mid'] }), province('mid', { neighbors: ['p', 'q'] }), province('q', { neighbors: ['mid'] }), initial.provinces[2]];
+    initial.countries[0] = { ...country('A', ['q', 'mid', 'p']), resources: { ...country('A', []).resources, stability: 10, prestige: -100 },
+      activeLaws: { ...DEFAULT_LAWS, governance: type === 'pretenders' ? 'governance_balanced' : 'governance_centralized' } };
+    const game = mountGame(initial);
+    act(() => vi.advanceTimersByTime(1000));
+    const faction = game.result.current.countries[0].rebellions![0];
+    expect(faction.type).toBe(type);
+    expect(faction.originProvince).toBe('p');
+    expect(faction.objective.targets).toEqual(['q']);
+    expect(game.result.current.armies[0]).toMatchObject({ location: 'mid', destination: 'q', targetDestination: 'q', path: ['q'] });
+    let controlled = false;
+    for (let tick = 0; tick < 200 && game.result.current.countries[0].rebellions![0].status === 'active'; tick++) {
+      act(() => vi.advanceTimersByTime(1000));
+      const current = game.result.current.countries[0].rebellions![0];
+      if (current.objective.heldDays > 0) controlled = true;
+      if (current.status === 'active') expect(game.result.current.armies[0].destination || game.result.current.armies[0].location === 'q').toBeTruthy();
+    }
+    expect(controlled).toBe(true);
+    expect(game.result.current.countries[0].rebellions![0]).toMatchObject({ status: 'victorious', objective: { heldDays: faction.objective.requiredDays } });
+  });
   it('persists through many real ticks and announces the explicit objective resolution once', () => {
     vi.useFakeTimers();
     const onToast = vi.fn(), game = mountGame(fixture(), onToast);

@@ -74,11 +74,11 @@ export function applyStabilityPrestigeChanges(
   const newStability = Math.max(0, Math.min(100, country.resources.stability + stabilityChange));
   const newPrestige = Math.max(0, country.resources.prestige + prestigeChange);
 
-  // Log das mudanças
-  if (stabilityChange !== 0) {
-    const symbol = stabilityChange > 0 ? '📈' : '📉';
-    console.log(`${symbol} Estabilidade de ${country.name}: ${country.resources.stability}% → ${newStability}% (${stabilityChange > 0 ? '+' : ''}${stabilityChange}%)`);
-  }
+  // // Log das mudanças
+  // if (stabilityChange !== 0) {
+  //   const symbol = stabilityChange > 0 ? '📈' : '📉';
+  //   console.log(`${symbol} Estabilidade de ${country.name}: ${country.resources.stability}% → ${newStability}% (${stabilityChange > 0 ? '+' : ''}${stabilityChange}%)`);
+  // }
   
   if (prestigeChange !== 0) {
     const symbol = prestigeChange > 0 ? '👑' : '💔';

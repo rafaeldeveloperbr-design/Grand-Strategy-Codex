@@ -34,6 +34,9 @@ export interface RebellionFaction {
   status: RebellionStatus;
   formedDay: number;
   lastObjectiveDay?: number;
+  lastReinforcementDay?: number;
+  reinforcementRate?: number;
+  recruitedTroops?: number;
   resolution?: { reason: 'military_defeat' | 'objective_completed' | 'negotiation'; day: number };
 }
 export type RebellionAction = 'repression' | 'tax_relief' | 'concessions' | 'autonomy' | 'investment' | 'negotiate';

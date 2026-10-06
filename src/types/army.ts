@@ -68,6 +68,7 @@ export interface Regiment {
  */
 export interface Army {
   rebellionFactionId?: string;
+  rebellionMovement?: { target?: string; reason: string; state: 'marching' | 'defending' | 'blocked'; blockedSinceDay?: number; powerRatio?: number; requiredRatio?: number };
   /** ID único do exército */
   id: string;
   /** País dono do exército */

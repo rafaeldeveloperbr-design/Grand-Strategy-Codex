@@ -259,6 +259,42 @@ describe('Rebellion V2 responses, military and migration', () => {
     const defender = { ...army('A','q'), regiments: Array.from({ length: 20 }, () => createRegiment('infantry')) };
     expect(planRebelMovement([...result.armies, defender], provinces, result.countries, result.relations)[0].destination).toBeNull();
   });
+  it('advances toward a defended capital instead of refusing the entire march, then explains its defensive hold', () => {
+    const provinces = [ready({ neighbors: ['mid'] }), province({ id: 'mid', neighbors: ['p', 'capital'] }), province({ id: 'capital', neighbors: ['mid'] })];
+    const c = country({ provinces: ['capital', 'mid', 'p'], resources: { ...country().resources, stability: 10, prestige: -100 } });
+    const born = spawnRebellions(provinces, [c], [], [], [], date);
+    const defender = { ...army('A', 'capital'), regiments: Array.from({ length: 20 }, () => createRegiment('infantry')) };
+    const planned = planRebelMovement([...born.armies, defender], born.provinces, born.countries, born.relations)[0];
+    expect(planned).toMatchObject({ destination: 'mid', path: ['mid'], rebellionMovement: { target: 'capital', state: 'marching' } });
+    const held = planRebelMovement([{ ...planned, location: 'mid', destination: null, path: [] }, defender], born.provinces, born.countries, born.relations)[0];
+    expect(held.destination).toBeNull();
+    expect(held.rebellionMovement).toMatchObject({ state: 'defending', target: 'capital', reason: expect.stringContaining('superior') });
+    const released = planRebelMovement([held], born.provinces, born.countries, born.relations)[0];
+    expect(released.destination).toBe('capital');
+  });
+  it('uses an accessible alternate route around a superior intermediate army, with no free reinforcements', () => {
+    const provinces = [ready({ neighbors: ['blocked', 'safe'] }), province({ id: 'blocked', neighbors: ['p', 'capital'] }),
+      province({ id: 'safe', neighbors: ['p', 'capital'] }), province({ id: 'capital', neighbors: ['blocked', 'safe'] })];
+    const c = country({ provinces: ['capital', 'p', 'blocked', 'safe'], resources: { ...country().resources, stability: 10, prestige: -100 } });
+    const born = spawnRebellions(provinces, [c], [], [], [], date);
+    const defender = { ...army('A', 'blocked'), regiments: Array.from({ length: 20 }, () => createRegiment('infantry')) };
+    const planned = planRebelMovement([...born.armies, defender], born.provinces, born.countries, born.relations)[0];
+    expect(planned.path).toEqual(['safe', 'capital']);
+    expect(calculateArmySize(planned)).toBe(calculateArmySize(born.armies[0]));
+  });
+  it('crosses sibling rebel occupations but does not grant access through unrelated foreign territory', () => {
+    const provinces = [ready({ neighbors: ['mid'] }), ready({ id: 'mid', neighbors: ['p', 'capital'] }), province({ id: 'capital', neighbors: ['mid'] })];
+    const c = country({ provinces: ['capital', 'p', 'mid'], resources: { ...country().resources, stability: 10, prestige: -100 } });
+    const born = spawnRebellions(provinces, [c], [], [], [], date), f = born.countries[0].rebellions![0];
+    const sibling = { ...f, id: 'rebel_v2_sibling' };
+    const countries = [{ ...born.countries[0], rebellions: [f, sibling] }];
+    const occupied = born.provinces.map(p => p.id === 'mid' ? { ...p, owner: sibling.id } : p);
+    expect(planRebelMovement(born.armies, occupied, countries, born.relations)[0].path).toEqual(['mid', 'capital']);
+    const foreign = occupied.map(p => p.id === 'mid' ? { ...p, owner: 'FOREIGN' } : p);
+    const blocked = planRebelMovement(born.armies, foreign, countries, born.relations)[0];
+    expect(blocked.destination).toBeNull();
+    expect(blocked.rebellionMovement).toMatchObject({ state: 'blocked', reason: 'Sem rota acessível ao objetivo.' });
+  });
   it('AI negotiates when outmatched and honors the action cooldown', () => {
     const result = spawn();
     const response = respondToRebellions(result.provinces, result.countries, result.armies, result.relations, date, 'PLAYER');
@@ -316,7 +352,7 @@ describe('Rebellion V2 responses, military and migration', () => {
       warsRef: { current: result.wars }, diplomaticRelationsRef: { current: result.relations }, recruitmentsRef: { current: [] }, buildingConstructionsRef: { current: [] },
       activeBattlesRef: { current: [] }, playerTechStateRef: { current: createInitialTechState('A') }, botTechStatesRef: { current: new Map() } }, 'rebellion');
     const loaded = loadGame('rebellion');
-    expect(loaded?.world.countries[0].rebellions).toEqual(result.countries[0].rebellions);
+    expect(loaded?.world.countries[0].rebellions).toEqual(normalizeSavedFactions(result.countries[0].rebellions));
     expect(loaded?.world.provinces[0].rebellion).toEqual(result.provinces[0].rebellion);
     expect(loaded?.military.armies[0].rebellionFactionId).toBe(faction.id);
   });

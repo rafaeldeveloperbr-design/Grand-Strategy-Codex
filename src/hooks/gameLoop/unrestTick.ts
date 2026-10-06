@@ -2,7 +2,7 @@
  * unrestTick.ts - 65 linhas - PASSO 4.5 
  * Agitação provincial e revoltas + Paz automática por anexação
  */
-import { processProvincialPressure, spawnRebellions, recoverRebelArmies } from '../../engine/rebellion';
+import { processProvincialPressure, spawnRebellions, recoverRebelArmies, reinforceRebellions } from '../../engine/rebellion';
 import type { Army, Province, Country, War } from '../../types';
 import type { GameDate } from '../../types/date';
 import type { DiplomaticRelation } from '../../types/diplomacy';
@@ -36,6 +36,7 @@ export function processUnrestTick(p: Params) {
   const { snapshot, playerCountryTag, addLog, addToast } = p;
 
   armies = recoverRebelArmies(armies, provinces, countries);
+  ({ provinces, countries, armies } = reinforceRebellions(provinces, countries, armies, snapshot.date));
 
   const pressure = processProvincialPressure(provinces, snapshot.date, armies, countries, wars);
   provinces = pressure.updatedProvinces;

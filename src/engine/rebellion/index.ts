@@ -10,3 +10,4 @@ export * from './rebellionAI';
 export * from './rebellionEngine';
 export * from './rebellionMigration';
 export * from './feedback';
+export * from './reinforcements';

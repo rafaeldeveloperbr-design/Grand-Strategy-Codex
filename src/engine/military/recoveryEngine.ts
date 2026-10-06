@@ -23,8 +23,44 @@ export function recoverArmy(army: Army, country: Country, province: Province): {
     market.goods.iron.stock -= amount * MILITARY_BALANCE.reinforcementIronPerMan;
     market.goods.tools.stock -= amount * MILITARY_BALANCE.reinforcementToolsPerMan;
     reinforced += amount;
-    const organizationDelta = supply.status === 'critical' ? -2 : MILITARY_BALANCE.dailyOrganizationRecovery * supply.ratio;
-    const moraleDelta = supply.status === 'critical' ? -1 : MILITARY_BALANCE.dailyMoraleRecovery * supply.ratio;
+    const organizationDelta =
+      MILITARY_BALANCE.dailyOrganizationRecovery *
+      supply.ratio;
+
+    const moraleDelta =
+      MILITARY_BALANCE.dailyMoraleRecovery *
+      supply.ratio;
+
+    return {
+      ...regiment,
+
+      strength:
+        regiment.strength + amount,
+
+      maxStrength:
+        getRegimentMaximum(regiment),
+
+      organization: Math.max(
+        0,
+        Math.min(
+          definition.maxOrganization,
+          getRegimentOrganization(regiment) +
+          organizationDelta
+        )
+      ),
+
+      morale: Math.max(
+        0,
+        Math.min(
+          definition.maxMorale,
+          regiment.morale +
+          moraleDelta
+        )
+      ),
+
+      experience:
+        regiment.experience ?? 0,
+    };
     return { ...regiment, strength: regiment.strength + amount, maxStrength: getRegimentMaximum(regiment), organization: Math.max(0, Math.min(definition.maxOrganization, getRegimentOrganization(regiment) + organizationDelta)), morale: Math.max(0, Math.min(definition.maxMorale, regiment.morale + moraleDelta)), experience: regiment.experience ?? 0 };
   });
   return { army: { ...army, regiments }, country: { ...country, resources: { ...country.resources, manpower, gold } }, province: { ...province, market }, reinforced };

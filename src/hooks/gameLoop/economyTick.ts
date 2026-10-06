@@ -153,7 +153,8 @@ export function processEconomyTick(p: Params) {
     const countryIndex = countries.findIndex(country => country.tag === originalArmy.owner);
     const provinceIndex = provinces.findIndex(province => province.id === originalArmy.location);
     if (armyIndex < 0 || countryIndex < 0 || provinceIndex < 0) continue;
-    const result = recoverArmy(armies[armyIndex], countries[countryIndex], provinces[provinceIndex]);
+    const result = recoverArmy(armies[armyIndex], countries[countryIndex], provinces[provinceIndex],
+      armies.filter(army => army.location === provinces[provinceIndex].id));
     armies = armies.map((army, index) => index === armyIndex ? result.army : army);
     countries = countries.map((country, index) => index === countryIndex ? result.country : country);
     provinces = provinces.map((province, index) => index === provinceIndex ? result.province : province);

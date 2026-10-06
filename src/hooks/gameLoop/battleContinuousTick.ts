@@ -29,12 +29,6 @@ import { getBuildingLevel } from '../../data/buildings';
 
 
 
-type ArmyWithMovement = Army & {
-  movementProgress?: number;
-  destination: string | null;
-  path: string[];
-};
-
 type FinalResultEnriched = CombatResult & {
   retreatInfo?: RetreatInfo | null;
 
@@ -236,18 +230,7 @@ export function processBattleContinuous(p: Params) {
       };
       rawUpdatedArmies = [...armies];
 
-      rawUpdatedArmies = rawUpdatedArmies.map(a => {
-        if (a.owner === retreatInfo.owner && (a.id === fb.attackerArmyId || a.id === fb.defenderArmyId || fb.participantArmyIds.includes(a.id))) {
-          if (calculateArmySize(a) === retreatInfo.troops || a.id === (retreatInfo.owner === attacker.owner ? fb.attackerArmyId : fb.defenderArmyId)) {
-            const moved: ArmyWithMovement = { ...a as ArmyWithMovement, location: retreatInfo.to, inCombat: false, destination: null, path: [], movementProgress: 0 };
-            return moved;
-          }
-        }
-        if (fb.participantArmyIds.includes(a.id)) {
-          return { ...a, inCombat: false };
-        }
-        return a;
-      });
+      // Combat V2 already resolved each participant's retreat separately.
     } else {
 
       finalResult = {
@@ -336,9 +319,7 @@ export function processBattleContinuous(p: Params) {
       let finalSize = calculateArmySize(finalArmy);
       const isLoserArmy = finalArmy.owner === (finalResult.winner === 'attacker' ? defender.owner : attacker.owner);
 
-      if (retreatInfo?.retreated && isLoserArmy && finalArmy.owner === retreatInfo.owner) {
-        finalSize = retreatInfo.troops;
-      } else if (isStackwipe && isLoserArmy) {
+      if (isStackwipe && isLoserArmy) {
         finalSize = 0;
       }
 
@@ -412,7 +393,12 @@ export function processBattleContinuous(p: Params) {
     const remainingDefenders = armies.filter(a => a.location === province.id
       && fb.participantSides?.[a.id] === 'defender' && calculateArmySize(a) > 0);
 
-    if (enrichedResult.winner === 'attacker' && remainingDefenders.length === 0) {
+    const warAllowsOccupation = wars.some(war =>
+      (war.attacker === attacker.owner && war.defender === province.owner) ||
+      (war.defender === attacker.owner && war.attacker === province.owner));
+    const liberationAllowsOccupation = !!checkRebelTerritoryReturn(attacker) && province.owner.startsWith('rebel_');
+    if (enrichedResult.winner === 'attacker' && remainingDefenders.length === 0 &&
+        (warAllowsOccupation || liberationAllowsOccupation)) {
       const oldOwner = province.owner;
       const rebelReturnOwner = checkRebelTerritoryReturn(attacker);
       const newProvinceOwner = rebelReturnOwner || attacker.owner;

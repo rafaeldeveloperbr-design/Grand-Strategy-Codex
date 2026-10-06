@@ -1,3 +1,4 @@
+import { mapMetadata } from '../../data/map';
 import React, { useState, useRef } from 'react';
 import { Province, Country, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../../types';
 import { useMapControls } from './useMapControls';
@@ -49,7 +50,8 @@ export const GameMap: React.FC<MapProps> = ({
     handleMouseDown,
     handleMouseMovePan,
     handleMouseUp,
-  } = useMapControls();
+  } = useMapControls(svgRef);
+  const capitalIds = new Set(countries.map(country => country.capitalId ?? country.capital));
 
   const handleMouseEnter = (e: React.MouseEvent, province: Province) => {
     onProvinceHover(province.id);
@@ -107,6 +109,8 @@ export const GameMap: React.FC<MapProps> = ({
       <svg
         ref={svgRef}
         className="map__svg"
+        style={{ background: "#1a3a5c" }}
+        aria-label={mapMetadata.name}
         viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMovePan}
@@ -115,35 +119,13 @@ export const GameMap: React.FC<MapProps> = ({
         onContextMenu={(e) => {
           e.preventDefault();
 
-          // Estratégia 1: Tenta encontrar via closest('[data-province-id]')
           const target = e.target as SVGElement;
-          const provinceElement = target.closest?.('[data-province-id]');
-          if (provinceElement) {
-            const provinceId = provinceElement.getAttribute('data-province-id');
-            if (provinceId) {
-              onProvinceRightClick(provinceId);
-              return;
-            }
-          }
-
-          // Estratégia 2 (fallback): Mapeia coordenadas SVG para província
-          const rect = svgRef.current?.getBoundingClientRect();
-          if (rect) {
-            const svgX = ((e.clientX - rect.left) / rect.width) * viewBox.w + viewBox.x;
-            const svgY = ((e.clientY - rect.top) / rect.height) * viewBox.h + viewBox.y;
-            const clickedProvince = provinces.find((p) => {
-              const dx = p.center.x - svgX;
-              const dy = p.center.y - svgY;
-              return Math.sqrt(dx * dx + dy * dy) < 60;
-            });
-            if (clickedProvince) {
-              onProvinceRightClick(clickedProvince.id);
-            }
-          }
+          const provinceId = target.closest?.('[data-province-id]')?.getAttribute('data-province-id');
+          if (provinceId) onProvinceRightClick(provinceId);
         }}
       >
         {/* Fundo do mar */}
-        <rect x="-100" y="-100" width="1000" height="800" fill="#1a3a5c" />
+        <rect x={mapMetadata.initialViewBox.x} y={mapMetadata.initialViewBox.y} width={mapMetadata.initialViewBox.w} height={mapMetadata.initialViewBox.h} fill="#1a3a5c" />
 
         {/* Grid decorativo */}
         <defs>
@@ -151,7 +133,7 @@ export const GameMap: React.FC<MapProps> = ({
             <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#1e4060" strokeWidth="0.5" />
           </pattern>
         </defs>
-        <rect x="-100" y="-100" width="1000" height="800" fill="url(#grid)" />
+        <rect x={mapMetadata.initialViewBox.x} y={mapMetadata.initialViewBox.y} width={mapMetadata.initialViewBox.w} height={mapMetadata.initialViewBox.h} fill="url(#grid)" />
 
         {/* === Províncias === */}
         <ProvinceLayer
@@ -169,7 +151,7 @@ export const GameMap: React.FC<MapProps> = ({
 
         {/* === Marcadores de capitais === */}
         {provinces
-          .filter((p) => p.id === 'p1' || p.id === 'p6' || p.id === 'p10' || p.id === 'p14' || p.id === 'p17' || p.id === 'p20')
+          .filter((p) => capitalIds.has(p.id))
           .map((province) => (
             <g key={`cap-${province.id}`}>
               <circle

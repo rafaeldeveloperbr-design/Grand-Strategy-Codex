@@ -12,9 +12,9 @@ import {
   stopArmyMovement,
 } from '../../engine/military';
 
-import { calculateArmySize } from '../../engine/combat';
+import { calculateArmySize, retreatArmyManually } from '../../engine/combat';
 
-import type { Army, Province } from '../../types';
+import type { ActiveBattle, Army, Province } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
 import type { ToastType } from '../../types/toast';
 
@@ -34,7 +34,9 @@ type Params = {
   >;
 
   provincesRef: React.RefObject<Province[]>;
-  armiesRef: React.RefObject<Army[]>;
+  armiesRef: React.MutableRefObject<Army[]>;
+  activeBattlesRef?: React.MutableRefObject<ActiveBattle[]>;
+  setActiveBattles?: React.Dispatch<React.SetStateAction<ActiveBattle[]>>;
 
   diplomaticRelationsRef: React.RefObject<
     DiplomaticRelation[]
@@ -68,7 +70,7 @@ type Params = {
 };
 
 export function useArmyActions(params: Params) {
-  const { selectedArmy, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection, setSplitSelection, setShowSplitModal } = params;
+  const { activeBattlesRef, setActiveBattles, selectedArmy, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection, setSplitSelection, setShowSplitModal } = params;
 
   const handleProvinceRightClick = useCallback((provinceId: string) => {
     if (!selectedArmy) return;
@@ -99,7 +101,6 @@ export function useArmyActions(params: Params) {
     let armyToMove = army;
     if (army.destination) {
       armyToMove = stopArmyMovement(army);
-      console.log(`🔧 Exército ${army.name} tinha destino ${army.destination}, parando para re-rota para ${provinceId}`);
     }
     const provinces = provincesRef.current;
     const relations = diplomaticRelationsRef.current;
@@ -211,19 +212,21 @@ export function useArmyActions(params: Params) {
 
   const handleRetreatArmy = useCallback(
     (armyId: string, battleId: string) => {
-      setArmies(prev =>
-        prev.map(a =>
-          a.id === armyId
-            ? { ...a, isRetreating: true }
-            : a
-        )
-      );
-
-      addLog(
-        `🏃 Exército ${armyId} recuando da batalha ${battleId}`
-      );
+      const army = armiesRef.current?.find(a => a.id === armyId);
+      if (!army || army.owner !== playerCountryTag || !army.inCombat || !activeBattlesRef || !setActiveBattles) return;
+      const result = retreatArmyManually(armyId, battleId, armiesRef.current ?? [],
+        activeBattlesRef.current, provincesRef.current ?? []);
+      if (!result.retreatSuccess) {
+        addToast('Nenhuma prov?ncia pr?pria segura para retirada.', 'warning', 'Retirada bloqueada');
+        return;
+      }
+      armiesRef.current = result.armies;
+      activeBattlesRef.current = result.activeBattles;
+      setArmies(result.armies);
+      setActiveBattles(result.activeBattles);
+      addLog(`Ex?rcito ${army.name} recuou da batalha ${battleId}`);
     },
-    [setArmies, addLog]
+    [armiesRef, provincesRef, activeBattlesRef, setActiveBattles, playerCountryTag, setArmies, addLog, addToast]
   );
 
   const handleStopMovement = useCallback((armyId: string) => {
@@ -246,7 +249,6 @@ export function useArmyActions(params: Params) {
   const handleUnstuckAll = useCallback(() => {
     setArmies(prev => prev.map(a => {
       if (a.destination && a.movementProgress === 0) {
-        console.log(`🔧 Destrancando exército ${a.name} travado em ${a.location} -> ${a.destination}`);
         return {
           ...a,
           location: a.destination,

@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { loadGame, saveGame, isAutoSaveEnabled, setAutoSaveEnabled, listSaves, deleteSave } from '../../engine/saveSystem';
+import { isSaveCompatibleWithActiveMap } from '../../data/map/saveCompatibility';
+import { mapMetadata } from '../../data/map';
 import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../../types';
 import type { CountryTechState } from '../../types/technology';
 import type { DiplomaticRelation, War } from '../../types/diplomacy';
@@ -19,6 +21,7 @@ interface SaveRefs {
 }
 
 interface SaveSetters {
+  setPlayerCountryTag?: (tag: string) => void;
   setProvinces: (v: Province[]) => void;
   setAllCountries: (v: Country[]) => void;
   setArmies: (v: Army[]) => void;
@@ -51,6 +54,12 @@ export function useSaveSystem(
     }
     const saved = loadGame('autosave');
     if (saved) {
+      if (!isSaveCompatibleWithActiveMap(saved)) {
+        addToast('Autosave de outro mapa. South America V1 iniciou uma nova partida.', 'info');
+        return;
+      }
+      setters.setPlayerCountryTag?.(saved.world.countries.some(country => country.tag === saved.technology.player.countryTag)
+        ? saved.technology.player.countryTag : mapMetadata.defaultPlayerCountry);
       // V2 PURO - agrupado por domínio
       setters.setProvinces(saved.world.provinces);
       setters.setAllCountries(saved.world.countries);
@@ -81,6 +90,12 @@ export function useSaveSystem(
       addToast('Save não encontrado', 'error');
       return;
     }
+    if (!isSaveCompatibleWithActiveMap(saved)) {
+      addToast('Este save pertence a outro mapa e não pode ser carregado na South America V1.', 'error');
+      return;
+    }
+    setters.setPlayerCountryTag?.(saved.world.countries.some(country => country.tag === saved.technology.player.countryTag)
+      ? saved.technology.player.countryTag : mapMetadata.defaultPlayerCountry);
     // V2 PURO
     setters.setProvinces(saved.world.provinces);
     setters.setAllCountries(saved.world.countries);

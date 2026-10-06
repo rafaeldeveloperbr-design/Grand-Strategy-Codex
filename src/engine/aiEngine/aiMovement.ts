@@ -13,7 +13,6 @@ import { getBuildingLevel } from '../../data/buildings';
 import {
   canMoveToProvince,
   isBorderProvince,
-  isAtWarWithNeighbor,
   isAtWarWith,
 } from './aiHelpers';
 
@@ -198,13 +197,15 @@ function findReinforcementArmy(
   botCountryId: string,
   armies: Army[],
   provinces: Province[],
-  diplomacy: DiplomaticRelation[]
+  diplomacy: DiplomaticRelation[],
+  reserved: ReadonlySet<string> = new Set()
 ): Army | null {
   if (!army.location) return null;
 
   const candidates = armies.filter(other =>
     other.owner === botCountryId &&
     other.id !== army.id &&
+    !reserved.has(other.id) &&
     other.location !== null &&
     other.destination === null &&
     !other.inCombat
@@ -490,8 +491,7 @@ function findBestProvinceTarget(
   diplomacy: DiplomaticRelation[],
   countries: Country[]
 ): Province | null {
-  const candidates = currentProvince.neighbors
-    .map(id => provinces.find(p => p.id === id))
+  const candidates = provinces
     .filter((province): province is Province => {
       if (!province) return false;
 
@@ -529,6 +529,8 @@ function findBestProvinceTarget(
       diplomacy
     );
 
+    if (path.length === 0) continue;
+
     const routeDanger = calculateRouteDanger(
       path,
       botCountryId,
@@ -548,30 +550,16 @@ function findBestProvinceTarget(
   return bestProvince;
 }
 
-type CountryWithCapital = Country & {
-  capital?: string;
-  capitalId?: string;
-};
-
-function getCountryCapitalId(
-  country: Country
-): string | null {
-  const countryWithCapital =
-    country as CountryWithCapital;
-
-  return (
-    countryWithCapital.capital ??
-    countryWithCapital.capitalId ??
-    country.provinces[0] ??
-    null
-  );
+export function getCountryCapitalId(country: Country): string | null {
+  return country.capitalId ?? country.capital ?? null;
 }
 
 function isOwnCapitalThreatened(
   botCountryId: string,
   provinces: Province[],
   armies: Army[],
-  countries: Country[]
+  countries: Country[],
+  diplomacy: DiplomaticRelation[]
 ): Province | null {
   const botCountry = countries.find(
     country => country.tag === botCountryId
@@ -591,7 +579,7 @@ function isOwnCapitalThreatened(
 
   const enemyPresent = armies.some(
     army =>
-      army.owner !== botCountryId &&
+      isAtWarWith(botCountryId, army.owner, diplomacy) &&
       army.location === capitalProvince.id &&
       calculateArmySize(army) > 0
   );
@@ -604,7 +592,7 @@ function isOwnCapitalThreatened(
     neighborId => {
       return armies.some(
         army =>
-          army.owner !== botCountryId &&
+          isAtWarWith(botCountryId, army.owner, diplomacy) &&
           army.location === neighborId &&
           calculateArmySize(army) > 0
       );
@@ -619,7 +607,8 @@ function isOwnCapitalThreatened(
 function calculateCapitalDefenseRequirement(
   capital: Province,
   botCountryId: string,
-  armies: Army[]
+  armies: Army[],
+  diplomacy: DiplomaticRelation[]
 ): {
   enemyThreat: number;
   friendlyDefense: number;
@@ -657,6 +646,8 @@ function calculateCapitalDefenseRequirement(
 
       continue;
     }
+
+    if (!isAtWarWith(botCountryId, army.owner, diplomacy)) continue;
 
     const enemyProvince =
       armyProvince ??
@@ -823,6 +814,7 @@ export function processAI(
     return armies;
   }
   const reinforcementOrders = new Map<string, string>();
+  const reservedReinforcements = new Set<string>();
 
   const enemyCountries = wars
     .filter(
@@ -852,7 +844,7 @@ export function processAI(
   );
 
   for (const army of botArmies) {
-    if (!army.location) continue;
+    if (!army.location || reservedReinforcements.has(army.id)) continue;
 
     const armyProvince = provinces.find(
       province => province.id === army.location
@@ -904,7 +896,8 @@ export function processAI(
       botCountryId,
       armies,
       provinces,
-      diplomacy
+      diplomacy,
+      reservedReinforcements
     );
 
     if (
@@ -912,6 +905,8 @@ export function processAI(
       army.location &&
       !reinforcementOrders.has(reinforcement.id)
     ) {
+      reservedReinforcements.add(army.id);
+      reservedReinforcements.add(reinforcement.id);
       reinforcementOrders.set(
         reinforcement.id,
         army.location
@@ -923,7 +918,8 @@ export function processAI(
     botCountryId,
     provinces,
     armies,
-    countries
+    countries,
+    diplomacy
   );
 
   const capitalDefense =
@@ -931,7 +927,8 @@ export function processAI(
       ? calculateCapitalDefenseRequirement(
         threatenedCapital,
         botCountryId,
-        armies
+        armies,
+        diplomacy
       )
       : null;
 
@@ -981,19 +978,15 @@ export function processAI(
             false
           );
 
+        const routed = createArmyWithRoute(army, threatenedCapital.id, provinces, botCountryId, diplomacy);
+        if (!routed.destination) return army;
         reservedCapitalDefense += reinforcementPower;
 
         console.log(
           `🏰 [IA CAPITAL] ${botCountryId} enviando ${army.name} para defender ${threatenedCapital.name}`
         );
 
-        return createArmyWithRoute(
-          army,
-          threatenedCapital.id,
-          provinces,
-          botCountryId,
-          diplomacy
-        );
+        return routed;
       }
     }
 
@@ -1021,6 +1014,9 @@ export function processAI(
       );
     }
 
+    // The requesting force holds its rendezvous instead of leaving as support arrives.
+    if (reservedReinforcements.has(army.id)) return army;
+
     const currentProv = provinces.find(
       province => province.id === army.location
     );
@@ -1033,12 +1029,8 @@ export function processAI(
       return army;
     }
 
-    const isAtWar = isAtWarWithNeighbor(
-      botCountryId,
-      currentProv,
-      provinces,
-      diplomacy
-    );
+    const isAtWar = diplomacy.some(relation => relation.status === 'war' &&
+      (relation.countryA === botCountryId || relation.countryB === botCountryId));
 
     // =========================================================
     // GUERRA
@@ -1200,73 +1192,13 @@ export function processAI(
       return army;
     }
 
-    const borderNeighbors = currentProv.neighbors.filter(
-      neighborId => {
-        const province = provinces.find(
-          p => p.id === neighborId
-        );
-
-        if (!province) return false;
-
-        return (
-          province.owner === botCountryId &&
-          isBorderProvince(
-            neighborId,
-            provinces,
-            botCountryId
-          )
-        );
-      }
-    );
-
-    if (borderNeighbors.length > 0) {
-      const chosenDestination =
-        borderNeighbors[
-        Math.floor(
-          Math.random() * borderNeighbors.length
-        )
-        ];
-
-      return createArmyWithRoute(
-        army,
-        chosenDestination,
-        provinces,
-        botCountryId,
-        diplomacy
-      );
-    }
-
-    // Se não consegue alcançar a fronteira diretamente,
-    // continua se deslocando por território próprio.
-    const ownNeighbors = currentProv.neighbors.filter(
-      neighborId => {
-        const province = provinces.find(
-          p => p.id === neighborId
-        );
-
-        return (
-          province &&
-          province.owner === botCountryId
-        );
-      }
-    );
-
-    if (ownNeighbors.length > 0) {
-      const chosenDestination =
-        ownNeighbors[
-        Math.floor(
-          Math.random() * ownNeighbors.length
-        )
-        ];
-
-      return createArmyWithRoute(
-        army,
-        chosenDestination,
-        provinces,
-        botCountryId,
-        diplomacy
-      );
-    }
+    // Choose a reachable frontier once, rather than randomly walking back and forth.
+    const frontier = provinces.filter(province => province.owner === botCountryId &&
+      isBorderProvince(province.id, provinces, botCountryId))
+      .map(province => ({ province, path: findPath(currentProv.id, province.id, provinces, botCountryId, diplomacy) }))
+      .filter(candidate => candidate.path.length > 0)
+      .sort((a, b) => a.path.length - b.path.length || a.province.id.localeCompare(b.province.id))[0];
+    if (frontier) return createArmyWithRoute(army, frontier.province.id, provinces, botCountryId, diplomacy);
 
     return army;
   });

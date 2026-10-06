@@ -6,9 +6,9 @@ import { getArmySupply } from './supplyEngine';
 import { getRegimentMaximum, getRegimentOrganization } from './armyStats';
 
 /** Daily recovery consumes the canonical national manpower and local market. */
-export function recoverArmy(army: Army, country: Country, province: Province): { army: Army; country: Country; province: Province; reinforced: number } {
+export function recoverArmy(army: Army, country: Country, province: Province, colocatedArmies: Army[] = [army]): { army: Army; country: Country; province: Province; reinforced: number } {
   if (army.inCombat || army.destination) return { army, country, province, reinforced: 0 };
-  const supply = getArmySupply(army, province);
+  const supply = getArmySupply(army, province, colocatedArmies);
   const market = normalizeMarket(province.market);
   let manpower = country.resources.manpower;
   let gold = country.resources.gold;
@@ -61,7 +61,6 @@ export function recoverArmy(army: Army, country: Country, province: Province): {
       experience:
         regiment.experience ?? 0,
     };
-    return { ...regiment, strength: regiment.strength + amount, maxStrength: getRegimentMaximum(regiment), organization: Math.max(0, Math.min(definition.maxOrganization, getRegimentOrganization(regiment) + organizationDelta)), morale: Math.max(0, Math.min(definition.maxMorale, regiment.morale + moraleDelta)), experience: regiment.experience ?? 0 };
   });
   return { army: { ...army, regiments }, country: { ...country, resources: { ...country.resources, manpower, gold } }, province: { ...province, market }, reinforced };
 }

@@ -423,6 +423,7 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
           loser.owner,
           province,
           allProvinces,
+          updatedArmies,
         );
 
         if (destination) {
@@ -446,6 +447,8 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
             destination: null,
             targetDestination: null,
             path: [],
+            position: null,
+            movementProgress: 0,
           };
         }
 
@@ -459,6 +462,7 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
           targetDestination: null,
           path: [],
           movementProgress: 0,
+          position: null,
         };
       });
 

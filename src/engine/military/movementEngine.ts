@@ -52,53 +52,26 @@ export function stopArmyMovement(army: Army): Army {
 }
 
 export function findPath(
-  startId: string,
-  endId: string,
-  provinces: Province[],
-  ownerTag: string,
+  startId: string, endId: string, provinces: Province[], ownerTag: string,
   diplomacy: DiplomaticRelation[]
 ): string[] {
-  if (startId === endId) return [];
-
-  const adjacencyMap = new Map<string, string[]>();
-  for (const province of provinces) {
-    adjacencyMap.set(province.id, province.neighbors || []);
-  }
-
-  const queue: string[] = [startId];
-  const visited = new Set<string>([startId]);
+  const index = new Map(provinces.map(province => [province.id, province]));
+  if (startId === endId || !index.has(startId) || !index.has(endId)) return [];
+  const queue = [startId], visited = new Set([startId]);
   const parent = new Map<string, string>();
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const current = queue[cursor];
     if (current === endId) {
       const path: string[] = [];
-      let node: string | undefined = endId;
-      while (node && node !== startId) {
-        path.unshift(node);
-        node = parent.get(node);
-      }
-      return path;
+      for (let node = endId; node !== startId; node = parent.get(node)!) path.push(node);
+      return path.reverse();
     }
-
-    const neighbors = adjacencyMap.get(current) ?? [];
-    for (const neighbor of neighbors) {
-      if (visited.has(neighbor)) continue;
-
-      const neighborProvince = provinces.find((p) => p.id === neighbor);
-      if (!neighborProvince) continue;
-
-      const isAllowed = canMoveToProvince(ownerTag, neighborProvince.owner, diplomacy);
-
-      if (isAllowed) {
-        visited.add(neighbor);
-        parent.set(neighbor, current);
-        queue.push(neighbor);
-      }
+    for (const neighbor of index.get(current)!.neighbors) {
+      const province = index.get(neighbor);
+      if (!province || visited.has(neighbor) || !canMoveToProvince(ownerTag, province.owner, diplomacy)) continue;
+      visited.add(neighbor); parent.set(neighbor, current); queue.push(neighbor);
     }
   }
-
   return [];
 }
 
@@ -108,7 +81,7 @@ export function moveArmy(
   provinces: Province[],
   diplomacy: DiplomaticRelation[]
 ): Army | null {
-  if (!army.location) return null;
+  if (!army.location || army.inCombat || army.location === destinationId) return null;
   if (army.destination) return null;
 
   const originProvince = provinces.find((p) => p.id === army.location);
@@ -118,13 +91,11 @@ export function moveArmy(
   if (!destinationProvince) return null;
 
   if (!canMoveToProvince(army.owner, destinationProvince.owner, diplomacy)) {
-    console.log('❌ Movimento não permitido: sem relação de guerra ou aliança com', destinationProvince.owner);
     return null;
   }
 
   if (originProvince.neighbors.includes(destinationId)) {
     if (!canMoveToProvince(army.owner, destinationProvince.owner, diplomacy)) {
-      console.log(`❌ Movimento não permitido para vizinho ${destinationProvince.name} (${destinationProvince.owner}): sem relação de guerra ou aliança`);
       return null;
     }
 
@@ -138,11 +109,8 @@ export function moveArmy(
     };
   }
 
-  console.log('🗺️ Calculando pathfinding:', { from: army.location, to: destinationId, owner: army.owner });
   const path = findPath(army.location, destinationId, provinces, army.owner, diplomacy);
-  console.log('🗺️ Caminho encontrado:', path);
   if (path.length === 0) {
-    console.log('❌ Caminho não encontrado');
     return null;
   }
 
@@ -159,113 +127,52 @@ export function moveArmy(
 }
 
 export function processArmyMovement(
-  armies: Army[],
-  provinces: Province[],
-  diplomacy: DiplomaticRelation[]
+  armies: Army[], provinces: Province[], diplomacy: DiplomaticRelation[]
 ): { updatedArmies: Army[]; arrivedArmies: Army[]; updatedProvinces: Province[] } {
-  void diplomacy;
-  const arrivedArmies: Army[] = [];
-
-  const updatedArmies = armies.map((army) => {
-    if (army.inCombat) {
-      return army;
+  const index = new Map(provinces.map(province => [province.id, province]));
+  const colocated = new Map<string, Army[]>();
+  for (const army of armies) {
+    if (!army.location) continue;
+    const group = colocated.get(army.location) ?? [];
+    group.push(army); colocated.set(army.location, group);
+  }
+  const arrivedArmies: Army[] = [], updatedArmies: Army[] = [];
+  const cancel = (army: Army): Army => ({ ...army, destination: null, targetDestination: null, path: [], movementProgress: 0, position: null });
+  for (const army of armies) {
+    if (army.inCombat || !army.destination) { updatedArmies.push(army); continue; }
+    const origin = army.location ? index.get(army.location) : undefined;
+    const next = index.get(army.destination);
+    const route = army.path.length ? army.path : [army.destination];
+    let previous = origin;
+    const validRoute = route[0] === army.destination && route.every(id => {
+      const province = index.get(id);
+      // Civil-war access is locally synthesized by rebel planning; preserve it at execution.
+      const rebelAccess = province && army.rebellionFactionId && army.originalOwner &&
+        (province.owner === army.originalOwner || (province.owner.startsWith('rebel_v2_') && province.originalOwner === army.originalOwner));
+      const allowed = previous && province && previous.neighbors.includes(id) &&
+        (rebelAccess || canMoveToProvince(army.owner, province.owner, diplomacy));
+      previous = province;
+      return !!allowed;
+    });
+    if (!origin || !next || !validRoute) {
+      updatedArmies.push(cancel(army)); continue;
     }
-
-    if (!army.destination) {
-      return army;
+    const progress = army.movementProgress + army.movementSpeed *
+      getArmySupply(army, origin, colocated.get(origin.id)).movementMultiplier;
+    if (progress < 1) {
+      updatedArmies.push({ ...army, movementProgress: progress, position: {
+        x: origin.center.x + (next.center.x - origin.center.x) * progress,
+        y: origin.center.y + (next.center.y - origin.center.y) * progress,
+      } });
+      continue;
     }
-
-    const currentProvince = provinces.find(province => province.id === army.location);
-    const colocated = armies.filter(item => item.location === army.location && item.owner === army.owner);
-    const nextProgress = army.movementProgress + army.movementSpeed * getArmySupply(army, currentProvince, colocated).movementMultiplier;
-
-    if (nextProgress < 1.0) {
-      const originProvince = provinces.find((p) => p.id === army.location);
-      const destProvince = provinces.find((p) => p.id === army.destination);
-
-      let position = null;
-      if (originProvince && destProvince) {
-        position = {
-          x: originProvince.center.x + (destProvince.center.x - originProvince.center.x) * nextProgress,
-          y: originProvince.center.y + (destProvince.center.y - originProvince.center.y) * nextProgress,
-        };
-      }
-
-      return {
-        ...army,
-        movementProgress: nextProgress,
-        position,
-      };
-    }
-
-    const reachedProvinceId = army.destination;
-    const reachedProvince = provinces.find((p) => p.id === reachedProvinceId);
-
-    if (!reachedProvince) {
-      return {
-        ...army,
-        location: reachedProvinceId,
-        destination: null,
-        targetDestination: null,
-        movementProgress: 0,
-        position: null,
-        path: [],
-      };
-    }
-
-    const enemyArmiesInProvince = armies.filter(
-      (a) => a.id !== army.id && a.location === reachedProvinceId && a.owner !== army.owner
-    );
-
-    if (enemyArmiesInProvince.length > 0) {
-      return {
-        ...army,
-        location: reachedProvinceId,
-        destination: null,
-        targetDestination: null,
-        movementProgress: 0,
-        position: null,
-        path: [],
-      };
-    }
-
-    if (army.path.length > 0) {
-      const remainingPath = army.path.slice(1);
-
-      if (remainingPath.length > 0) {
-        return {
-          ...army,
-          location: reachedProvinceId,
-          destination: remainingPath[0],
-          movementProgress: 0,
-          position: null,
-          path: remainingPath,
-        };
-      }
-    }
-
-    const arrivedArmy: Army = {
-      ...army,
-      location: reachedProvinceId,
-      destination: null,
-      targetDestination: null,
-      movementProgress: 0,
-      position: null,
-      path: [],
-    };
-
-    arrivedArmies.push(arrivedArmy);
-    return arrivedArmy;
-  });
-
-  const movingArmies = updatedArmies.filter((army) => {
-    const hasArrived = arrivedArmies.some((a) => a.id === army.id);
-    return !hasArrived;
-  });
-
-  // Territory is deliberately not mutated here. Arrival processing validates
-  // the war/rebel rules and delegates ownership changes to transferProvince.
-  return { updatedArmies: movingArmies, arrivedArmies, updatedProvinces: provinces };
+    const remaining = army.path[0] === next.id ? army.path.slice(1) : [];
+    // Every crossing is an arrival, so occupation and combat run before continuing.
+    arrivedArmies.push({ ...army, location: next.id, destination: remaining[0] ?? null,
+      targetDestination: remaining.length ? army.targetDestination : null,
+      path: remaining, movementProgress: 0, position: null });
+  }
+  return { updatedArmies, arrivedArmies, updatedProvinces: provinces };
 }
 
 export function mergeArmies(army1: Army, army2: Army): Army {

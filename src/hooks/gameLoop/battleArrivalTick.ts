@@ -2,7 +2,7 @@
  * battleArrivalTick.ts - 230 linhas - PASSO 4.3
  * Chegada de exércitos + detecção automática de combate
  */
-import { checkAllProvinceCombats } from '../../engine/combat';
+import { calculateArmySize, checkAllProvinceCombats } from '../../engine/combat';
 import type { Army, Province, Country, War, ActiveBattle } from '../../types';
 import type { GameDate } from '../../types/date';
 import type { Recruitment, BuildingConstruction } from '../../types';
@@ -51,6 +51,15 @@ export function processBattleArrival(p: Params) {
   let { arrivedArmies, armies, provinces, countries, wars, recruitments, buildingConstructions, currentActiveBattles } = p;
   const { snapshot, playerCountryTag, activeBattlesRef, addLog, addToast, setActiveBattles } = p;
 
+  // A surviving occupier must still capture after the final defender withdraws.
+  const vacantOccupiers = armies.filter(army => !army.inCombat && !army.destination && calculateArmySize(army) > 0
+    && provinces.some(province => province.id === army.location && province.owner !== army.owner
+      && wars.some(war => (war.attacker === army.owner && war.defender === province.owner)
+        || (war.defender === army.owner && war.attacker === province.owner))));
+  const occupierIds = new Set(vacantOccupiers.map(army => army.id));
+  armies = armies.filter(army => !occupierIds.has(army.id));
+  arrivedArmies = [...arrivedArmies, ...vacantOccupiers];
+
   // 1. Primeiro move todo mundo que chegou pra lista principal
   for (const arrived of arrivedArmies) {
     const province = provinces.find(pr => pr.id === arrived.location);
@@ -78,9 +87,9 @@ export function processBattleArrival(p: Params) {
 
     // Only hostile armies fight. Empty territory can be transferred only by a
     // valid war occupation or by the established rebel liberation rule.
-    const enemies = armies.filter(a =>
+    const enemies = [...armies, ...arrivedArmies].filter(a =>
       a.location === province.id &&
-      a.id !== arrived.id &&
+      a.id !== arrived.id && calculateArmySize(a) > 0 &&
       isHostile(arrived.owner, a.owner, arrived.originalOwner, a.originalOwner)
     );
 
@@ -100,13 +109,13 @@ export function processBattleArrival(p: Params) {
         buildingConstructions = transferred.constructions;
         addLog(`🏳️ ${newOwner} ocupou ${province.name} de ${oldOwner}`);
       }
-      armies = [...armies, { ...arrived, inCombat: false, destination: null, targetDestination: null, path: [] }];
+      armies = [...armies, { ...arrived, inCombat: false }];
       continue;
     }
 
     // Se tem inimigo, não decide batalha aqui. Só coloca o exército na província livre
     // O checkAllProvinceCombats abaixo vai cuidar de criar/juntar na batalha
-    armies = [...armies, { ...arrived, inCombat: false, destination: null, targetDestination: null, path: [] }];
+    armies = [...armies, { ...arrived, inCombat: false }];
   }
 
   // 2. Agora SIM verifica combate em todas as províncias com TODO MUNDO já no mapa
@@ -114,7 +123,9 @@ export function processBattleArrival(p: Params) {
   const battlesToCheck = activeBattlesRef.current.length > 0 ? activeBattlesRef.current : currentActiveBattles;
   const autoCombatResult = checkAllProvinceCombats(armies, provinces, wars, snapshot.date, battlesToCheck);
 
-  armies = autoCombatResult.armies;
+  armies = autoCombatResult.armies.map(army => army.inCombat ? {
+    ...army, destination: null, targetDestination: null, path: [], movementProgress: 0, position: null,
+  } : army);
   currentActiveBattles = [...autoCombatResult.updatedBattles, ...autoCombatResult.newBattles];
 
   // Atualiza o ref e o state de uma vez

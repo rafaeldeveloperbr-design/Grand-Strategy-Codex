@@ -11,16 +11,6 @@ export function selectRebelType(
   p: Province,
   country?: Country
 ): RebelType {
-  console.log(
-  `[REBELLION TYPE] province=${p.name} ` +
-  `country=${country?.tag ?? 'NONE'} ` +
-  `stability=${country?.resources.stability ?? 'NONE'} ` +
-  `prestige=${country?.resources.prestige ?? 'NONE'} ` +
-  `governance=${country?.activeLaws.governance ?? 'NONE'} ` +
-  `originalOwner=${p.originalOwner ?? 'NONE'} ` +
-  `owner=${p.owner}`
-);
-
   if (
     p.originalOwner &&
     p.originalOwner !== p.owner &&

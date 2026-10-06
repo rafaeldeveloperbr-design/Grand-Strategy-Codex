@@ -10,12 +10,14 @@ import { calculateArmySize } from './combatCalculations';
 export function findRetreatProvince(
   loserOwner: string,
   battleProvince: Province,
-  allProvinces: Province[]
+  allProvinces: Province[],
+  allArmies: Army[] = []
 ): Province | null {
   // Busca províncias vizinhas que pertencem ao país do perdedor
   const retreatProvinces = battleProvince.neighbors
     .map(neighborId => allProvinces.find(p => p.id === neighborId))
-    .filter(p => p && p.owner === loserOwner);
+    .filter(p => p && p.owner === loserOwner && !allArmies.some(army =>
+      army.location === p.id && army.owner !== loserOwner && calculateArmySize(army) > 0));
 
   if (retreatProvinces.length === 0) {
     // Perdedor está cercado - não há rota de fuga
@@ -83,11 +85,13 @@ export function retreatArmyManually(
   }
 
   // Determina o lado do exército (atacante ou defensor)
-  const isAttackerSide = battle.attackerArmyId === armyId || 
+  const isAttackerSide = battle.participantSides?.[armyId]
+    ? battle.participantSides[armyId] === 'attacker'
+    : battle.attackerArmyId === armyId ||
     armies.some(a => battle.participantArmyIds.includes(a.id) && a.owner === army.owner && a.id !== armyId && a.id === battle.attackerArmyId);
   
   // Encontra província de recuo
-  const retreatProvince = findRetreatProvince(army.owner, battleProvince, provinces);
+  const retreatProvince = findRetreatProvince(army.owner, battleProvince, provinces, armies);
   
   if (!retreatProvince) {
     console.warn(`❌ Nenhuma província de recuo disponível para ${army.owner}`);
@@ -113,13 +117,14 @@ export function retreatArmyManually(
   // Move exército para província de recuo e libera do combate
   const updatedArmies = armies.map(a => {
     if (a.id === armyId) {
-      return { ...a, location: retreatProvince.id, inCombat: false };
+      return { ...a, location: retreatProvince.id, inCombat: false, battleId: null,
+        destination: null, targetDestination: null, path: [], position: null, movementProgress: 0 };
     }
     return a;
   });
 
   // Se não há mais exércitos de um lado, finaliza a batalha
-  if (updatedBattle.participantArmyIds.length === 0) {
+  if (updatedBattle.attackerCurrentTroops === 0 || updatedBattle.defenderCurrentTroops === 0) {
     console.log(`🏁 Batalha ${battleId} finalizada - todos os exércitos recuaram`);
     
     // Remove batalha da lista
@@ -129,7 +134,8 @@ export function retreatArmyManually(
     const winner = updatedBattle.attackerCurrentTroops > 0 ? 'attacker' : 'defender';
     
     return {
-      armies: updatedArmies,
+      armies: updatedArmies.map(a => updatedBattle.participantArmyIds.includes(a.id)
+        ? { ...a, inCombat: false, battleId: null } : a),
       activeBattles: updatedBattles,
       retreatSuccess: true,
       battleEnded: true,

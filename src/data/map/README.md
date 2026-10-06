@@ -140,3 +140,8 @@ Alterados: agregador/tipos/README de mapa, `types/country.ts`, `App.tsx`,
 `rebellionLifecycle.test.tsx` e `rebellionV2.test.ts`.
 
 Branch `feat/map-expansion`, sem commit ou push.
+
+## Auditoria de rotas e log?stica
+
+Veja [ROUTING_AUDIT.md](./ROUTING_AUDIT.md) para corre??es, regress?es de
+movimento/diplomacia/supply e limites da inspe??o visual da South America V1.

@@ -1,3 +1,4 @@
+import { mapCapitals } from '../../data/map';
 import React, { useState, useRef } from 'react';
 import { Province, Country, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../../types';
 import { useMapControls } from './useMapControls';
@@ -169,7 +170,7 @@ export const GameMap: React.FC<MapProps> = ({
 
         {/* === Marcadores de capitais === */}
         {provinces
-          .filter((p) => p.id === 'p1' || p.id === 'p6' || p.id === 'p10' || p.id === 'p14' || p.id === 'p17' || p.id === 'p20')
+          .filter((p) => Object.values(mapCapitals).includes(p.id))
           .map((province) => (
             <g key={`cap-${province.id}`}>
               <circle

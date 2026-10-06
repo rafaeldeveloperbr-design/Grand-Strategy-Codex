@@ -1,3 +1,4 @@
+import { canEnterTerritory } from '../diplomacy';
 import { getTerrainDefinition } from '../terrain';
 import { Army, Province } from '../../types';
 import { DiplomaticRelation } from '../../types/diplomacy';
@@ -9,25 +10,7 @@ export function canMoveToProvince(
   targetProvinceOwner: string,
   diplomacy: DiplomaticRelation[]
 ): boolean {
-  if (targetProvinceOwner === armyCountryId) {
-    return true;
-  }
-
-  if (!diplomacy || diplomacy.length === 0) {
-    return false;
-  }
-
-  const relation = diplomacy.find(
-    (r) =>
-      (r.countryA === armyCountryId && r.countryB === targetProvinceOwner) ||
-      (r.countryA === targetProvinceOwner && r.countryB === armyCountryId)
-  );
-
-  if (!relation) {
-    return false;
-  }
-
-  return relation.status === 'war' || relation.opinion >= 80;
+  return canEnterTerritory(diplomacy, armyCountryId, targetProvinceOwner);
 }
 
 export function stopArmyMovement(army: Army): Army {

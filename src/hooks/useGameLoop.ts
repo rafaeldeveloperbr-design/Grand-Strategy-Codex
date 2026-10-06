@@ -1,3 +1,4 @@
+import { cleanupDiplomacy } from '../engine/diplomacy';
 import {
   useCallback,
   useEffect,
@@ -200,7 +201,7 @@ export function useGameLoop(props: Props) {
     countries = dip.countries; provinces = dip.provinces; armies = dip.armies; wars = dip.wars; relations = dip.relations; currentPlayerTechState = dip.currentPlayerTechState; currentBotTechStates = dip.currentBotTechStates;
 
     // 7. AI - precisa ver economy, stability e diplomacy antes de decidir
-    const ai = processAiTick({ countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates, playerCountryTag, aiDifficultyRef, ceilingLogRef, snapshot, allCountries, addAILog, formatGameDate });
+    const ai = processAiTick({ countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates, playerCountryTag, aiDifficultyRef, ceilingLogRef, snapshot, allCountries, addAILog, addToast, formatGameDate });
     countries = ai.countries; provinces = ai.provinces; armies = ai.armies; wars = ai.wars; relations = ai.relations; buildingConstructions = ai.buildingConstructions; recruitments = ai.recruitments; currentBotTechStates = ai.currentBotTechStates;
 
     // 8. MOVEMENT - IA já decidiu pra onde ir
@@ -219,6 +220,7 @@ export function useGameLoop(props: Props) {
     provinces = reb.provinces; armies = reb.armies; countries = reb.countries; wars = reb.wars; relations = reb.relations; currentActiveBattles = reb.currentActiveBattles; recruitments = reb.recruitments; buildingConstructions = reb.buildingConstructions;
     if (reb.endGameTriggered) { setEndGameType(reb.endGameType); setGameStats(reb.gameStats); setHasTriggeredEndGame(true); setIsPaused(true); }
 
+    ({relations,wars} = cleanupDiplomacy({relations,wars,countries,provinces,armies,date: snapshot.date}));
     setArmies(armies); setProvinces(provinces); setAllCountries(countries); setWars(wars);
     setDiplomaticRelations(relations); setRecruitments(recruitments); setBuildingConstructions(buildingConstructions);
     setPlayerTechState(currentPlayerTechState); setBotTechStates(currentBotTechStates); setDate((prev: GameDate) => advanceDate(prev));

@@ -1,3 +1,4 @@
+import { processDiplomacyAI } from '../../engine/diplomacy';
 /**
  * aiTick.ts - 180 linhas - PASSO 4.7 - CORRIGIDO
  * IA dos bots + Fusão automática + IA separatista
@@ -13,6 +14,7 @@ import type { DiplomaticRelation } from '../../types/diplomacy';
 import type { AIDifficulty } from '../../types/difficulty';
 import type { GameDate } from '../../types/date';
 import type { AIActionType } from '../../types/aiLog';
+import type { ToastType } from '../../types/toast';
 
 type Params = {
   countries: Country[];
@@ -36,11 +38,21 @@ type Params = {
     color?: string
   ) => void;
   formatGameDate: (date: GameDate) => string;
+  addToast?: (message: string,type?: ToastType,title?: string,date?: string) => void;
 };
 
 export function processAiTick(p: Params) {
   let { countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates } = p;
   const { playerCountryTag, ceilingLogRef, snapshot, addAILog, formatGameDate } = p;
+
+  const diplomaticAI = processDiplomacyAI({relations,wars,countries,armies,provinces,date: snapshot.date},playerCountryTag);
+  const oldProposals = new Set(relations.flatMap(r => r.proposals ?? []).map(p => p.id));
+  for (const proposal of diplomaticAI.relations.flatMap(r => r.proposals ?? []).filter(q => q.to === playerCountryTag && !oldProposals.has(q.id))) {
+    const country = countries.find(c => c.tag === proposal.from);
+    p.addToast?.(`${country?.name ?? proposal.from} enviou ${proposal.kind === 'call' ? 'uma chamada à guerra' : proposal.kind === 'alliance' ? 'uma proposta de aliança' : proposal.kind === 'nap' ? 'um pacto de não agressão' : 'um pedido de acesso militar'}. Abra a diplomacia com esse país para responder.`, 'info','Diplomacia',formatGameDate(snapshot.date));
+  }
+  relations = diplomaticAI.relations; wars = diplomaticAI.wars;
+  diplomaticAI.messages.forEach(message => addAILog('Diplomacia', 'diplomacy', message, formatGameDate(snapshot.date)));
 
   const rebellionResponse = respondToRebellions(provinces, countries, armies, relations, p.snapshot.date, p.playerCountryTag);
   ({ provinces, countries, armies } = rebellionResponse);

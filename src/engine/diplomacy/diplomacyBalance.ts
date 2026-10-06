@@ -1,0 +1,18 @@
+export const DIPLOMACY_BALANCE = {
+  allianceMinOpinion: 40, allianceMinTrust: 50,
+  initialBorderOpinion: 40, initialDistantOpinion: 10,
+  napMinOpinion: 10, napMinTrust: 40,
+  militaryAccessMinOpinion: 20, militaryAccessMinTrust: 40,
+  guaranteeMinOpinion: 30, guaranteeMinTrust: 50,
+  breakAllianceOpinionPenalty: -30, breakAllianceTrustPenalty: -25,
+  breakNapOpinionPenalty: -25, breakNapTrustPenalty: -30,
+  declareWarOpinionPenalty: -50, declareWarWithoutCbAdditional: -20,
+  globalWarOpinionPenalty: -5, globalWarWithoutCbPenalty: -20,
+  warTrustPenalty: -5, warWithoutCbTrustPenalty: -20,
+  brokenNapWarPenalty: -15, callToWarRefusalTrustPenalty: -15,
+  callToWarRefusalOpinionPenalty: -10,
+  napDuration: 365 * 5, cbDuration: 365 * 2, proposalDuration: 30,
+  actionCooldown: 90, aiInterval: 30, recentNapWindow: 365,
+  aiPowerFloor: 1000, aiAllianceMinPowerRatio: .2, aiAllianceMaxPowerRatio: 5,
+  aiMaxWars: 2, aiCallPowerRatio: .7, aiDefensiveCallTrust: 50, aiOffensiveCallTrust: 65,
+} as const;

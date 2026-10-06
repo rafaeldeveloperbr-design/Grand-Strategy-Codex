@@ -1,6 +1,6 @@
 import type { Army, Country, GameDate, Province, War } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
-import { declareWar } from '../diplomacy';
+import { startInternalWar } from '../diplomacy';
 import { normalizePopulation } from '../population';
 import { REBELLION_BALANCE as B } from './balance';
 import { calculateUnrest } from './unrestEngine';
@@ -37,7 +37,7 @@ export function spawnRebellions(provinces: Province[], countries: Country[], arm
   const logs: string[] = [];
   const createdFactionIds: string[] = [];
   for (const faction of countries.flatMap(c => c.rebellions ?? []).filter(f => f.status === 'active')) {
-    if (!wars.some(w => (w.attacker === faction.id && w.defender === faction.owner) || (w.defender === faction.id && w.attacker === faction.owner))) ({ wars, relations } = declareWar(relations, wars, faction.id, faction.owner, date));
+    if (!wars.some(w => (w.attacker === faction.id && w.defender === faction.owner) || (w.defender === faction.id && w.attacker === faction.owner))) ({ wars, relations } = startInternalWar(relations, wars, faction.id, faction.owner, date));
   }
   for (const origin of provinces) {
     const p = provinces.find(p => p.id === origin.id)!;
@@ -54,7 +54,7 @@ export function spawnRebellions(provinces: Province[], countries: Country[], arm
     armies = [...armies, createRebelArmy(faction, p)];
     provinces = provinces.map(pr => faction.involvedProvinces.includes(pr.id) ? { ...pr, rebellion: { ...normalizeRebellion(pr.rebellion), factionId: id } } : pr);
     countries = countries.map(c => c.tag === country.tag ? { ...c, rebellions: [...(c.rebellions ?? []), faction] } : c);
-    ({ wars, relations } = declareWar(relations, wars, id, country.tag, date));
+    ({ wars, relations } = startInternalWar(relations, wars, id, country.tag, date));
     createdFactionIds.push(id);
     logs.push(`Facção de ${REBEL_TYPE_LABELS[type]} formada em ${p.name}: ${faction.militaryStrength} tropas, ${group.length} província(s).`);
   }

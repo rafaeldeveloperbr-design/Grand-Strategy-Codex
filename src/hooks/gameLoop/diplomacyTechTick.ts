@@ -48,7 +48,7 @@ export function processDiplomacyTechTick(p: Params) {
   const { playerCountryTag, snapshot, aiDifficultyRef, playerTechStateRef, botTechStatesRef, addLog, addToast, addAILog, formatGameDate } = p;
 
   // PASSO E: DIPLOMACIA
-  relations = processDiplomacyTick(relations);
+  relations = processDiplomacyTick({relations,wars,countries,date: snapshot.date,armies,provinces}).relations;
 
   // PASSO E.5: TECNOLOGIAS E FOCOS
   const playerCountry = countries.find(c => c?.tag === playerCountryTag);

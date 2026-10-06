@@ -1,36 +1,38 @@
-/**
- * ============================================================
- * MÓDULO 4 - Tipos de Diplomacia e Guerra
- * ============================================================
- */
-
-/**
- * Status da relação entre dois países
- */
-export type DiplomaticStatus = 'peace' | 'war' | 'non_aggression_pact' | 'alliance';
-
-/**
- * Representa a relação diplomática entre dois países
- */
-export interface DiplomaticRelation {
-  /** Tag do país A */
-  countryA: string;
-  /** Tag do país B */
-  countryB: string;
-  /** Nível de opinião (-100 a +100) */
-  opinion: number;
-  /** Status atual da relação */
-  status: DiplomaticStatus;
-  /** Dias restantes de pacto de não agressão (0 = expirado) */
-  pactDaysRemaining: number;
+export type CountryTag = string;
+export type DiplomaticStatus = 'peace' | 'war';
+export type CasusBelliType = 'conquest' | 'reconquest' | 'liberation' | 'humiliate';
+export interface CasusBelli {
+  id: string; attacker: CountryTag; target: CountryTag; type: CasusBelliType;
+  createdAt: number; expiresAt?: number; targetProvinceIds?: string[];
 }
-
-/**
- * Representa uma guerra ativa entre países
- */
+export type ProposalKind = 'alliance' | 'nap' | 'access' | 'call';
+export interface DiplomaticProposal {
+  id: string; kind: ProposalKind; from: string; to: string; createdAt: number;
+  expiresAt: number; warId?: string;
+}
+/** One canonical pair; opinion/trust and bilateral agreements are symmetric. */
+export interface DiplomaticRelation {
+  countryA: CountryTag; countryB: CountryTag;
+  opinion: number; trust: number; status: DiplomaticStatus;
+  alliance?: { since: number };
+  nonAggressionPact?: { since: number; expiresAt: number };
+  /** Countries granting access to the other member. */
+  militaryAccess?: CountryTag[];
+  /** Countries guaranteeing the other member. */
+  guarantees?: CountryTag[];
+  casusBelli?: CasusBelli[];
+  proposals?: DiplomaticProposal[];
+  cooldowns?: Record<string, number>;
+  lastWarEndedAt?: number;
+  lastNapBroken?: { by: string; at: number };
+}
+export type DiplomacyAction = 'offerAlliance' | 'breakAlliance' | 'offerNap' | 'breakNap'
+  | 'requestAccess' | 'revokeAccess' | 'guarantee' | 'withdrawGuarantee' | 'declareWar' | 'generateConquestCb';
 export interface War {
   /** ID único da guerra */
   id: string;
+  campaignId?: string;
+  casusBelliType?: CasusBelliType;
   /** País atacante */
   attacker: string;
   /** País defensor */
@@ -49,22 +51,4 @@ export interface War {
   occupiedByDefender: string[];
   /** Dias desde o início da guerra (calculado automaticamente) */
   daysSinceStart?: number;
-}
-
-/**
- * Ação diplomática disponível
- */
-export type DiplomaticAction = 
-  | 'improve_relations'
-  | 'offer_non_aggression'
-  | 'declare_war'
-  | 'make_peace';
-
-/**
- * Custo de uma ação diplomática
- */
-export interface DiplomaticActionCost {
-  gold: number;
-  opinionChange: number;
-  daysToComplete?: number;
 }

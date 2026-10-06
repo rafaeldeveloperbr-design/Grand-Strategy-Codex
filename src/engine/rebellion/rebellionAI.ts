@@ -32,10 +32,10 @@ export function planRebelMovement(armies: Army[], provinces: Province[], countri
     // An active civil war grants access to its government; sibling occupations
     // must not cut the route through the same country's territory.
     const access = relations.filter(r => !((r.countryA === faction.id && r.countryB === faction.owner) || (r.countryB === faction.id && r.countryA === faction.owner)));
-    access.push({ countryA: faction.id, countryB: faction.owner, status: 'war', opinion: -50, pactDaysRemaining: 0 });
+    access.push({ countryA: faction.id, countryB: faction.owner, status: 'war', opinion: -50, trust: 50 });
     for (const sibling of factions.filter(f => f.owner === faction.owner && f.id !== faction.id)) {
       if (!access.some(r => (r.countryA === faction.id && r.countryB === sibling.id) || (r.countryB === faction.id && r.countryA === sibling.id))) {
-        access.push({ countryA: faction.id, countryB: sibling.id, status: 'peace', opinion: 80, pactDaysRemaining: 0 });
+        access.push({ countryA: faction.id, countryB: sibling.id, status: 'peace', opinion: 80, trust: 50, militaryAccess: [sibling.id] });
       }
     }
     const capitalObjective = faction.objective.kind === 'replace_government' || faction.objective.kind === 'reform';

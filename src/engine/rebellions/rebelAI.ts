@@ -1,6 +1,6 @@
 import { Army, Province, GameDate } from '../../types';
 import { DiplomaticRelation, War } from '../../types/diplomacy';
-import { declareWar } from '../diplomacy';
+import { startInternalWar } from '../diplomacy';
 import {
   isRebelArmy,
   findSeparatistPath,
@@ -224,7 +224,7 @@ export function ensureSeparatistWars(
       );
       if (exists) continue;
 
-      const result = declareWar(currentRelations, currentWars, rebel.owner, occupier, currentDate);
+      const result = startInternalWar(currentRelations, currentWars, rebel.owner, occupier, currentDate);
       currentWars = result.wars;
       currentRelations = result.relations;
 
@@ -275,7 +275,7 @@ export function cleanupSeparatistWars(
     currentRelations = currentRelations.map(r =>
       (r.countryA === rebelTag && r.countryB === enemyTag) ||
       (r.countryB === rebelTag && r.countryA === enemyTag)
-        ? { ...r, status: 'peace' as const, pactDaysRemaining: 0 }
+        ? { ...r, status: 'peace' as const }
         : r
     );
     endedWars.push(`${rebelTag} ⚔️ ${enemyTag}`);

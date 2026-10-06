@@ -15,7 +15,7 @@ describe('South America controlled campaigns', () => {
     ['CHL', 'sa_chl_santiago', 'BOL', 'sa_bol_la_paz'],
     ['VEN', 'sa_ven_caracas', 'URY', 'sa_ury_montevideu'],
   ])('%s advances from %s and wins a defended campaign against %s in %s', (owner, start, enemy, target) => {
-    const relations = access(owner).map(r => r.countryB === enemy ? r : { ...r, status: 'alliance' as const, opinion: 80 });
+    const relations = access(owner).map(r => r.countryB === enemy ? r : { ...r, status: 'peace' as const, alliance: {since: 0}, opinion: 80 });
     const invader = army(owner, start, 5), defender = army(enemy, target, 1);
     defender.regiments = defender.regiments.map(r => ({ ...r, strength: 300, morale: 1, organization: 1 }));
     let state = campaign([moveArmy(invader, target, provincesData, relations)!, defender], relations, [war(owner, enemy)]);

@@ -369,7 +369,7 @@ describe('Rebellion V2 responses, military and migration', () => {
     const loaded = loadGame('legacy_rebels'), tag = loaded?.military.armies[0].owner;
     expect(tag).toMatch(/^rebel_v2_/);
     expect(loaded?.military.wars[0].attacker).toBe(tag);
-    expect(loaded?.diplomacy.relations[0].countryA).toBe(tag);
+    expect([loaded?.diplomacy.relations[0].countryA, loaded?.diplomacy.relations[0].countryB]).toContain(tag);
     expect(loaded?.military.activeBattles[0].attackerCountryId).toBe(tag);
     expect(loaded?.military.activeBattles[0].attackerInitialSnapshot?.owner).toBe(tag);
   });

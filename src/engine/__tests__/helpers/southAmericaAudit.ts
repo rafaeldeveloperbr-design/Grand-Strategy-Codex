@@ -15,8 +15,9 @@ export function army(owner: string, location: string, count = 3, id = `${owner}-
     ...createRegiment('infantry'), morale: 100, organization: 100, originProvinceId: location,
   })) };
 }
-export function relation(a: string, b: string, status: DiplomaticRelation['status'] = 'war', opinion = -100): DiplomaticRelation {
-  return { countryA: a, countryB: b, status, opinion, pactDaysRemaining: 0 };
+export function relation(a: string, b: string, status: DiplomaticRelation['status'] | 'alliance' | 'access' = 'war', opinion = -100): DiplomaticRelation {
+  return { countryA: a, countryB: b, status: status === 'war' ? 'war' : 'peace', opinion, trust: 50,
+    ...(status === 'alliance' ? {alliance: {since: 0}} : status === 'access' ? {militaryAccess: [b]} : {}) };
 }
 export const access = (owner: string) => countries.filter(c => c.tag !== owner).map(c => relation(owner, c.tag));
 export function war(attacker: string, defender: string): War {

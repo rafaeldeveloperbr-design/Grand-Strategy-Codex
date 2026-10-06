@@ -51,7 +51,7 @@ export const CheatPanel: React.FC<CheatPanelProps> = ({ cheats, isOpen, onClose 
 
       <div style={{ marginTop: '10px', fontSize: '10px', color: '#aaa' }}>
         Console: <code>cheats.addGold(10000)</code><br/>
-        <code>cheats.spawnArmy('p1')</code><br/>
+        <code>cheats.spawnArmy('sa_bra_brasilia')</code><br/>
         <code>cheats.godMode()</code>
       </div>
     </div>

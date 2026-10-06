@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, type RefObject } from 'react';
+import { mapMetadata } from '../../data/map';
 
-export function useMapControls() {
-  const [viewBox, setViewBox] = useState({ x: -20, y: 20, w: 840, h: 640 });
+export function useMapControls(svgRef?: RefObject<SVGSVGElement>) {
+  const [viewBox, setViewBox] = useState({ ...mapMetadata.initialViewBox });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
@@ -24,7 +25,7 @@ export function useMapControls() {
   };
 
   const handleResetZoom = () => {
-    setViewBox({ x: -20, y: 20, w: 840, h: 640 });
+    setViewBox({ ...mapMetadata.initialViewBox });
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -36,8 +37,13 @@ export function useMapControls() {
 
   const handleMouseMovePan = (e: React.MouseEvent) => {
     if (isPanning) {
-      const dx = (e.clientX - panStart.x) * (viewBox.w / 800);
-      const dy = (e.clientY - panStart.y) * (viewBox.h / 600);
+      const matrix = svgRef?.current?.getScreenCTM();
+      if (!matrix) return;
+      const inverse = matrix.inverse();
+      const current = new DOMPoint(e.clientX, e.clientY).matrixTransform(inverse);
+      const previous = new DOMPoint(panStart.x, panStart.y).matrixTransform(inverse);
+      const dx = current.x - previous.x;
+      const dy = current.y - previous.y;
       setViewBox((prev) => ({
         ...prev,
         x: prev.x - dx,

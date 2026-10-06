@@ -1,18 +1,9 @@
 import type { Country, Province } from '../../types';
 import type { MapRegion } from './types';
-import { provinceGameplay } from './regions/current/provinces';
-import { countries as currentCountries } from './regions/current/countries';
-import { provinceTopology } from './regions/current/topology';
-import { provinceGeometry } from './regions/current/geometry';
+import { southAmerica, southAmericaMetadata } from './regions/southAmerica';
 
-export const mapRegions: readonly MapRegion[] = [{
-  id: 'current',
-  provinces: provinceGameplay,
-  countries: currentCountries,
-  topology: provinceTopology,
-  geometry: provinceGeometry,
-  capitals: { IMP: 'p1', REP: 'p6', RNO: 'p10', KHA: 'p14', THC: 'p17', LIG: 'p20' },
-}];
+export const mapRegions: readonly MapRegion[] = [southAmerica];
+export const mapMetadata = southAmericaMetadata;
 
 // Join all regions globally so future cross-region edges use the same IDs.
 // Fail on missing/duplicate definitions instead of silently dropping map data.

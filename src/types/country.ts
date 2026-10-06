@@ -4,6 +4,10 @@
 import type { ActiveLaws } from './government';
 
 export interface Country {
+  /** Explicit capital province. Optional for legacy saves and synthetic countries. */
+  capitalId?: string;
+  /** Legacy explicit alias supported at the load boundary. */
+  capital?: string;
   rebellions?: import('../engine/rebellion/types').RebellionFaction[];
   /** Tag única do país (ex: "BRA", "FRA", "GER") */
   tag: string;

@@ -2,6 +2,7 @@ import React from 'react';
 import { CombatResult, Country } from '../types';
 
 interface BattleHistoryModalProps {
+  playerCountryTag: string;
   battleHistory: CombatResult[];
   allCountries: Country[];
   onClose: () => void;
@@ -9,6 +10,7 @@ interface BattleHistoryModalProps {
 }
 
 export const BattleHistoryModal: React.FC<BattleHistoryModalProps> = ({
+  playerCountryTag,
   battleHistory,
   allCountries,
   onClose,
@@ -50,8 +52,8 @@ export const BattleHistoryModal: React.FC<BattleHistoryModalProps> = ({
                 const attackerCountry = getCountryByTag(battle.attackerOriginal?.owner || battle.attacker?.owner);
                 const defenderCountry = getCountryByTag(battle.defenderOriginal?.owner || battle.defender?.owner);
                 const playerWon =
-                  (battle.winner === 'attacker' && (battle.attackerOriginal?.owner === 'IMP' || battle.attacker?.owner === 'IMP')) ||
-                  (battle.winner === 'defender' && (battle.defenderOriginal?.owner === 'IMP' || battle.defender?.owner === 'IMP'));
+                  (battle.winner === 'attacker' && (battle.attackerOriginal?.owner === playerCountryTag || battle.attacker?.owner === playerCountryTag)) ||
+                  (battle.winner === 'defender' && (battle.defenderOriginal?.owner === playerCountryTag || battle.defender?.owner === playerCountryTag));
 
                 const retreatInfo = battle.retreatInfo;
 

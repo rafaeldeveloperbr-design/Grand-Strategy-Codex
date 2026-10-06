@@ -107,8 +107,8 @@ describe('Rebellion V2 factions and objectives', () => {
     expect(selectRebelType(ready(), { ...c, activeLaws: { ...c.activeLaws, governance: 'governance_centralized' } })).toBe('revolutionaries');
     expect(selectRebelType(ready(), country())).toBe('peasants');
   });
-  it('capital objectives use the existing country capital fallback', () => {
-    expect(createObjective('pretenders', [ready({ id: 'q' })], country(), [province(), ready({ id: 'q', development: 10 })]).targets).toEqual(['p']);
+  it('capital objectives use explicit metadata independently of holdings order', () => {
+    expect(createObjective('pretenders', [ready({ id: 'q' })], country({ capitalId: 'p', provinces: ['q', 'p'] }), [province(), ready({ id: 'q', development: 10 })]).targets).toEqual(['p']);
   });
   it('unopposed rebels occupy territory and are not automatically liberated by legacy movement', () => {
     const result = spawn();
@@ -261,7 +261,7 @@ describe('Rebellion V2 responses, military and migration', () => {
   });
   it('advances toward a defended capital instead of refusing the entire march, then explains its defensive hold', () => {
     const provinces = [ready({ neighbors: ['mid'] }), province({ id: 'mid', neighbors: ['p', 'capital'] }), province({ id: 'capital', neighbors: ['mid'] })];
-    const c = country({ provinces: ['capital', 'mid', 'p'], resources: { ...country().resources, stability: 10, prestige: -100 } });
+    const c = country({ capitalId: 'capital', provinces: ['capital', 'mid', 'p'], resources: { ...country().resources, stability: 10, prestige: -100 } });
     const born = spawnRebellions(provinces, [c], [], [], [], date);
     const defender = { ...army('A', 'capital'), regiments: Array.from({ length: 20 }, () => createRegiment('infantry')) };
     const planned = planRebelMovement([...born.armies, defender], born.provinces, born.countries, born.relations)[0];
@@ -275,7 +275,7 @@ describe('Rebellion V2 responses, military and migration', () => {
   it('uses an accessible alternate route around a superior intermediate army, with no free reinforcements', () => {
     const provinces = [ready({ neighbors: ['blocked', 'safe'] }), province({ id: 'blocked', neighbors: ['p', 'capital'] }),
       province({ id: 'safe', neighbors: ['p', 'capital'] }), province({ id: 'capital', neighbors: ['blocked', 'safe'] })];
-    const c = country({ provinces: ['capital', 'p', 'blocked', 'safe'], resources: { ...country().resources, stability: 10, prestige: -100 } });
+    const c = country({ capitalId: 'capital', provinces: ['capital', 'p', 'blocked', 'safe'], resources: { ...country().resources, stability: 10, prestige: -100 } });
     const born = spawnRebellions(provinces, [c], [], [], [], date);
     const defender = { ...army('A', 'blocked'), regiments: Array.from({ length: 20 }, () => createRegiment('infantry')) };
     const planned = planRebelMovement([...born.armies, defender], born.provinces, born.countries, born.relations)[0];

@@ -7,6 +7,7 @@ import { normalizePopulation } from './population';
 import { normalizeMarket } from './market';
 import { normalizeTechState } from './technology';
 import { normalizeActiveLaws } from './government';
+import { mapMetadata, mapCapitals, provincesData } from '../data/map';
 
 // ============ META ============
 export type SaveMeta = {
@@ -43,6 +44,7 @@ export type SaveGameV1 = {
 
 export type SaveGameV2 = {
   version: 2;
+  mapId?: string;
   id: string;
   name: string;
   timestamp: number;
@@ -104,7 +106,11 @@ function deserializeV2(raw: SerializedSaveGameV2): SaveGameV2 {
   };
 }
 function normalizeSavedCountry(country: Country): Country {
-  return { ...country, rebellions: normalizeSavedFactions(country.rebellions), activeLaws: normalizeActiveLaws(country.activeLaws) };
+  // Legacy capital inference is confined to loading, never normal AI logic.
+  const knownCapital = mapCapitals[country.tag];
+  const capitalId = country.capitalId ?? country.capital ??
+    (country.provinces.includes(knownCapital) ? knownCapital : country.provinces[0]);
+  return { ...country, capitalId, rebellions: normalizeSavedFactions(country.rebellions), activeLaws: normalizeActiveLaws(country.activeLaws) };
 }
 export function migrateLegacyBuildings(buildings: Province['buildings']): Province['buildings'] {
   const aliases: Record<string, Province['buildings'][number]['type']> = {
@@ -192,7 +198,11 @@ type SaveGameRefs = {
 
 export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, customName?: string) {
   const now = Date.now();
+  const activeIds = new Set(provincesData.map(province => province.id));
+  const isActiveMap = refs.provincesRef.current.length === activeIds.size &&
+    refs.provincesRef.current.every(province => activeIds.has(province.id));
   const save: SaveGameV2 = {
+    mapId: isActiveMap ? mapMetadata.id : undefined,
     version: CURRENT_VERSION, id: slotId, name: customName || (slotId === AUTO_SAVE_KEY ? 'Autosave' : `Save ${new Date(now).toLocaleString('pt-BR')}`),
     timestamp: now, date: refs.dateRef.current,
     world: { provinces: refs.provincesRef.current, countries: refs.countriesRef.current },

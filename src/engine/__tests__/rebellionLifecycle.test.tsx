@@ -4,7 +4,6 @@ import { act, cleanup, render, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ActiveBattle, Army, BuildingConstruction, Country, DiplomaticRelation, GameDate, Province, Recruitment, ToastType, War } from '../../types';
 import { DEFAULT_LAWS } from '../../constants/laws';
-import { provincesData } from '../../data/provinces';
 import { createArmy, createRegiment, splitArmy } from '../military';
 import { createInitialTechState } from '../technology';
 import { advanceObjective, applyRebellionAction, collectRebellionFormationFeedback, collectRebellionResolutionFeedback, createRebelArmy, getProvinceRebellion, migrateLegacyRebels, normalizeSavedFactions, normalizeRebellion, planRebelMovement, processRebellionObjectives, REBELLION_BALANCE as B, rebellionDay, reinforceRebellions, resolveRebellion, spawnRebellions, troopCount } from '../rebellion';
@@ -114,7 +113,7 @@ describe('rebellion announcement lifecycle', () => {
     const pop = { total: 15000, growthRate: 0, employed: 7500, unemployed: 1500, satisfaction: 60 };
     initial.provinces = [ready('p', { neighbors: ['mid'], population: { ...pop } }), province('mid', { neighbors: ['p', 'q'], population: { ...pop } }),
       province('q', { neighbors: ['mid'], population: { ...pop }, development: 20 }), initial.provinces[2]];
-    initial.countries[0] = { ...country('A', ['q', 'mid', 'p']), resources: { ...country('A', []).resources, stability: 10, prestige: -100 },
+    initial.countries[0] = { ...country('A', ['q', 'mid', 'p']), capitalId: 'q', resources: { ...country('A', []).resources, stability: 10, prestige: -100 },
       activeLaws: { ...DEFAULT_LAWS, governance: type === 'pretenders' ? 'governance_balanced' : 'governance_centralized' } };
     const born = spawnRebellions(initial.provinces, initial.countries, [], [], [], date);
     const f = { ...born.countries[0].rebellions![0], militaryStrength: 5000 };
@@ -144,7 +143,7 @@ describe('rebellion announcement lifecycle', () => {
     vi.useFakeTimers();
     const initial = fixture();
     initial.provinces = [ready('p', { neighbors: ['mid'] }), province('mid', { neighbors: ['p', 'q'] }), province('q', { neighbors: ['mid'] }), initial.provinces[2]];
-    initial.countries[0] = { ...country('A', ['q', 'mid', 'p']), resources: { ...country('A', []).resources, stability: 10, prestige: -100 },
+    initial.countries[0] = { ...country('A', ['q', 'mid', 'p']), capitalId: 'q', resources: { ...country('A', []).resources, stability: 10, prestige: -100 },
       activeLaws: { ...DEFAULT_LAWS, governance: type === 'pretenders' ? 'governance_balanced' : 'governance_centralized' } };
     const game = mountGame(initial);
     act(() => vi.advanceTimersByTime(1000));
@@ -266,7 +265,7 @@ describe('rebellion announcement lifecycle', () => {
   it('reports same-tick military defeat as a resolved revolt instead of announcing a nonexistent active rebellion', () => {
     vi.useFakeTimers();
     const initial = fixture();
-    const silva = provincesData.find(p => p.name === 'Silva Antiqua')!;
+    const silva = { name: 'Silva Antiqua', population: { total: 15000, growthRate: .002, employed: 7500, unemployed: 1500, satisfaction: 60 }, maxPopulation: 35000, development: 3, defense: 1 };
     initial.provinces[0] = ready('p', { name: silva.name, population: { ...silva.population }, development: silva.development, defense: silva.defense });
     initial.armies = [{ ...createArmy('A', 'Exército manual de 6k', 'p'), regiments: Array.from({ length: 6 }, () => createRegiment('infantry')) }];
     const onToast = vi.fn(), game = mountGame(initial, onToast);

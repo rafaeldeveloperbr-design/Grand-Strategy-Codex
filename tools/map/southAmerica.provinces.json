@@ -1,0 +1,506 @@
+[
+  {
+    "tag": "BRA",
+    "id": "sa_bra_roraima",
+    "name": "Roraima",
+    "longitude": -61.0,
+    "latitude": 2.0,
+    "development": 2,
+    "population": 12000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_amazonas",
+    "name": "Amazonas",
+    "longitude": -66.0,
+    "latitude": -3.0,
+    "development": 2,
+    "population": 16000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_acre",
+    "name": "Acre",
+    "longitude": -70.0,
+    "latitude": -9.0,
+    "development": 2,
+    "population": 12000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_rondonia",
+    "name": "Rondônia",
+    "longitude": -63.0,
+    "latitude": -11.0,
+    "development": 3,
+    "population": 15000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_para",
+    "name": "Pará",
+    "longitude": -53.0,
+    "latitude": -4.0,
+    "development": 3,
+    "population": 22000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_amapa",
+    "name": "Amapá",
+    "longitude": -51.0,
+    "latitude": 1.0,
+    "development": 3,
+    "population": 14000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_maranhao",
+    "name": "Maranhão",
+    "longitude": -45.0,
+    "latitude": -4.0,
+    "development": 4,
+    "population": 20000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_ceara",
+    "name": "Ceará",
+    "longitude": -39.0,
+    "latitude": -5.0,
+    "development": 5,
+    "population": 26000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_pernambuco",
+    "name": "Pernambuco",
+    "longitude": -36.0,
+    "latitude": -9.0,
+    "development": 6,
+    "population": 28000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_bahia",
+    "name": "Bahia",
+    "longitude": -41.0,
+    "latitude": -13.0,
+    "development": 5,
+    "population": 28000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_tocantins",
+    "name": "Tocantins",
+    "longitude": -48.0,
+    "latitude": -8.0,
+    "development": 3,
+    "population": 15000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_mato_grosso",
+    "name": "Mato Grosso",
+    "longitude": -56.0,
+    "latitude": -13.0,
+    "development": 3,
+    "population": 18000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_brasilia",
+    "name": "Brasília",
+    "longitude": -47.88,
+    "latitude": -15.79,
+    "development": 8,
+    "population": 36000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_minas_gerais",
+    "name": "Minas Gerais",
+    "longitude": -44.0,
+    "latitude": -19.0,
+    "development": 6,
+    "population": 30000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_sao_paulo",
+    "name": "São Paulo",
+    "longitude": -47.0,
+    "latitude": -23.0,
+    "development": 8,
+    "population": 40000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_parana",
+    "name": "Paraná",
+    "longitude": -51.0,
+    "latitude": -24.0,
+    "development": 6,
+    "population": 26000
+  },
+  {
+    "tag": "BRA",
+    "id": "sa_bra_rio_grande_do_sul",
+    "name": "Rio Grande do Sul",
+    "longitude": -53.0,
+    "latitude": -29.0,
+    "development": 5,
+    "population": 24000
+  },
+  {
+    "tag": "ARG",
+    "id": "sa_arg_salta",
+    "name": "Salta",
+    "longitude": -65.0,
+    "latitude": -24.0,
+    "development": 3,
+    "population": 16000
+  },
+  {
+    "tag": "ARG",
+    "id": "sa_arg_chaco",
+    "name": "Chaco",
+    "longitude": -60.0,
+    "latitude": -26.0,
+    "development": 3,
+    "population": 16000
+  },
+  {
+    "tag": "ARG",
+    "id": "sa_arg_cordoba",
+    "name": "Córdoba",
+    "longitude": -64.0,
+    "latitude": -31.0,
+    "development": 6,
+    "population": 26000
+  },
+  {
+    "tag": "ARG",
+    "id": "sa_arg_mendoza",
+    "name": "Mendoza",
+    "longitude": -68.0,
+    "latitude": -33.0,
+    "development": 5,
+    "population": 22000
+  },
+  {
+    "tag": "ARG",
+    "id": "sa_arg_buenos_aires",
+    "name": "Buenos Aires",
+    "longitude": -58.38,
+    "latitude": -34.6,
+    "development": 8,
+    "population": 36000
+  },
+  {
+    "tag": "ARG",
+    "id": "sa_arg_patagonia",
+    "name": "Patagônia",
+    "longitude": -67.0,
+    "latitude": -42.0,
+    "development": 2,
+    "population": 12000
+  },
+  {
+    "tag": "ARG",
+    "id": "sa_arg_santa_cruz",
+    "name": "Santa Cruz",
+    "longitude": -70.0,
+    "latitude": -49.0,
+    "development": 2,
+    "population": 10000
+  },
+  {
+    "tag": "CHL",
+    "id": "sa_chl_atacama",
+    "name": "Atacama",
+    "longitude": -69.0,
+    "latitude": -24.0,
+    "development": 3,
+    "population": 14000
+  },
+  {
+    "tag": "CHL",
+    "id": "sa_chl_coquimbo",
+    "name": "Coquimbo",
+    "longitude": -71.0,
+    "latitude": -30.0,
+    "development": 4,
+    "population": 16000
+  },
+  {
+    "tag": "CHL",
+    "id": "sa_chl_santiago",
+    "name": "Santiago",
+    "longitude": -70.67,
+    "latitude": -33.45,
+    "development": 8,
+    "population": 32000
+  },
+  {
+    "tag": "CHL",
+    "id": "sa_chl_araucania",
+    "name": "Araucanía",
+    "longitude": -72.0,
+    "latitude": -38.0,
+    "development": 4,
+    "population": 18000
+  },
+  {
+    "tag": "CHL",
+    "id": "sa_chl_aysen",
+    "name": "Aysén",
+    "longitude": -73.0,
+    "latitude": -45.0,
+    "development": 2,
+    "population": 11000
+  },
+  {
+    "tag": "CHL",
+    "id": "sa_chl_magallanes",
+    "name": "Magalhães",
+    "longitude": -72.0,
+    "latitude": -51.0,
+    "development": 2,
+    "population": 10000
+  },
+  {
+    "tag": "PER",
+    "id": "sa_per_piura",
+    "name": "Piura",
+    "longitude": -80.0,
+    "latitude": -5.0,
+    "development": 4,
+    "population": 18000
+  },
+  {
+    "tag": "PER",
+    "id": "sa_per_iquitos",
+    "name": "Iquitos",
+    "longitude": -73.0,
+    "latitude": -4.0,
+    "development": 2,
+    "population": 12000
+  },
+  {
+    "tag": "PER",
+    "id": "sa_per_lima",
+    "name": "Lima",
+    "longitude": -77.04,
+    "latitude": -12.05,
+    "development": 8,
+    "population": 32000
+  },
+  {
+    "tag": "PER",
+    "id": "sa_per_cusco",
+    "name": "Cusco",
+    "longitude": -72.0,
+    "latitude": -13.0,
+    "development": 5,
+    "population": 20000
+  },
+  {
+    "tag": "PER",
+    "id": "sa_per_arequipa",
+    "name": "Arequipa",
+    "longitude": -71.0,
+    "latitude": -16.0,
+    "development": 5,
+    "population": 22000
+  },
+  {
+    "tag": "BOL",
+    "id": "sa_bol_la_paz",
+    "name": "La Paz",
+    "longitude": -68.15,
+    "latitude": -16.5,
+    "development": 7,
+    "population": 28000
+  },
+  {
+    "tag": "BOL",
+    "id": "sa_bol_beni",
+    "name": "Beni",
+    "longitude": -65.0,
+    "latitude": -13.0,
+    "development": 2,
+    "population": 14000
+  },
+  {
+    "tag": "BOL",
+    "id": "sa_bol_santa_cruz",
+    "name": "Santa Cruz",
+    "longitude": -61.0,
+    "latitude": -17.0,
+    "development": 5,
+    "population": 24000
+  },
+  {
+    "tag": "BOL",
+    "id": "sa_bol_tarija",
+    "name": "Tarija",
+    "longitude": -65.0,
+    "latitude": -21.0,
+    "development": 4,
+    "population": 16000
+  },
+  {
+    "tag": "COL",
+    "id": "sa_col_caribe",
+    "name": "Caribe",
+    "longitude": -74.0,
+    "latitude": 10.0,
+    "development": 5,
+    "population": 22000
+  },
+  {
+    "tag": "COL",
+    "id": "sa_col_bogota",
+    "name": "Bogotá",
+    "longitude": -74.07,
+    "latitude": 4.71,
+    "development": 8,
+    "population": 32000
+  },
+  {
+    "tag": "COL",
+    "id": "sa_col_cali",
+    "name": "Cali",
+    "longitude": -76.5,
+    "latitude": 3.4,
+    "development": 6,
+    "population": 26000
+  },
+  {
+    "tag": "COL",
+    "id": "sa_col_amazonia",
+    "name": "Amazônia",
+    "longitude": -70.0,
+    "latitude": 0.0,
+    "development": 2,
+    "population": 14000
+  },
+  {
+    "tag": "VEN",
+    "id": "sa_ven_caracas",
+    "name": "Caracas",
+    "longitude": -66.9,
+    "latitude": 10.5,
+    "development": 8,
+    "population": 30000
+  },
+  {
+    "tag": "VEN",
+    "id": "sa_ven_maracaibo",
+    "name": "Maracaibo",
+    "longitude": -71.0,
+    "latitude": 9.0,
+    "development": 6,
+    "population": 24000
+  },
+  {
+    "tag": "VEN",
+    "id": "sa_ven_llanos",
+    "name": "Llanos",
+    "longitude": -68.0,
+    "latitude": 7.0,
+    "development": 3,
+    "population": 18000
+  },
+  {
+    "tag": "VEN",
+    "id": "sa_ven_guayana",
+    "name": "Guayana",
+    "longitude": -63.0,
+    "latitude": 6.0,
+    "development": 3,
+    "population": 16000
+  },
+  {
+    "tag": "ECU",
+    "id": "sa_ecu_quito",
+    "name": "Quito",
+    "longitude": -78.5,
+    "latitude": -0.2,
+    "development": 7,
+    "population": 26000
+  },
+  {
+    "tag": "ECU",
+    "id": "sa_ecu_guayaquil",
+    "name": "Guayaquil",
+    "longitude": -79.9,
+    "latitude": -2.2,
+    "development": 6,
+    "population": 24000
+  },
+  {
+    "tag": "ECU",
+    "id": "sa_ecu_oriente",
+    "name": "Oriente",
+    "longitude": -76.5,
+    "latitude": -1.5,
+    "development": 2,
+    "population": 12000
+  },
+  {
+    "tag": "PRY",
+    "id": "sa_pry_chaco",
+    "name": "Chaco",
+    "longitude": -60.0,
+    "latitude": -21.0,
+    "development": 2,
+    "population": 12000
+  },
+  {
+    "tag": "PRY",
+    "id": "sa_pry_assuncao",
+    "name": "Assunção",
+    "longitude": -57.63,
+    "latitude": -25.28,
+    "development": 7,
+    "population": 24000
+  },
+  {
+    "tag": "URY",
+    "id": "sa_ury_montevideu",
+    "name": "Montevidéu",
+    "longitude": -56.16,
+    "latitude": -34.9,
+    "development": 7,
+    "population": 24000
+  },
+  {
+    "tag": "GUY",
+    "id": "sa_guy_georgetown",
+    "name": "Georgetown",
+    "longitude": -58.16,
+    "latitude": 6.8,
+    "development": 5,
+    "population": 18000
+  },
+  {
+    "tag": "SUR",
+    "id": "sa_sur_paramaribo",
+    "name": "Paramaribo",
+    "longitude": -55.17,
+    "latitude": 5.85,
+    "development": 5,
+    "population": 16000
+  },
+  {
+    "tag": "GUF",
+    "id": "sa_guf_caiena",
+    "name": "Caiena",
+    "longitude": -52.33,
+    "latitude": 4.94,
+    "development": 5,
+    "population": 14000
+  }
+]

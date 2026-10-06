@@ -2,11 +2,6 @@ import { Army, Province, ActiveBattle, GameDate, CombatResult, Country } from '.
 import { applyTroopLoss, calculateArmySize } from './combatCalculations';
 
 // ============ EXTENSÕES QUE FALTAVAM NO TIPO ============
-type CountryWithCapital = Country & {
-  capital?: string;
-  capitalId?: string;
-};
-
 type BattleWithExtensions = ActiveBattle & {
   attackerReinfInitial?: number;
   defenderReinfInitial?: number;
@@ -62,9 +57,9 @@ export function finalizeBattle(
   }
 
   const findCapitalId = (owner: string): string | null => {
-    const country = allCountries.find(c => c.tag === owner) as CountryWithCapital | undefined;
+    const country = allCountries.find(c => c.tag === owner);
     if (!country) return null;
-    return country.capital?? country.capitalId?? country.provinces[0]?? null;
+    return country.capitalId ?? country.capital ?? null;
   };
 
   let remainingLoserTroopsToKeep = isStackwipe? 0 : 1000;

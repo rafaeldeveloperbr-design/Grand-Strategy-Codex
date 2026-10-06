@@ -548,23 +548,8 @@ function findBestProvinceTarget(
   return bestProvince;
 }
 
-type CountryWithCapital = Country & {
-  capital?: string;
-  capitalId?: string;
-};
-
-function getCountryCapitalId(
-  country: Country
-): string | null {
-  const countryWithCapital =
-    country as CountryWithCapital;
-
-  return (
-    countryWithCapital.capital ??
-    countryWithCapital.capitalId ??
-    country.provinces[0] ??
-    null
-  );
+export function getCountryCapitalId(country: Country): string | null {
+  return country.capitalId ?? country.capital ?? null;
 }
 
 function isOwnCapitalThreatened(

@@ -51,7 +51,7 @@ export function selectRebelType(
   return 'peasants';
 }
 export function createObjective(type: RebelType, involved: Province[], country: Country, provinces: Province[]): RebellionObjective {
-  const capital = provinces.find(p => p.id === country.provinces[0]) ?? provinces.filter(p => p.owner === country.tag).sort((a, b) => b.development - a.development || a.id.localeCompare(b.id))[0];
+  const capital = provinces.find(p => p.id === (country.capitalId ?? country.capital)) ?? provinces.filter(p => p.owner === country.tag).sort((a, b) => b.development - a.development || a.id.localeCompare(b.id))[0];
   const kind = type === 'separatists' || type === 'nationalists' ? 'independence' : type === 'pretenders' ? 'replace_government' : type === 'revolutionaries' || type === 'religious' ? 'reform' : 'tax_relief';
   return { kind, targets: kind === 'replace_government' || kind === 'reform' ? [capital?.id ?? involved[0].id] : involved.map(p => p.id), heldDays: 0, requiredDays: B.objectiveDays[kind] };
 }

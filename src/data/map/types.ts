@@ -4,6 +4,15 @@ export type ProvinceGameplay = Omit<Province, 'neighbors' | 'center' | 'path'>;
 export type ProvinceGeometry = Pick<Province, 'id' | 'center' | 'path'>;
 export type ProvinceTopology = Pick<Province, 'id' | 'neighbors'>;
 
+export interface MapViewBox { x: number; y: number; w: number; h: number }
+export interface MapMetadata {
+  id: string;
+  name: string;
+  bounds: MapViewBox;
+  initialViewBox: MapViewBox;
+  defaultPlayerCountry: string;
+}
+
 export interface MapRegion {
   id: string;
   provinces: readonly ProvinceGameplay[];
@@ -12,6 +21,7 @@ export interface MapRegion {
   geometry: readonly ProvinceGeometry[];
   /** Initial visual capitals; separate from mutable country ownership. */
   capitals: Readonly<Record<string, string>>;
+  metadata?: MapMetadata;
 }
 
 export interface TopologyProvince {

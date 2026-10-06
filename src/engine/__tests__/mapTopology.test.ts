@@ -77,21 +77,18 @@ describe('map topology validation', () => {
     expect(validateMapTopology([], [])).toEqual({ valid: true, issues: [], components: [] });
   });
 
-  it('audits the real map with only the four preserved legacy unilateral edges', () => {
-    const result = validateMapTopology(provincesData, countries.map(country => ({ ...country, capital: mapCapitals[country.tag] })));
-    expect(result.valid).toBe(false);
+  it('audits the real South America map with no topology or capital issues', () => {
+    const result = validateMapTopology(provincesData, countries);
+    expect(result.valid).toBe(true);
+    expect(result.issues).toEqual([]);
     expect(result.components).toHaveLength(1);
-    expect(result.issues.map(({ type, provinceId, neighborId }) => ({ type, provinceId, neighborId }))).toEqual([
-      { type: 'asymmetric-neighbor', provinceId: 'p12', neighborId: 'p10' },
-      { type: 'asymmetric-neighbor', provinceId: 'p19', neighborId: 'p16' },
-      { type: 'asymmetric-neighbor', provinceId: 'p20', neighborId: 'p19' },
-      { type: 'asymmetric-neighbor', provinceId: 'p21', neighborId: 'p19' },
-    ]);
+    expect(result.components[0]).toHaveLength(56);
+    expect(countries.every(country => country.capitalId === mapCapitals[country.tag])).toBe(true);
   });
 
   it('keeps legacy exports and lookup compatible', () => {
     expect(legacyProvinces).toBe(provincesData); expect(legacyCountries).toBe(countries);
-    expect(getCountryByTag('IMP')).toBe(countries[0]); expect(getCountryByTag('missing')).toBeUndefined();
+    expect(getCountryByTag('BRA')).toBe(countries[0]); expect(getCountryByTag('missing')).toBeUndefined();
   });
 
   it('assembles multiple regions and preserves cross-region edges', () => {
@@ -106,10 +103,10 @@ describe('map topology validation', () => {
   });
 
   it('pathfinding depends on explicit edges, independently of drawing coordinates', () => {
-    const map = provincesData.map(province => ({ ...province, owner: 'IMP' }));
-    const path = findPath('p1', 'p22', map, 'IMP', []);
+    const map = provincesData.map(province => ({ ...province, owner: 'BRA' }));
+    const path = findPath('sa_bra_brasilia', 'sa_arg_buenos_aires', map, 'BRA', []);
     expect(path.length).toBeGreaterThan(0);
-    expect(findPath('p1', 'p22', map.map(province => ({ ...province, center: { x: 0, y: 0 }, path: '' })), 'IMP', [])).toEqual(path);
-    expect(findPath('p1', 'p22', map.map(province => ({ ...province, neighbors: [] })), 'IMP', [])).toEqual([]);
+    expect(findPath('sa_bra_brasilia', 'sa_arg_buenos_aires', map.map(province => ({ ...province, center: { x: 0, y: 0 }, path: '' })), 'BRA', [])).toEqual(path);
+    expect(findPath('sa_bra_brasilia', 'sa_arg_buenos_aires', map.map(province => ({ ...province, neighbors: [] })), 'BRA', [])).toEqual([]);
   });
 });

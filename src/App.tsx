@@ -1,7 +1,3 @@
-/**
- * App.tsx - COMPLETO - 285 linhas - COM TODAS FEATURES
- * 6 exércitos iniciais + painel completo + bottom bar completa
- */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useGameRefs } from './hooks/useGameRefs';
 import { useGameLoop } from './hooks/useGameLoop';
@@ -17,7 +13,8 @@ import { FocusModal } from './components/FocusModal';
 import { ResearchModal } from './components/ResearchModal';
 import { EndGameModal } from './components/EndGameModal';
 import { SettingsModal } from './components/SettingsModal';
-import { provincesData } from './data/provinces';
+import { provincesData, mapMetadata } from './data/map';
+import { createInitialArmies } from './data/map/initialState';
 import { countries as initialCountries } from './data/countries';
 import { calculateArmySize } from './engine/combat';
 import { getFriendlyArmiesInProvince } from './engine/military';
@@ -54,111 +51,23 @@ import { UNIT_DEFINITIONS } from './data/units';
 import { useSaveSystem } from './hooks/app/useSaveSystem';
 
 
-const createInitialArmies = (): Army[] => {
-  const base = {
-    destination: null,
-    targetDestination: null,
-    movementProgress: 0,
-    movementSpeed: 1.0,
-    position: null,
-    path: [] as string[],
-    targetArmyId: null,
-    targetProvinceId: null,
-  };
-
-  const armies: Army[] = [
-    {
-      ...base,
-      id: 'army_init_1',
-      owner: 'IMP',
-      name: '1º Exército Imperial',
-      location: 'p1',
-      movementSpeed: 1.0,
-      regiments: [
-        { type: 'infantry', strength: 3000, morale: 90 },
-        { type: 'infantry', strength: 2000, morale: 85 },
-        { type: 'cavalry', strength: 1000, morale: 80 },
-      ],
-    },
-    {
-      ...base,
-      id: 'army_init_2',
-      owner: 'REP',
-      name: 'Legião Valoriana',
-      location: 'p6',
-      movementSpeed: 1.0,
-      regiments: [
-        { type: 'infantry', strength: 2500, morale: 88 },
-        { type: 'cavalry', strength: 800, morale: 82 },
-      ],
-    },
-    {
-      ...base,
-      id: 'army_init_3',
-      owner: 'RNO',
-      name: 'Guarda Nordiana',
-      location: 'p10',
-      movementSpeed: 0.5,
-      regiments: [
-        { type: 'infantry', strength: 2000, morale: 92 },
-        { type: 'artillery', strength: 500, morale: 85 },
-      ],
-    },
-    {
-      ...base,
-      id: 'army_init_4',
-      owner: 'KHA',
-      name: 'Horda Dourada',
-      location: 'p14',
-      movementSpeed: 1.5,
-      regiments: [
-        { type: 'cavalry', strength: 4000, morale: 95 },
-        { type: 'cavalry', strength: 2000, morale: 90 },
-      ],
-    },
-    {
-      ...base,
-      id: 'army_init_5',
-      owner: 'THC',
-      name: 'Guardiões de Solara',
-      location: 'p17',
-      movementSpeed: 1.0,
-      regiments: [
-        { type: 'infantry', strength: 1800, morale: 80 },
-        { type: 'artillery', strength: 300, morale: 75 },
-      ],
-    },
-    {
-      ...base,
-      id: 'army_init_6',
-      owner: 'LIG',
-      name: 'Mercenários de Portus',
-      location: 'p20',
-      movementSpeed: 1.0,
-      regiments: [
-        { type: 'infantry', strength: 1500, morale: 75 },
-        { type: 'cavalry', strength: 500, morale: 70 },
-      ],
-    },
-  ];
-
-  return armies;
-};
 const App: React.FC = () => {
   const { addToast, notificationHistory, unreadCount, markAllAsRead } = useToast();
   const { addAILog } = useAILog();
-  const [playerCountryTag] = useState('IMP');
+  const [playerCountryTag, setPlayerCountryTag] = useState(mapMetadata.defaultPlayerCountry);
   const [date, setDate] = useState<GameDate>({ year: 1444, month: 11, day: 11 });
   const [gameSpeed, setGameSpeed] = useState(0);
-  const [provinces, setProvinces] = useState<Province[]>(() => provincesData.map(p => ({ ...p, buildings: [...p.buildings], unrest: 0, originalOwner: p.owner } as Province)));
+  const [provinces, setProvinces] = useState<Province[]>(() => structuredClone(provincesData));
   const [allCountries, setAllCountries] = useState<Country[]>(() =>
     initialCountries.map((c): Country => ({
       ...c,
+      provinces: [...c.provinces],
+      activeLaws: { ...c.activeLaws },
       resources: { ...c.resources },
       economy: { ...c.economy },
     }))
   );
-  const [armies, setArmies] = useState<Army[]>(createInitialArmies);
+  const [armies, setArmies] = useState<Army[]>(() => createInitialArmies(initialCountries));
   const [recruitments, setRecruitments] = useState<Recruitment[]>([]);
   const [buildingConstructions, setBuildingConstructions] = useState<BuildingConstruction[]>([]);
   const [diplomaticRelations, setDiplomaticRelations] = useState<DiplomaticRelation[]>([]);
@@ -187,7 +96,7 @@ const App: React.FC = () => {
 
   const saveSystem = useSaveSystem(
     { provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef },
-    { setProvinces, setAllCountries, setArmies, setWars, setDiplomaticRelations, setRecruitments, setBuildingConstructions, setPlayerTechState, setBotTechStates, setActiveBattles, setDate },
+    { setProvinces, setAllCountries, setArmies, setWars, setDiplomaticRelations, setRecruitments, setBuildingConstructions, setPlayerTechState, setBotTechStates, setActiveBattles, setDate, setPlayerCountryTag },
     addToast,
     modals.setShowSettingsModal
   );
@@ -341,7 +250,7 @@ const App: React.FC = () => {
         {diplomacyTargetCountry && <DiplomacyPanel targetCountry={diplomacyTargetCountry} playerCountry={playerCountry} relation={diplomacyRelation} onClose={modals.handleCloseDiplomacy} onImproveRelations={diplomacy.handleImproveRelations} onOfferNonAggression={diplomacy.handleOfferNonAggression} onDeclareWar={diplomacy.handleDeclareWar} />}
         {modals.showWarPanel && <WarPanel wars={wars} playerCountry={playerCountry} allCountries={allCountries} onClose={() => modals.setShowWarPanel(false)} onMakePeace={diplomacy.handleMakePeace} />}
         {modals.battleReport && <BattleReportModal battleResult={modals.battleReport} playerCountry={playerCountry} allCountries={allCountries} onClose={() => { modals.setBattleReport(null); modals.setIsPaused(false); }} />}
-        {modals.showBattleHistory && <BattleHistoryModal battleHistory={battleHistory} allCountries={allCountries} onClose={() => modals.setShowBattleHistory(false)} onViewBattle={(b) => { modals.setShowBattleHistory(false); modals.setBattleReport(b); modals.setIsPaused(true); }} />}
+        {modals.showBattleHistory && <BattleHistoryModal playerCountryTag={playerCountryTag} battleHistory={battleHistory} allCountries={allCountries} onClose={() => modals.setShowBattleHistory(false)} onViewBattle={(b) => { modals.setShowBattleHistory(false); modals.setBattleReport(b); modals.setIsPaused(true); }} />}
         {showFocusModal &&
           <FocusModal
             techState={playerTechState}

@@ -18,6 +18,6 @@ export default defineConfig({
     // unnecessarily couples them to jsdom/undici versions in CI.
     environment: 'node',
     globals: true,
-    include: ['src/engine/__tests__/**/*.test.{ts,tsx}'],
+    include: ['src/engine/__tests__/**/*.test.{ts,tsx}', 'src/components/**/__tests__/**/*.test.{ts,tsx}'],
   }
 });

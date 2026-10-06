@@ -107,7 +107,7 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
       <ProvinceMarketSection province={province} />
 
       {/* Agitação Provincial */}
-      <div className="province-panel__section">
+      <div className="province-panel__section province-panel__rebellion">
         <h3 className="province-panel__subtitle">
           {isPacified ? '🕊️ Província Pacífica' : '🔥 Agitação Provincial'}
         </h3>
@@ -140,7 +140,7 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
         <details><summary>Causas da pressão social (alvo {Math.round(province.unrestExplanation?.total ?? unrest)}%)</summary>
           {province.unrestExplanation?.modifiers.map(m => <div key={m.source}>{UNREST_SOURCE_LABELS[m.source] ?? m.source}: {m.value > 0 ? '+' : ''}{m.value.toFixed(1)}</div>)}
         </details>
-        {onRebellionAction && <div className="province-panel__neighbors">
+        {onRebellionAction && <div className="province-panel__rebellion-actions">
           {([
             ['repression', 'Reprimir', 'Exige tropas; aumenta ressentimento, custa vidas e prestígio.'],
             ['tax_relief', 'Alívio fiscal', 'Receita local −20% por 180 dias.'],

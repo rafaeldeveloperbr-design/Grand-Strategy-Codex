@@ -1,0 +1,125 @@
+﻿/* Shared presentation rules for UI V1. Domain styles retain their layout and status semantics. */
+button, input, select, textarea { font-family: var(--font-main); }
+button { transition: background-color .15s, border-color .15s, color .15s; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+button:disabled { cursor: not-allowed; opacity: .5; }
+button:enabled:active { filter: brightness(.9); }
+input:not([type='range']):not([type='checkbox']), select, textarea {
+  background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); padding: var(--space-2); font-size: var(--font-base);
+}
+* { scrollbar-width: thin; scrollbar-color: var(--border-light) var(--bg-secondary); }
+.game__main, .map-container { min-width: 0; min-height: 0; }
+.top-bar { padding: 10px 16px; gap: 12px; flex-wrap: wrap; border-bottom-width: 1px; background: var(--bg-secondary); }
+.top-bar__country { min-width: 180px; padding: 8px 12px; border-radius: var(--radius-md); }
+.top-bar__country-name { font-size: var(--font-base); }
+.top-bar__country-tag, .top-bar__resource-label { font-size: var(--font-xs); color: var(--text-secondary); }
+.top-bar__resources { gap: 8px; flex: 1; justify-content: center; flex-wrap: wrap; }
+.top-bar__resource { padding: 7px 10px; gap: 8px; border-color: transparent; border-radius: var(--radius-md); min-height: 56px; }
+.top-bar__resource-value { font-size: var(--font-lg); font-variant-numeric: tabular-nums; }
+.top-bar__resource-rate, .top-bar__resource-balance { font-size: var(--font-xs); font-variant-numeric: tabular-nums; }
+.top-bar__tech-group { gap: 6px; margin-left: 0; }
+.topbar__icon-btn, .top-bar__settings-btn { width: 34px; height: 34px; padding: 0; border-radius: var(--radius-sm); background: var(--bg-tertiary); border: 1px solid var(--border-subtle); }
+.topbar__icon-btn:hover, .top-bar__settings-btn:hover { background: var(--bg-hover); transform: none; box-shadow: none; }
+.top-bar__date-section { gap: 8px; flex-wrap: wrap; }
+.top-bar__date { font-size: var(--font-sm); padding: 8px; border-color: transparent; }
+.top-bar__speed-controls { gap: 3px; }
+.top-bar__speed-btn { min-height: 32px; font-size: var(--font-xs); border-radius: var(--radius-sm); }
+.province-panel { width: clamp(480px, 40vw, 640px); min-width: 0; flex-shrink: 0; border-left-width: 1px; }
+.province-panel__header { padding: 20px; gap: 12px; }
+.province-panel__title { font-size: var(--font-title); line-height: 1.3; }
+.province-panel__identity { color: var(--text-secondary); font-size: var(--font-xs); margin-top: 6px; overflow-wrap: anywhere; }
+.province-panel__layout, .province-panel__main, .province-panel__content { min-height: 0; min-width: 0; }
+.province-panel__main { overflow: hidden; }
+.province-panel__sidebar { width: 190px; min-width: 190px; border-left-width: 1px; }
+.province-panel__sidebar-content { padding: 12px; min-height: 0; }
+.province-panel__sidebar-item { padding: 10px; border-radius: var(--radius-md); }
+.province-panel__tabs { padding: 8px; gap: 4px; flex-shrink: 0; }
+.province-panel__tab { font-size: var(--font-sm); border-radius: var(--radius-sm); padding: 10px 6px; }
+.province-panel__tab--active { background: var(--bg-panel-elevated); color: var(--gold); }
+.province-panel__section { padding: 16px; }
+.province-panel__subtitle { color: var(--text-secondary); font-size: var(--font-xs); margin-bottom: 12px; }
+.province-panel__info-row { gap: 12px; padding: 8px 0; font-size: var(--font-sm); border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 45%, transparent); align-items: baseline; }
+.province-panel__label { flex-shrink: 0; }
+.province-panel__value { text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.province-panel__build-desc, .province-panel__build-bonus, .province-panel__building-badge-level, .province-panel__pop-text { font-size: var(--font-xs); line-height: 1.5; }
+.province-panel__build-option, .province-panel__army-card { padding: 12px; border-radius: var(--radius-md); }
+.province-panel__rebellion { background: color-mix(in srgb, var(--warning) 4%, var(--bg-panel)); }
+.province-panel__rebellion p, .province-panel__rebellion details { font-size: var(--font-sm); line-height: 1.6; color: var(--text-secondary); margin: 10px 0; }
+.province-panel__rebellion summary { cursor: pointer; color: var(--text-primary); }
+.province-panel__rebellion-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+.province-panel__rebellion-actions button { font-size: var(--font-xs); padding: 8px; border-left-width: 1px; }
+.province-market__scroll { overflow-x: auto; }
+.province-market__grid { display: grid; grid-template-columns: minmax(72px, 1.4fr) repeat(6, minmax(42px, 1fr)); gap: 6px; min-width: 390px; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); align-items: baseline; font-size: var(--font-xs); }
+.province-market__head { color: var(--text-secondary); font-weight: 600; }
+.province-market__head span:not(:first-child), .province-market__number { text-align: right; font-variant-numeric: tabular-nums; }
+.province-market__status { grid-column: 1 / -1; color: var(--text-secondary); line-height: 1.5; }
+:is(.settings-modal, .government-modal, .notification-modal, .ai-log-modal, .battle-history-modal, .battle-report-modal, .tech-modal__container.tree-modal, .endgame-modal__container, .diplomacy-panel, .war-panel) {
+  background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); max-height: calc(100dvh - 48px); max-width: calc(100vw - 48px);
+}
+:is(.settings-modal-overlay, .government-modal-overlay, .notification-modal-overlay, .ai-log-modal-overlay, .battle-history-overlay, .battle-report-overlay, .tech-modal__overlay, .endgame-modal__overlay) {
+  background: #080e18bd; backdrop-filter: blur(5px); padding: 24px;
+}
+:is(.settings-modal__header, .government-modal__header, .notification-modal__header, .ai-log-modal__header, .battle-history-header, .battle-report-header, .tech-modal__header, .diplomacy-panel__header, .war-panel__header) {
+  padding: 18px 24px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); gap: 12px; flex-shrink: 0;
+}
+:is(.settings-modal__header, .government-modal__header, .notification-modal__header, .ai-log-modal__header, .battle-history-header, .tech-modal__header) :is(h2, h3) { font-size: var(--font-title); font-weight: 600; }
+:is(.settings-modal__close, .government-modal__close, .notification-modal__close, .ai-log-modal__close, .battle-history-close, .tech-modal__close, .diplomacy-panel__close, .war-panel__close, .cheat-panel__close, .province-panel__close) {
+  display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; padding: 0; font-size: 18px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+}
+:is(.settings-modal__close, .government-modal__close, .notification-modal__close, .ai-log-modal__close, .battle-history-close, .tech-modal__close, .diplomacy-panel__close, .war-panel__close, .cheat-panel__close, .province-panel__close):hover { background: var(--bg-hover); color: var(--danger); border-color: var(--danger); }
+:is(.settings-modal__content, .government-modal__content, .notification-modal__body, .ai-log-modal__body, .battle-history-content, .tree-container, .research-columns) { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px 24px; }
+:is(.notification-modal__footer, .ai-log-modal__footer, .battle-report-footer) { padding: 16px 24px; background: var(--bg-secondary); gap: 8px; border-top: 1px solid var(--border-subtle); flex-wrap: wrap; }
+:is(.notification-modal__btn, .ai-log-modal__btn, .settings-modal__btn, .government-modal__law-button, .tree-btn, .battle-report-close-btn, .endgame-modal__btn, .province-panel__build-btn, .cheat-panel__button) { border-width: 1px; border-radius: var(--radius-sm); font-size: var(--font-sm); font-weight: 600; box-shadow: none; }
+:is(.notification-modal__btn--primary, .ai-log-modal__btn--primary, .tree-btn.available) { background: var(--accent-blue); color: var(--text-primary); }
+:is(.notification-modal__btn, .ai-log-modal__btn, .tree-btn, .endgame-modal__btn):hover:enabled { transform: none; box-shadow: none; filter: brightness(1.1); }
+.tree-desc, .tree-prereq, .tree-prerequisites, .tree-meta, .tree-category { font-size: var(--font-xs); line-height: 1.5; }
+.ai-log-modal__filters { flex-wrap: wrap; gap: 12px; }
+.endgame-modal__container { overflow-y: auto; }
+.cheat-panel { position: fixed; top: 110px; left: 20px; width: 320px; max-width: calc(100vw - 40px); max-height: calc(100dvh - 160px); overflow-y: auto; background: var(--bg-panel); border: 1px solid var(--warning); border-radius: var(--radius-md); padding: 16px; z-index: 9999; box-shadow: var(--shadow-lg); font-size: var(--font-sm); }
+.cheat-panel__header { display: flex; align-items: center; gap: 12px; justify-content: space-between; margin-bottom: 12px; }
+.cheat-panel__title { color: var(--warning); }
+.cheat-panel__actions { display: grid; gap: 6px; }
+.cheat-panel__button { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-subtle); padding: 9px; text-align: left; cursor: pointer; }
+.cheat-panel__button:hover { background: var(--bg-hover); border-color: var(--border-active); }
+.cheat-panel__help { margin-top: 12px; color: var(--text-secondary); font-size: var(--font-xs); line-height: 1.6; }
+.map__province:hover { filter: brightness(1.15); }
+.map__province--selected { filter: brightness(1.15) saturate(1.1); }
+.map__province-label { paint-order: stroke; stroke: #101720b3; stroke-width: 2px; stroke-linejoin: round; }
+.map__instructions { max-width: calc(100% - 120px); white-space: normal; text-align: center; font-size: var(--font-xs); color: var(--text-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 12px; background: var(--bg-secondary); }
+.game__bottom-bar { flex-wrap: wrap; gap: 8px; min-height: 36px; font-size: var(--font-xs); }
+.army-marker text { pointer-events: none; font-variant-numeric: tabular-nums; }
+@media (max-width: 1250px) {
+  .top-bar__resources { justify-content: flex-start; }
+  .top-bar__date-section { margin-left: auto; }
+  .province-panel { width: 460px; }
+  .province-panel__layout { flex-direction: column; }
+  .province-panel__main { flex: 1; min-height: 0; }
+  .province-panel__sidebar { width: 100%; min-width: 0; height: auto; max-height: 180px; border-left: none; border-top: 1px solid var(--border-subtle); }
+  .province-panel__sidebar-content { padding: 12px 16px; }
+  .research-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 950px) {
+  .top-bar { gap: 8px; padding: 8px; }
+  .top-bar__resources { order: 3; flex-basis: 100%; }
+  .top-bar__resource { flex: 1; }
+  .province-panel { width: 420px; max-width: 55vw; }
+  .research-columns { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms; transition-duration: .01ms; }
+}
+.map__tooltip { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 16px; }
+.map__tooltip-name { font-size: var(--font-base); }
+.map__tooltip-country, .map__tooltip-pop, .game__bottom-label, .game__bottom-value { font-size: var(--font-xs); }
+.map__tooltip-pop { color: var(--text-secondary); }
+:is(.province-panel__construction-cancel, .diplomacy-panel__action-btn--war) { background: color-mix(in srgb, var(--danger) 15%, var(--bg-panel)); color: var(--danger); border: 1px solid var(--danger); }
+:is(.province-panel__construction-cancel, .diplomacy-panel__action-btn--war):hover:enabled { background: color-mix(in srgb, var(--danger) 25%, var(--bg-panel)); transform: none; }
+input[type='checkbox'], input[type='range'] { accent-color: var(--accent); }
+.settings-modal__toggle { font-size: var(--font-base); gap: var(--space-2); }
+.settings-modal__btn--primary { background: var(--accent-blue); color: var(--text-primary); }
+.settings-modal__btn--primary:hover:enabled { background: var(--bg-hover); }
+.settings-modal__btn--danger { background: color-mix(in srgb, var(--danger) 15%, var(--bg-panel)); color: var(--danger); border: 1px solid var(--danger); }
+.province-market__grid[title] { cursor: help; }

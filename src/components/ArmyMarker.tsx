@@ -15,6 +15,9 @@ interface ArmyMarkerProps {
   offsetY: number;
   onClick: (armyId: string) => void;
   onHover: (armyId: string | null) => void;
+  markerPosition?: { x: number; y: number };
+  resolvedCountry?: Country;
+  resolvedProvince?: Province;
 }
 
 /**
@@ -30,26 +33,29 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
   offsetY,
   onClick,
   onHover,
+  markerPosition,
+  resolvedCountry,
+  resolvedProvince,
 }) => {
   const isRebellionArmy = !!army.rebellionFactionId;
-  const effectiveTag = army.owner.startsWith('rebel_') && army.originalOwner 
-    ? army.originalOwner 
+  const effectiveTag = army.owner.startsWith('rebel_') && army.originalOwner
+    ? army.originalOwner
     : army.owner;
-  const country = countries.find(c => c.tag === effectiveTag);
-  
+  const country = resolvedCountry ?? countries.find(c => c.tag === effectiveTag);
+
   // Recalcula dinamicamente a soma do exército atual no estado
-  const size = calculateArmySize(army); 
-  
+  const size = calculateArmySize(army);
+
   // Determina posição base (se está em movimento, usa position; senão, centro da província)
   let baseX: number, baseY: number;
-  
+
   if (army.position && army.destination) {
     // Em movimento - usa posição interpolada (sem offset para não confundir rota)
     baseX = army.position.x;
     baseY = army.position.y;
   } else if (army.location) {
     // Parado - usa centro da província + offset
-    const province = provinces.find(p => p.id === army.location);
+    const province = resolvedProvince ?? provinces.find(p => p.id === army.location);
     if (!province) return null;
     baseX = province.center.x;
     baseY = province.center.y + 20; // Offset base para não sobrepor nome da província
@@ -58,8 +64,8 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
   }
 
   // Aplica offset (apenas para exércitos parados)
-  const x = baseX + (army.destination ? 0 : offsetX);
-  const y = baseY + (army.destination ? 0 : offsetY);
+  const x = markerPosition?.x ?? baseX + (army.destination ? 0 : offsetX);
+  const y = markerPosition?.y ?? baseY + (army.destination ? 0 : offsetY);
 
   // Elevação visual: selected > hovered > normal
   const isElevated = isSelected || isHovered;
@@ -67,6 +73,13 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
   return (
     <g
       className={`army-marker ${isSelected ? 'army-marker--selected' : ''} ${isHovered ? 'army-marker--hovered' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`${country?.name ?? army.owner}: ${army.name}, ${size.toLocaleString('pt-BR')} tropas`}
+      aria-pressed={isSelected}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClick(army.id); }
+      }}
       onClick={(e) => {
         e.stopPropagation();
         onClick(army.id);
@@ -79,6 +92,7 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
         transition: 'transform 0.15s ease',
       }}
     >
+      <title>{country?.name ?? army.owner} {'\u00b7'} {army.name} {'\u00b7'} {size.toLocaleString()} tropas</title>
       {/* Sombra (mais proeminente quando elevado) */}
       <ellipse
         cx={x}
@@ -87,21 +101,36 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
         ry={isElevated ? '5' : '4'}
         fill={isElevated ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.3)'}
       />
-      
+
       {/* Base do marcador */}
       <rect
-        x={x - 16}
+        x={x - 19}
         y={y - 8}
-        width="32"
+        width="38"
         height="20"
         rx="4"
-        fill={isRebellionArmy ? '#702d3e' : country?.color ?? '#555'}
-        stroke={isSelected ? '#FFD700' : isHovered ? '#FFFFFF' : '#000'}
-        strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1}
+        fill={
+          isRebellionArmy
+            ? 'var(--danger)'
+            : country?.color ?? 'var(--bg-panel)'
+        }
+        stroke={
+          isSelected
+            ? 'var(--gold)'
+            : isHovered
+              ? '#ffffff'
+              : 'rgba(0,0,0,0.85)'
+        }
+        strokeWidth={
+          isSelected
+            ? 2.5
+            : isHovered
+              ? 2
+              : 1.5
+        }
         className="army-marker__body"
-        filter={isElevated ? 'url(#glow)' : undefined}
       />
-      
+
       {/* Bandeira/Ícone */}
       <text
         x={x - 10}
@@ -112,12 +141,12 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
       >
         {isRebellionArmy ? '🏴' : country?.flag ?? '⚔️'}
       </text>
-      
+
       {/* Número de tropas */}
       <text
         x={x + 6}
         y={y + 4}
-        fontSize="8"
+        fontSize="9"
         fontWeight="bold"
         fill="#FFF"
         textAnchor="middle"
@@ -126,14 +155,15 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
       >
         {formatArmySize(size)}
       </text>
-      
+
+      {army.inCombat && <text x={x} y={y - 12} textAnchor="middle" fontSize="10" fill="var(--danger)">{'\u2694'}</text>}
       {/* Indicador de movimento */}
       {army.destination && (
         <circle
           cx={x + 14}
           cy={y - 6}
           r="3"
-          fill="#4CAF50"
+          fill="var(--success)"
           stroke="#FFF"
           strokeWidth="0.5"
         >
@@ -145,7 +175,7 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
           />
         </circle>
       )}
-      
+
       {/* Indicador de seleção (anel rotativo) */}
       {isSelected && (
         <circle
@@ -153,7 +183,7 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
           cy={y + 2}
           r="20"
           fill="none"
-          stroke="#FFD700"
+          stroke="var(--gold)"
           strokeWidth="1.5"
           strokeDasharray="3,2"
           opacity="0.9"

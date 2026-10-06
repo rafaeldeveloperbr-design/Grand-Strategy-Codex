@@ -25,8 +25,8 @@
     max-width: 1350px;
     max-height: 90vh;
     overflow: hidden;
-    background: #0f172a;
-    border: 1px solid #334155;
+    background: var(--bg-app);
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, .8)
 }
@@ -39,20 +39,20 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    background: #0f172a;
-    border-bottom: 1px solid #334155
+    background: var(--bg-app);
+    border-bottom: 1px solid var(--border-subtle)
 }
 
 .tech-modal__header h2 {
     margin: 0;
     font-size: 18px;
-    color: #f8fafc
+    color: var(--text-primary)
 }
 
 .tech-modal__close {
     background: none;
     border: none;
-    color: #94a3b8;
+    color: var(--text-secondary);
     font-size: 22px;
     cursor: pointer
 }
@@ -67,7 +67,7 @@
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-    background: #0f172a
+    background: var(--bg-app)
 }
 
 .tree-container {
@@ -75,7 +75,7 @@
     display: flex;
     flex-direction: column;
     gap: 50px;
-    background: radial-gradient(ellipse at top, #1e293b 0%, #0f172a 100%)
+    background: radial-gradient(ellipse at top, #1e293b 0%, var(--bg-app) 100%)
 }
 
 /* FOCO - NIVEIS */
@@ -99,7 +99,7 @@
     width: 155px;
     min-height: 215px;
     background: linear-gradient(180deg, #1e293b 0%, #162032 100%);
-    border: 1.5px solid #334155;
+    border: 1.5px solid var(--border-subtle);
     border-radius: 10px;
     padding: 12px 10px;
     display: flex;
@@ -137,7 +137,7 @@
 .tree-desc {
     font-size: 10.5px;
     line-height: 1.3;
-    color: #94a3b8;
+    color: var(--text-secondary);
     margin: 0 8px;
     display: -webkit-box;
     -webkit-line-clamp: 4;
@@ -157,7 +157,6 @@
     margin-top: auto
 }
 .tree-reward span { display: block; margin: 2px 0 }
-.tree-prerequisites { margin: 6px 0; color: #94a3b8; font-size: 9px; line-height: 1.2 }
 .focus-columns .tree-column { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 12px; align-items: stretch }
 
 /* ESTADOS FOCO */
@@ -216,10 +215,10 @@
 
 .tree-progress {
     height: 5px;
-    background: #0f172a;
+    background: var(--bg-app);
     border-radius: 3px;
     overflow: hidden;
-    border: 1px solid #334155
+    border: 1px solid var(--border-subtle)
 }
 
 .tree-progress div {
@@ -243,7 +242,7 @@
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    background: #334155;
+    background: var(--border-subtle);
     color: #e2e8f0;
     border: 1px solid #475569;
     border-radius: 5px;
@@ -264,11 +263,11 @@
 
 .tree-btn.cancel-btn {
   background: rgba(239, 68, 68, 0.15);
-  border: 1px solid #ef4444;
+  border: 1px solid var(--danger);
   color: #fca5a5;
 }
 .tree-btn.cancel-btn:hover {
-  background: #ef4444;
+  background: var(--danger);
   color: white;
 }
 
@@ -283,7 +282,7 @@
 
 .research-col {
     background: rgba(30, 41, 59, .6);
-    border: 1px solid #334155;
+    border: 1px solid var(--border-subtle);
     border-top-width: 3px;
     border-radius: 12px;
     padding: 14px 10px;
@@ -299,10 +298,10 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #f8fafc;
+    color: var(--text-primary);
     margin: 0 0 14px;
     padding-bottom: 10px;
-    border-bottom: 1px solid #334155
+    border-bottom: 1px solid var(--border-subtle)
 }
 
 .tree-column {
@@ -340,7 +339,7 @@
 }
 
 .tree-meta .gold.no-gold {
-    color: #ef4444
+    color: var(--danger)
 }
 
 .tree-prereq {
@@ -355,7 +354,7 @@
 
 /* FOCOS EM COLUNAS - IGUAL PESQUISA */
 .focus-columns {
-    background: #0f172a;
+    background: var(--bg-app);
 }
 
 .focus-columns .research-col {
@@ -371,7 +370,7 @@
 .research-columns .tree-node,
 .research-columns .research-node,
 .focus-columns .tree-node {
-    width: 100% !important;
+    width: 100%;
     min-height: 220px;
 }
 
@@ -393,8 +392,8 @@
 .technology-modifiers h3 { margin: 0 0 8px; color: #93c5fd; font-size: 14px; }
 .technology-modifiers__grid { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; }
 .technology-modifiers__grid strong { color: #86efac; }
-.tree-category { color: #94a3b8; font-size: 10px; letter-spacing: .08em; margin-bottom: 4px; }
+.tree-category { color: var(--text-secondary); font-size: 10px; letter-spacing: .08em; margin-bottom: 4px; }
 .tree-effects { margin: 7px 0; color: #bfdbfe; font-size: 11px; line-height: 1.45; }
-.tree-prerequisites { margin: 7px 0; padding: 6px; background: rgba(0,0,0,.2); font-size: 11px; }
+.tree-prerequisites { color: var(--text-secondary); line-height: 1.5; margin: 7px 0; padding: 6px; background: rgba(0,0,0,.2); font-size: 11px; }
 .tree-prerequisites .completed { color: #86efac; }
 .tree-prerequisites .missing { color: #fca5a5; }

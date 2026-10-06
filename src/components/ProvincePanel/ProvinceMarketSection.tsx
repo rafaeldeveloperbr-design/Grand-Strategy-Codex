@@ -9,8 +9,8 @@ export function ProvinceMarketSection({ province }: { province: Province }) {
   return (
     <div className="province-panel__section">
       <h3 className="province-panel__subtitle">Mercado</h3>
-      <div className="province-panel__info-row" style={{ fontSize: '10px', fontWeight: 700 }}>
-        <span>Bem</span><span>Est. | Prod. | Dem. | Imp. | Exp. | Preço</span>
+      <div className="province-market__scroll"><div className="province-market__grid province-market__head">
+        {["Bem", "Est.", "Prod.", "Dem.", "Imp.", "Exp.", "Pre\u00e7o"].map(label => <span key={label}>{label}</span>)}
       </div>
       {ALL_GOODS.map(id => {
         const good = GOODS[id];
@@ -49,15 +49,11 @@ export function ProvinceMarketSection({ province }: { province: Province }) {
             ? ` ⚠️ Escassez ${foodStatus.percent}%${foodStatus.consecutiveDays > 0 ? ` · ${foodStatus.consecutiveDays} dias` : ''}`
             : foodStatus && foodStatus.ratio > 0 ? ` ⚠️ Déficit ${foodStatus.percent}%` : ' · Normal';
         return (
-          <div className="province-panel__info-row" key={id} style={{ fontSize: '11px' }}>
+          <div className="province-market__grid" key={id} title={id === 'food' ? foodTooltip : undefined}>
             <span className="province-panel__label">{good.name}</span>
 
-            <span
-              className="province-panel__value"
-              title={id === 'food' ? foodTooltip : undefined}
-              style={{ cursor: id === 'food' ? 'help' : undefined }}
-            >
-              {state.stock.toFixed(1)} | +{state.production.toFixed(1)} | {state.demand.toFixed(1)} | {state.imported.toFixed(1)} | {state.exported.toFixed(1)} | {state.price.toFixed(2)}¤
+            {[state.stock.toFixed(1), `+${state.production.toFixed(1)}`, state.demand.toFixed(1), state.imported.toFixed(1), state.exported.toFixed(1), `${state.price.toFixed(2)}\u00a4`].map((value, index) => <span className="province-market__number" key={index}>{value}</span>)}
+            <span className="province-market__status" title={id === 'food' ? foodTooltip : undefined}>
               {shortageLabel}
               {source
                 ? ` · ${sourceType === 'farm'
@@ -75,6 +71,7 @@ export function ProvinceMarketSection({ province }: { province: Province }) {
           </div>
         );
       })}
+      </div>
       <div className="province-panel__info-row" style={{ marginTop: '6px' }}>
         <span className="province-panel__label">Poder de compra:</span>
         <span className="province-panel__value">{market.purchasingPower.toFixed(1)}/100</span>

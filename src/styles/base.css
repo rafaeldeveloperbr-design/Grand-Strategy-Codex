@@ -1,9 +1,4 @@
-/**
- * ============================================================
- * MÓDULO 1 - Estilos Globais do Jogo
- * ============================================================
- * Tema escuro estilo Hearts of Iron IV / Age of History.
- * Layout responsivo com grid para organizar os componentes./* === Reset e Base === */
+/* Global dark theme and reusable UI tokens. */
 *{
   margin: 0;
   padding: 0;
@@ -11,37 +6,52 @@
 }
 
 /* Tipografia */
-:root{
-  
-  --bg-primary: #0f1419;
-  --bg-secondary: #1a2332;
-  --bg-tertiary: #243447;
-  --bg-panel: #1e2d3d;
-  --bg-hover: #2a3f54;
-
-  
-  --text-primary: #e8edf2;
-  --text-secondary: #8899aa;
-  --text-muted: #5a6b7c;
-
-  
-  --border-color: #2a3f54;
-  --border-light: #3a5068;
-
-  
-  --accent-gold: #ffd700;
-  --accent-red: #e74c3c;
-  --accent-green: #2ecc71;
-  --accent-blue: #3498db;
-
-  
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-
-  
-  --font-main: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+:root {
+  color-scheme: dark;
+  --bg-app: #101720;
+  --bg-panel: #182330;
+  --bg-panel-elevated: #213142;
+  --bg-primary: var(--bg-app);
+  --bg-secondary: #141e2a;
+  --bg-tertiary: var(--bg-panel-elevated);
+  --bg-hover: #2b4055;
+  --border-subtle: #324458;
+  --border-active: #88b8df;
+  --border-color: var(--border-subtle);
+  --border-light: #50677e;
+  --text-primary: #edf2f7;
+  --text-secondary: #b1c0cf;
+  --text-disabled: #8394a6;
+  --text-muted: var(--text-disabled);
+  --accent: #88b8df;
+  --success: #75d6a3;
+  --warning: #efb96b;
+  --danger: #f08086;
+  --gold: #e8c779;
+  --accent-gold: var(--gold);
+  --accent-red: var(--danger);
+  --accent-green: var(--success);
+  --accent-blue: #397ba9;
+  --accent-blue-light: var(--accent);
+  --accent-purple: #b4a2db;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --radius-sm: 5px;
+  --radius-md: 9px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 2px 6px #0003;
+  --shadow-md: 0 8px 24px #0005;
+  --shadow-lg: 0 24px 64px #0009;
+  --font-main: 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-mono: 'Consolas', monospace;
+  --font-xs: 11px;
+  --font-sm: 12px;
+  --font-base: 13px;
+  --font-lg: 16px;
+  --font-title: 20px;
 }
 
 html, body, #root{

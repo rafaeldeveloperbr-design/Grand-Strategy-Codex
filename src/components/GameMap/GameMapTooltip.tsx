@@ -1,42 +1,32 @@
-import React from 'react';
-import { Province, Country } from '../../types';
+import type { Province, Country } from '../../types';
+import { calculateLocalSupplyCapacity } from '../../engine/military';
+import { type ArmyPresentation, type WarPresentation } from './mapPresentation';
 
 interface GameMapTooltipProps {
   tooltip: { x: number; y: number; province: Province } | null;
-  countries: Country[];
+  countries: Map<string, Country>;
+  presentation: ArmyPresentation;
+  war: WarPresentation;
 }
 
-export const GameMapTooltip: React.FC<GameMapTooltipProps> = ({ tooltip, countries }) => {
+export function GameMapTooltip({ tooltip, countries, presentation, war }: GameMapTooltipProps) {
   if (!tooltip) return null;
-
-  const getProvinceColor = (province: Province): string => {
-    const country = countries.find((c) => c.tag === province.owner);
-    return country?.color ?? '#555555';
-  };
-
-  const getTooltipCountry = (province: Province) => {
-    return countries.find((c) => c.tag === province.owner);
-  };
-
-  return (
-    <div
-      className="map__tooltip"
-      style={{
-        left: tooltip.x,
-        top: tooltip.y,
-      }}
-    >
-      <div className="map__tooltip-name">{tooltip.province.name}</div>
-      <div className="map__tooltip-country">
-        <span
-          className="map__tooltip-color"
-          style={{ backgroundColor: getProvinceColor(tooltip.province) }}
-        />
-        {getTooltipCountry(tooltip.province)?.name ?? 'Desconhecido'}
-      </div>
-      <div className="map__tooltip-pop">
-        👥 {tooltip.province.population.total.toLocaleString()}
-      </div>
-    </div>
-  );
-};
+  // Read current state, rather than a province object captured before a simulation tick.
+  const province = presentation.provinceById.get(tooltip.province.id) ?? tooltip.province;
+  const country = countries.get(province.owner);
+  const total = presentation.localTotals.get(province.id);
+  const capital = war.capitals.has(province.id);
+  return <div className="map__tooltip map__tooltip--operational" role="tooltip" style={{ left: `clamp(12px, ${tooltip.x + 16}px, max(12px, calc(100% - 272px)))`, top: `clamp(64px, ${tooltip.y + 48}px, max(64px, calc(100% - 290px)))` }}>
+    <div className="map__tooltip-name">{province.name} {capital && <span className="map__tooltip-capital">★ Capital</span>}</div>
+    <div className="map__tooltip-country"><span className="map__tooltip-color" style={{ backgroundColor: country?.color ?? province.color }} />{country?.flag} {country?.name ?? province.owner}</div>
+    <dl className="map__tooltip-grid">
+      <dt>População</dt><dd>{province.population.total.toLocaleString('pt-BR')}</dd>
+      <dt>Desenvolvimento</dt><dd>{province.development}</dd>
+      <dt>Exércitos / tropas</dt><dd>{total?.count ?? 0} / {(total?.troops ?? 0).toLocaleString('pt-BR')}</dd>
+      <dt>Agitação / rebelião</dt><dd>{Math.round(province.unrest ?? 0)}% / {Math.round(province.rebellion?.progress ?? 0)}%</dd>
+      <dt>Supply · capacidade base</dt><dd>{calculateLocalSupplyCapacity(province).toFixed(1)}</dd>
+    </dl>
+    {(war.frontlines.has(province.id) || war.occupied.has(province.id) || war.battleProvinces.has(province.id) || war.capitalsAtRisk.has(province.id)) && <p className="map__tooltip-alert">{[war.frontlines.has(province.id) && 'Fronteira em guerra', war.occupied.has(province.id) && 'Ocupação ativa', war.battleProvinces.has(province.id) && 'Batalha em curso', war.capitalsAtRisk.has(province.id) && 'Capital em risco'].filter(Boolean).join(' · ')}</p>}
+    {province.originalOwner && province.originalOwner !== province.owner && <p>Controle anterior: {countries.get(province.originalOwner)?.name ?? province.originalOwner}</p>}
+  </div>;
+}

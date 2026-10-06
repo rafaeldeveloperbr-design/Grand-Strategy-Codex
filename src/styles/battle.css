@@ -186,10 +186,10 @@
   color: var(--text-secondary);
 }
 
-.battle-history-empty-subtitle{
-  margin-top: 8px !important;
-  font-size: 13px !important;
-  color: var(--text-muted) !important;
+.battle-history-empty .battle-history-empty-subtitle{
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .battle-history-list{
@@ -350,7 +350,7 @@
 }
 
 .battle-report-close-btn:hover{
-  background: linear-gradient(135deg, #3498db 0%, var(--accent-blue) 100%);
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue) 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
 }

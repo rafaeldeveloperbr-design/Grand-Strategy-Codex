@@ -1,3 +1,4 @@
+import { getTerrainDefinition, terrainSummary } from '../../engine/terrain';
 import type { Province, Country } from '../../types';
 import { calculateLocalSupplyCapacity } from '../../engine/military';
 import { type ArmyPresentation, type WarPresentation } from './mapPresentation';
@@ -19,6 +20,8 @@ export function GameMapTooltip({ tooltip, countries, presentation, war }: GameMa
   return <div className="map__tooltip map__tooltip--operational" role="tooltip" style={{ left: `clamp(12px, ${tooltip.x + 16}px, max(12px, calc(100% - 272px)))`, top: `clamp(64px, ${tooltip.y + 48}px, max(64px, calc(100% - 290px)))` }}>
     <div className="map__tooltip-name">{province.name} {capital && <span className="map__tooltip-capital">★ Capital</span>}</div>
     <div className="map__tooltip-country"><span className="map__tooltip-color" style={{ backgroundColor: country?.color ?? province.color }} />{country?.flag} {country?.name ?? province.owner}</div>
+    <p title={getTerrainDefinition(province).description}>Terreno: {getTerrainDefinition(province).label}</p>
+    <small>{terrainSummary(province)}</small>
     <dl className="map__tooltip-grid">
       <dt>População</dt><dd>{province.population.total.toLocaleString('pt-BR')}</dd>
       <dt>Desenvolvimento</dt><dd>{province.development}</dd>

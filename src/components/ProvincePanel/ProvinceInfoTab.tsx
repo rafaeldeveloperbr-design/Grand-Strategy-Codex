@@ -1,3 +1,4 @@
+import { getTerrainDefinition, terrainSummary } from '../../engine/terrain';
 import React from 'react';
 import { REBELLION_BALANCE, REBEL_TYPE_LABELS, OBJECTIVE_LABELS, UNREST_SOURCE_LABELS, type RebellionAction, type RebellionFaction } from '../../engine/rebellion';
 import { Province, Country, Army } from '../../types';
@@ -58,6 +59,8 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
     <>
       {/* Informações Gerais */}
       <div className="province-panel__section">
+        <div className="province-panel__info-row" title={getTerrainDefinition(province).description}><span className="province-panel__label">Terreno:</span><span className="province-panel__value">{getTerrainDefinition(province).label}</span></div>
+        <small>{terrainSummary(province)}</small>
         <div className="province-panel__info-row">
           <span className="province-panel__label">País:</span>
           <span className="province-panel__value province-panel__value--country">

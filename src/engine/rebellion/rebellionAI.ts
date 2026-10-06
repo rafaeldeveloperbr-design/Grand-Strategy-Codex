@@ -1,3 +1,4 @@
+import { getTerrainDefinition } from '../terrain';
 import type { Army, Country, GameDate, Province } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
 import { calculateArmySiege, findPath, getArmySupply, moveArmy, recoverArmy } from '../military';
@@ -72,7 +73,7 @@ export function planRebelMovement(armies: Army[], provinces: Province[], countri
               stats.defense * B.projectedPower.defenseWeight
             ) *
             getArmySupply(enemy, p, enemies).combatMultiplier;
-        }, 0) * (1 + fort);
+        }, 0) * (1 + fort) * getTerrainDefinition(p).defenseModifier;
 
         const stats = calculateArmyCombatStats(army);
 

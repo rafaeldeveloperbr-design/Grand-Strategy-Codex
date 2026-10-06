@@ -1,3 +1,4 @@
+import { getTerrainDefinition } from '../terrain';
 import type {
   Army,
   Province,
@@ -264,7 +265,7 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
   const siege = attackerArmies.reduce((sum, army) => sum + calculateArmySiege(army), 0);
   const fortBonus = Math.min(MILITARY_BALANCE.maximumFortDefense, effectiveDefense * MILITARY_BALANCE.fortDefensePerLevel / (1 + siege / 20)) * fortificationMultiplier;
   const attackerPressure = (attackerStats.attack + attackerStats.shock * .45) * attackerPower * attackerSupply;
-  const defenderPressure = (defenderStats.attack + defenderStats.defense * .35) * defenderPower * defenderSupply * (1 + fortBonus);
+  const defenderPressure = (defenderStats.attack + defenderStats.defense * .35) * defenderPower * defenderSupply * (1 + fortBonus) * getTerrainDefinition(province).defenseModifier;
   const attackerLoss = Math.min(attackerBefore, Math.max(1, Math.floor(attackerBefore * MILITARY_BALANCE.dailyBaseCasualtyRate * defenderPressure / Math.max(1, attackerPressure))));
   const defenderLoss = Math.min(defenderBefore, Math.max(1, Math.floor(defenderBefore * MILITARY_BALANCE.dailyBaseCasualtyRate * attackerPressure / Math.max(1, defenderPressure))));
   let updatedArmies = applySideLoss(armies, attackerArmies, attackerLoss, MILITARY_BALANCE.dailyBaseOrganizationDamage * defenderPressure / Math.max(1, attackerPressure));

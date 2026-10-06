@@ -1,3 +1,4 @@
+import { getTerrainDefinition } from '../terrain';
 import { Army, Province } from '../../types';
 import { DiplomaticRelation } from '../../types/diplomacy';
 import { calculateArmySpeed, generateArmyId } from './militaryUtils';
@@ -158,7 +159,7 @@ export function processArmyMovement(
       updatedArmies.push(cancel(army)); continue;
     }
     const progress = army.movementProgress + army.movementSpeed *
-      getArmySupply(army, origin, colocated.get(origin.id)).movementMultiplier;
+      getArmySupply(army, origin, colocated.get(origin.id)).movementMultiplier / getTerrainDefinition(next).movementCost;
     if (progress < 1) {
       updatedArmies.push({ ...army, movementProgress: progress, position: {
         x: origin.center.x + (next.center.x - origin.center.x) * progress,

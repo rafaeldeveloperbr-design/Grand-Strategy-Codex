@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { getTerrainDefinition } from '../../../engine/terrain';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
@@ -183,7 +184,7 @@ describe('UI V2 routes, map modes and operational information', () => {
     fireEvent.click(view.getByRole('button', { name: `Modo ${mode.label}` }));
     const values = buildMapValues(data.provinces, mode.id);
     const path = view.container.querySelector(`[data-province-id="${capital.id}"]`)!;
-    expect(path.getAttribute('fill')).toBe(numericMapColor(values.values.get(capital.id)!, values.max, mode.id));
+    expect(path.getAttribute('fill')).toBe(mode.id === 'terrain' ? getTerrainDefinition(capital).color : numericMapColor(values.values.get(capital.id)!, values.max, mode.id));
     expect(view.getByLabelText(`Legenda ${mode.label}`)).toBeTruthy();
     fireEvent.click(path); expect(data.onProvinceClick).toHaveBeenCalledWith(capital.id);
     fireEvent.contextMenu(path); expect(data.onProvinceRightClick).toHaveBeenCalledWith(capital.id);

@@ -1,8 +1,9 @@
 import type { Army, Country, Province, SupplyStatus, War, DiplomaticRelation, ActiveBattle } from '../../types';
 import { calculateArmySize, calculateArmyOrganization, calculateArmyMorale, calculateLocalSupplyCapacity, getArmySupply } from '../../engine/military';
 
-export type MapMode = 'political' | 'development' | 'population' | 'unrest' | 'supply';
+export type MapMode = 'political' | 'development' | 'population' | 'unrest' | 'supply' | 'terrain';
 export const MAP_MODES: { id: MapMode; label: string; description: string }[] = [
+  { id: 'terrain', label: 'TERRENO', description: 'Terreno e modificadores militares' },
   { id: 'political', label: 'Político', description: 'Controle atual por país' },
   { id: 'development', label: 'Desenvolvimento', description: 'Desenvolvimento provincial' },
   { id: 'population', label: 'População', description: 'População total; escala relativa ao mapa atual' },

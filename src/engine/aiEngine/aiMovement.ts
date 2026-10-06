@@ -1,3 +1,4 @@
+import { getTerrainDefinition } from '../terrain';
 import { Army, Province, Country } from '../../types';
 import { DiplomaticRelation, War } from '../../types/diplomacy';
 import { findPath } from '../military';
@@ -104,6 +105,8 @@ function calculateEffectiveArmyPower(
       province.defense * 0.04 +
       fortLevel * 0.10;
   }
+
+  if (defending) defenseMultiplier *= getTerrainDefinition(province).defenseModifier;
 
   return (
     combatPower *

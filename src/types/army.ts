@@ -124,7 +124,7 @@ export interface Recruitment {
 
 export type SupplyStatus = 'good' | 'low' | 'critical';
 
-/** Ponto de extensão neutro: terreno não participa do gameplay nesta versão. */
+/** Ponto de extensão neutro: Terreno não participa do gameplay nesta versão. */
 export type TerrainType = 'neutral';
 export interface TerrainCombatModifiers { attack: 1; defense: 1; movement: 1; supply: 1 }
 

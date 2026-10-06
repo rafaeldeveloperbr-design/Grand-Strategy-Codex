@@ -18,7 +18,7 @@ do protótipo na camada React.
   defesa, choque, cerco, consumo e manutenção).
 - `recruitmentEngine.ts`: custo, tempo, requisitos, bloqueio, pagamento único e conclusão.
 - `supplyEngine.ts`: capacidade provincial simples, compartilhamento local e estados
-  `good`, `low` e `critical`. O contrato neutro de terreno permanece desligado.
+  `good`, `low` e `critical`. O contrato neutro de Terreno permanece desligado.
 - `recoveryEngine.ts`: reforço e recuperação diária fora de combate; consome manpower
   nacional e ouro/ferro/ferramentas canônicos.
 - `continuousBattle.ts`: único fluxo usado pelo game loop. Aplica pressão diária,
@@ -48,6 +48,6 @@ manpower e manutenção.
 ## Limitações e expansão
 
 Supply é deliberadamente provincial, sem comboios ou comércio internacional. Não há
-efeitos de terreno: `TerrainType` e os modificadores neutros são somente extensão futura.
+efeitos de Terreno: `TerrainType` e os modificadores neutros são somente extensão futura.
 O relatório histórico ainda usa o formato público `CombatResult`; uma futura migração pode
 armazenar séries diárias de organização sem alterar o motor.

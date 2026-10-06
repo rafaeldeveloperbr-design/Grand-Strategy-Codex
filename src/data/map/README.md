@@ -112,7 +112,7 @@ interativa em navegador. `git diff --check` passou.
 Guiana Francesa é jogável provisoriamente. A data inicial permanece 1444;
 o cenário não representa fronteiras políticas históricas. Ilhas offshore e
 polígonos separados da Terra do Fogo foram omitidos. Não há rotas marítimas,
-terreno militar novo, clima, estreitos, rios navegáveis ou sistema naval.
+Terreno militar novo, clima, estreitos, rios navegáveis ou sistema naval.
 Capitais não são automaticamente relocadas após conquista; seu ID continua
 identificando a capital original. Países estreitos/com uma província possuem
 capitais próximas de fronteiras; Brasília tem apenas vizinhos brasileiros.

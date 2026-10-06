@@ -90,9 +90,9 @@ describe('Terrain V1 UI and saves', () => {
   it('renders every terrain color, six legend entries and preserves province selection', () => {
     const onClick = vi.fn();
     const view = render(<GameMap provinces={provincesData} countries={countries} armies={[]} recruitments={[]} buildingConstructions={[]} activeBattles={[]} selectedProvince={null} hoveredProvince={null} selectedArmy={null} onProvinceHover={vi.fn()} onProvinceClick={onClick} onArmyClick={vi.fn()} onProvinceRightClick={vi.fn()} />);
-    fireEvent.click(view.getByRole('button', { name: 'Modo TERRENO' }));
+    fireEvent.click(view.getByRole('button', { name: 'Modo Terreno' }));
     for (const p of provincesData) expect(view.container.querySelector(`[data-province-id="${p.id}"]`)!.getAttribute('fill')).toBe(getTerrainDefinition(p).color);
-    for (const terrain of Object.values(TERRAIN_DEFINITIONS)) expect(view.getByLabelText('Legenda TERRENO').textContent).toContain(terrain.label);
+    for (const terrain of Object.values(TERRAIN_DEFINITIONS)) expect(view.getByLabelText('Legenda Terreno').textContent).toContain(terrain.label);
     fireEvent.click(view.container.querySelector(`[data-province-id="${base.id}"]`)!);
     expect(onClick).toHaveBeenCalledWith(base.id);
   });

@@ -79,6 +79,7 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
         transition: 'transform 0.15s ease',
       }}
     >
+      <title>{country?.name ?? army.owner} {'\u00b7'} {army.name} {'\u00b7'} {size.toLocaleString()} tropas</title>
       {/* Sombra (mais proeminente quando elevado) */}
       <ellipse
         cx={x}
@@ -90,13 +91,13 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
       
       {/* Base do marcador */}
       <rect
-        x={x - 16}
+        x={x - 19}
         y={y - 8}
-        width="32"
+        width="38"
         height="20"
         rx="4"
-        fill={isRebellionArmy ? '#702d3e' : country?.color ?? '#555'}
-        stroke={isSelected ? '#FFD700' : isHovered ? '#FFFFFF' : '#000'}
+        fill="var(--bg-panel)"
+        stroke={isSelected ? 'var(--gold)' : isHovered ? 'var(--text-primary)' : isRebellionArmy ? 'var(--danger)' : country?.color ?? 'var(--border-light)'}
         strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1}
         className="army-marker__body"
         filter={isElevated ? 'url(#glow)' : undefined}
@@ -117,7 +118,7 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
       <text
         x={x + 6}
         y={y + 4}
-        fontSize="8"
+        fontSize="9"
         fontWeight="bold"
         fill="#FFF"
         textAnchor="middle"
@@ -127,13 +128,14 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
         {formatArmySize(size)}
       </text>
       
+      {army.inCombat && <text x={x} y={y - 12} textAnchor="middle" fontSize="10" fill="var(--danger)">{'\u2694'}</text>}
       {/* Indicador de movimento */}
       {army.destination && (
         <circle
           cx={x + 14}
           cy={y - 6}
           r="3"
-          fill="#4CAF50"
+          fill="var(--success)"
           stroke="#FFF"
           strokeWidth="0.5"
         >
@@ -153,7 +155,7 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
           cy={y + 2}
           r="20"
           fill="none"
-          stroke="#FFD700"
+          stroke="var(--gold)"
           strokeWidth="1.5"
           strokeDasharray="3,2"
           opacity="0.9"

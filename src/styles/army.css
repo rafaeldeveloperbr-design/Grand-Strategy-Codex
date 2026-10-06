@@ -8,7 +8,7 @@
 }
 
 .army-marker--selected .army-marker__body{
-  filter: brightness(1.2) drop-shadow(0 0 4px #FFD700);
+  filter: brightness(1.2) drop-shadow(0 0 4px var(--gold));
 }
 
 /* === Hover state para ArmyMarker === */

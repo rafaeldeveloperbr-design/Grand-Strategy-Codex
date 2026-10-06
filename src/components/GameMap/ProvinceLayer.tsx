@@ -116,7 +116,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
             <path
               d={province.path}
               fill={fillColor}
-              stroke={isSelected ? '#FFD700' : isHovered ? '#FFFFFF' : '#2a2a2a'}
+              stroke={isSelected ? 'var(--gold)' : isHovered ? 'var(--text-primary)' : 'var(--bg-app)'}
               strokeWidth={isSelected ? 3 : isHovered ? 2 : 1}
               className={getProvinceClass(province)}
               data-province-id={province.id}
@@ -136,7 +136,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
               textAnchor="middle"
               dominantBaseline="middle"
               className="map__province-label"
-              fill="rgba(255,255,255,0.8)"
+              fill="var(--text-primary)"
               fontSize="8"
               fontWeight="bold"
               pointerEvents="none"

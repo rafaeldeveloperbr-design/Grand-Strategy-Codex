@@ -1,130 +1,64 @@
-import React, { useMemo } from 'react';
-import { Army, Country, Province } from '../../types';
+import React, { useMemo, useId } from 'react';
+import type { Country } from '../../types';
 import { ArmyMarker } from '../ArmyMarker';
-import { calculateArmyOffset } from '../../engine/military';
+import { ArmyStackMarker } from '../ArmyStackMarker';
+import { SUPPLY_LABELS, type ArmyPresentation, type ArmyVisualGroup } from './mapPresentation';
 
 interface ArmyMovementLayerProps {
-  armies: Army[];
-  countries: Country[];
-  provinces: Province[];
+  presentation: ArmyPresentation;
+  countries: Map<string, Country>;
   selectedArmy: string | null;
   hoveredArmyId: string | null;
+  openStackKey: string | null;
   onArmyClick: (armyId: string) => void;
   onArmyHover: (armyId: string | null) => void;
+  onStackOpen: (group: ArmyVisualGroup, x: number, y: number) => void;
 }
 
-export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = ({
-  armies,
-  countries,
-  provinces,
-  selectedArmy,
-  hoveredArmyId,
-  onArmyClick,
-  onArmyHover,
-}) => {
-  const armyOffsets = useMemo(() => {
-    const offsets = new Map<string, { offsetX: number; offsetY: number }>();
-
-    const groups = new Map<string, Army[]>();
-    for (const army of armies) {
-      if (army.location && !army.destination) {
-        const group = groups.get(army.location) ?? [];
-        group.push(army);
-        groups.set(army.location, group);
-      }
-    }
-
-    for (const [, group] of groups) {
-      if (group.length <= 1) {
-        offsets.set(group[0].id, { offsetX: 0, offsetY: 0 });
-      } else {
-        group.forEach((army, index) => {
-          const { offsetX, offsetY } = calculateArmyOffset(index, group.length);
-          offsets.set(army.id, { offsetX, offsetY });
-        });
-      }
-    }
-
-    return offsets;
-  }, [armies]);
-
-  const sortedArmies = useMemo(() => {
-    const sorted = [...armies];
-    sorted.sort((a, b) => {
-      const aMoving = a.destination ? 0 : 1;
-      const bMoving = b.destination ? 0 : 1;
-      if (aMoving !== bMoving) return aMoving - bMoving;
-
-      const aSelected = a.id === selectedArmy ? 2 : 0;
-      const bSelected = b.id === selectedArmy ? 2 : 0;
-      if (aSelected !== bSelected) return aSelected - bSelected;
-
-      const aHovered = a.id === hoveredArmyId ? 1 : 0;
-      const bHovered = b.id === hoveredArmyId ? 1 : 0;
-      return aHovered - bHovered;
+export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = ({ presentation, countries, selectedArmy, hoveredArmyId, openStackKey, onArmyClick, onArmyHover, onStackOpen }) => {
+  const arrowId = useId().replace(/:/g, '');
+  const groups = useMemo(() => [...presentation.groups].sort((a, b) => Number(a.armies.some(army => army.id === selectedArmy)) - Number(b.armies.some(army => army.id === selectedArmy)) || Number(a.armies.some(army => army.id === hoveredArmyId)) - Number(b.armies.some(army => army.id === hoveredArmyId))), [presentation.groups, selectedArmy, hoveredArmyId]);
+  const routes = useMemo(() => {
+    const relevant = new Set([selectedArmy, hoveredArmyId]);
+    const open = presentation.groups.find(group => group.key === openStackKey);
+    open?.armies.forEach(army => relevant.add(army.id));
+    return [...relevant].flatMap(id => {
+      const army = id ? presentation.armyById.get(id) : undefined;
+      if (!army?.destination) return [];
+      const origin = army.location ? presentation.provinceById.get(army.location) : undefined;
+      const start = army.position ?? origin?.center;
+      if (!start) return [];
+      // The engine's path includes destination; remove consecutive duplicates only.
+      const ids = [army.destination, ...army.path].filter((value, index, all) => index === 0 || value !== all[index - 1]);
+      const steps = ids.flatMap(value => { const province = presentation.provinceById.get(value); return province ? [province.center] : []; });
+      if (!steps.length) return [];
+      return [{ army, start, steps, final: steps[steps.length - 1] }];
     });
-    return sorted;
-  }, [armies, selectedArmy, hoveredArmyId]);
-
-  return (
-    <g className="army-movement-layer">
-      {/* Linhas de movimento dos exércitos (path completo) */}
-      {armies
-        .filter((a) => a.destination && a.location)
-        .map((army) => {
-          const country = countries.find((c) => c.tag === army.owner);
-
-          const fullPath = [army.location!, army.destination!, ...army.path];
-          const pathPoints = fullPath
-            .map((pid) => provinces.find((p) => p.id === pid))
-            .filter((p): p is Province => p !== undefined);
-
-          if (pathPoints.length < 2) return null;
-
-          const pointsStr = pathPoints
-            .map((p) => `${p.center.x},${p.center.y}`)
-            .join(' ');
-
-          return (
-            <polyline
-              key={`route-${army.id}`}
-              points={pointsStr}
-              fill="none"
-              stroke={country?.colorLight ?? '#FFF'}
-              strokeWidth="2"
-              strokeDasharray="6,3"
-              opacity="0.7"
-              pointerEvents="none"
-            >
-              <animate
-                attributeName="stroke-dashoffset"
-                from="0"
-                to="-18"
-                dur="1s"
-                repeatCount="indefinite"
-              />
-            </polyline>
-          );
-        })}
-
-      {/* Marcadores de Exércitos */}
-      {sortedArmies.map((army) => {
-        const offset = armyOffsets.get(army.id) ?? { offsetX: 0, offsetY: 0 };
-        return (
-          <ArmyMarker
-            key={army.id}
-            army={army}
-            provinces={provinces}
-            countries={countries}
-            isSelected={army.id === selectedArmy}
-            isHovered={army.id === hoveredArmyId}
-            offsetX={offset.offsetX}
-            offsetY={offset.offsetY}
-            onClick={onArmyClick}
-            onHover={onArmyHover}
-          />
-        );
-      })}
+  }, [presentation, selectedArmy, hoveredArmyId, openStackKey]);
+  const selected = selectedArmy ? presentation.armyById.get(selectedArmy) : undefined;
+  const selectedGroup = selectedArmy ? presentation.groups.find(group => group.armies.some(army => army.id === selectedArmy)) : undefined;
+  const stats = selectedArmy ? presentation.readouts.get(selectedArmy) : undefined;
+  return <g className="army-movement-layer">
+    <defs><marker id={arrowId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" /></marker></defs>
+    <g className="army-routes" pointerEvents="none">
+      {routes.map(({ army, start, steps, final }) => <g key={army.id} data-route-army={army.id}>
+        <polyline points={[start, ...steps].map(point => `${point.x},${point.y}`).join(' ')} fill="none" stroke={army.id === selectedArmy ? 'var(--gold)' : 'var(--accent)'} strokeWidth={army.id === selectedArmy ? 3 : 1.5} strokeDasharray="7 4" vectorEffect="non-scaling-stroke" opacity={army.id === selectedArmy ? 1 : .55} markerEnd={`url(#${arrowId})`} />
+        <circle cx={final.x} cy={final.y} r="8" fill="none" stroke={army.id === selectedArmy ? 'var(--gold)' : 'var(--accent)'} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        {army.id === selectedArmy && <text x={final.x} y={final.y - 12} textAnchor="middle" className="army-route-label">Destino</text>}
+      </g>)}
     </g>
-  );
+    {groups.map(group => {
+      const army = group.armies[0];
+      const selectedInGroup = group.armies.some(item => item.id === selectedArmy);
+      const effectiveOwner = army.owner.startsWith('rebel_') && army.originalOwner ? army.originalOwner : army.owner;
+      if (group.armies.length > 1) return <ArmyStackMarker key={group.key} group={group} country={countries.get(group.owner)} selected={selectedInGroup} expanded={group.key === openStackKey} onOpen={onStackOpen} />;
+      return <ArmyMarker key={army.id} army={army} countries={[]} provinces={[]} resolvedCountry={countries.get(effectiveOwner)} resolvedProvince={army.location ? presentation.provinceById.get(army.location) : undefined} markerPosition={{ x: group.x + group.offsetX, y: group.y + group.offsetY }} isSelected={selectedInGroup} isHovered={army.id === hoveredArmyId} offsetX={0} offsetY={0} onClick={onArmyClick} onHover={onArmyHover} />;
+    })}
+    {selected && selectedGroup && stats && <g className="army-mini-status" pointerEvents="none" transform={`translate(${selectedGroup.x + selectedGroup.offsetX}, ${selectedGroup.y + selectedGroup.offsetY + 36})`}>
+      <rect x="-70" y="-9" width="140" height={selected.destination ? 35 : 25} rx="4" fill="var(--bg-app)" stroke="var(--border-subtle)" />
+      <text y="0" textAnchor="middle">{stats.troops.toLocaleString('pt-BR')} · Org {Math.round(stats.organization)} · Moral {Math.round(stats.morale)}</text>
+      <text y="10" textAnchor="middle">Supply {SUPPLY_LABELS[stats.supply]} · {Math.round(stats.supplyRatio * 100)}%</text>
+      {selected.destination && <text y="20" textAnchor="middle">Trecho atual: {Math.round(Math.min(1, Math.max(0, selected.movementProgress)) * 100)}%</text>}
+    </g>}
+  </g>;
 };

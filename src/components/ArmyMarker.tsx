@@ -15,6 +15,9 @@ interface ArmyMarkerProps {
   offsetY: number;
   onClick: (armyId: string) => void;
   onHover: (armyId: string | null) => void;
+  markerPosition?: { x: number; y: number };
+  resolvedCountry?: Country;
+  resolvedProvince?: Province;
 }
 
 /**
@@ -30,12 +33,15 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
   offsetY,
   onClick,
   onHover,
+  markerPosition,
+  resolvedCountry,
+  resolvedProvince,
 }) => {
   const isRebellionArmy = !!army.rebellionFactionId;
   const effectiveTag = army.owner.startsWith('rebel_') && army.originalOwner 
     ? army.originalOwner 
     : army.owner;
-  const country = countries.find(c => c.tag === effectiveTag);
+  const country = resolvedCountry ?? countries.find(c => c.tag === effectiveTag);
   
   // Recalcula dinamicamente a soma do exército atual no estado
   const size = calculateArmySize(army); 
@@ -49,7 +55,7 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
     baseY = army.position.y;
   } else if (army.location) {
     // Parado - usa centro da província + offset
-    const province = provinces.find(p => p.id === army.location);
+    const province = resolvedProvince ?? provinces.find(p => p.id === army.location);
     if (!province) return null;
     baseX = province.center.x;
     baseY = province.center.y + 20; // Offset base para não sobrepor nome da província
@@ -58,8 +64,8 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
   }
 
   // Aplica offset (apenas para exércitos parados)
-  const x = baseX + (army.destination ? 0 : offsetX);
-  const y = baseY + (army.destination ? 0 : offsetY);
+  const x = markerPosition?.x ?? baseX + (army.destination ? 0 : offsetX);
+  const y = markerPosition?.y ?? baseY + (army.destination ? 0 : offsetY);
 
   // Elevação visual: selected > hovered > normal
   const isElevated = isSelected || isHovered;
@@ -67,6 +73,13 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
   return (
     <g
       className={`army-marker ${isSelected ? 'army-marker--selected' : ''} ${isHovered ? 'army-marker--hovered' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`${country?.name ?? army.owner}: ${army.name}, ${size.toLocaleString('pt-BR')} tropas`}
+      aria-pressed={isSelected}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClick(army.id); }
+      }}
       onClick={(e) => {
         e.stopPropagation();
         onClick(army.id);

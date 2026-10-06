@@ -1,8 +1,9 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Province, Country, Recruitment, BuildingConstruction } from '../../types';
 import { BUILDING_DEFINITIONS } from '../../data/buildings';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getProvinceRebellion, REBEL_TYPE_LABELS } from '../../engine/rebellion';
+import { numericMapColor, buildMapValues, type MapMode } from './mapPresentation';
 
 interface ProvinceLayerProps {
   provinces: Province[];
@@ -11,6 +12,8 @@ interface ProvinceLayerProps {
   recruitments: Recruitment[];
   selectedProvince: string | null;
   hoveredProvince: string | null;
+  mapMode?: MapMode;
+  mapValues?: ReturnType<typeof buildMapValues>;
   onProvinceClick: (provinceId: string) => void;
   onMouseEnter: (e: React.MouseEvent, province: Province) => void;
   onMouseMove: (e: React.MouseEvent, province: Province) => void;
@@ -24,11 +27,14 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
   recruitments,
   selectedProvince,
   hoveredProvince,
+  mapMode = 'political',
+  mapValues,
   onProvinceClick,
   onMouseEnter,
   onMouseMove,
   onMouseLeave,
 }) => {
+  const values = useMemo(() => mapValues ?? buildMapValues(provinces, mapMode), [mapValues, provinces, mapMode]);
   const getProvinceColor = useCallback(
     (province: Province): string => {
       const country = countries.find((c) => c.tag === province.owner);
@@ -73,7 +79,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
       {provinces.map((province) => {
         const isHovered = province.id === hoveredProvince;
         const isSelected = province.id === selectedProvince;
-        const fillColor = isHovered || isSelected
+        const fillColor = mapMode !== 'political' ? numericMapColor(values.values.get(province.id) ?? 0, values.max, mapMode) : isHovered || isSelected
           ? getProvinceLightColor(province)
           : getProvinceColor(province);
 

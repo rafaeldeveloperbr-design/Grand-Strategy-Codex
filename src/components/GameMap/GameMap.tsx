@@ -1,11 +1,18 @@
 import { mapMetadata } from '../../data/map';
-import React, { useState, useRef } from 'react';
-import { Province, Country, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../../types';
+import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import { Province, Country, Army, Recruitment, BuildingConstruction, ActiveBattle, War, DiplomaticRelation } from '../../types';
 import { useMapControls } from './useMapControls';
 import { ProvinceLayer } from './ProvinceLayer';
 import { ArmyMovementLayer } from './ArmyMovementLayer';
 import { BattleMarkersOverlay } from './BattleMarkersOverlay';
 import { GameMapTooltip } from './GameMapTooltip';
+import { buildArmyPresentation, buildMapValues, buildWarPresentation, type MapMode, type ArmyVisualGroup } from './mapPresentation';
+import { MapModeBar } from './MapModeBar';
+import { ArmyStackPopover } from '../ArmyStackPopover';
+import { OperationalOverlay } from './OperationalOverlay';
+
+const NO_WARS: War[] = [];
+const NO_RELATIONS: DiplomaticRelation[] = [];
 
 export interface MapProps {
   provinces: Province[];
@@ -14,6 +21,8 @@ export interface MapProps {
   recruitments: Recruitment[];
   buildingConstructions: BuildingConstruction[];
   activeBattles: ActiveBattle[];
+  wars?: War[];
+  diplomaticRelations?: DiplomaticRelation[];
   selectedProvince: string | null;
   hoveredProvince: string | null;
   selectedArmy: string | null;
@@ -30,6 +39,8 @@ export const GameMap: React.FC<MapProps> = ({
   recruitments,
   buildingConstructions,
   activeBattles,
+  wars = NO_WARS,
+  diplomaticRelations = NO_RELATIONS,
   selectedProvince,
   hoveredProvince,
   selectedArmy,
@@ -41,6 +52,23 @@ export const GameMap: React.FC<MapProps> = ({
   const [tooltip, setTooltip] = useState<{ x: number; y: number; province: Province } | null>(null);
   const [hoveredArmyId, setHoveredArmyId] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [mapMode, setMapMode] = useState<MapMode>('political');
+  const [openStack, setOpenStack] = useState<{ key: string; anchor: { x: number; y: number } } | null>(null);
+  const presentation = useMemo(() => buildArmyPresentation(armies, provinces), [armies, provinces]);
+  const countryByTag = useMemo(() => new Map(countries.map(country => [country.tag, country])), [countries]);
+  const mapValues = useMemo(() => buildMapValues(provinces, mapMode), [provinces, mapMode]);
+  const war = useMemo(() => buildWarPresentation(provinces, countries, wars, diplomaticRelations, activeBattles), [provinces, countries, wars, diplomaticRelations, activeBattles]);
+  const closeStack = useCallback(() => setOpenStack(null), []);
+  const openGroup = openStack ? presentation.groups.find(group => group.key === openStack.key && group.armies.length > 1) : undefined;
+  useEffect(closeStack, [selectedProvince, selectedArmy, closeStack]);
+  useEffect(() => { if (openStack && !openGroup) closeStack(); }, [openStack, openGroup, closeStack]);
+  const openStackAt = (group: ArmyVisualGroup, x: number, y: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    setTooltip(null);
+    setOpenStack({ key: group.key, anchor: { x: rect ? x - rect.left + 12 : 12, y: rect ? y - rect.top + 12 : 70 } });
+  };
+  const selectArmy = (id: string) => { closeStack(); onArmyClick(id); };
 
   const {
     viewBox,
@@ -51,7 +79,7 @@ export const GameMap: React.FC<MapProps> = ({
     handleMouseMovePan,
     handleMouseUp,
   } = useMapControls(svgRef);
-  const capitalIds = new Set(countries.map(country => country.capitalId ?? country.capital));
+  const capitalIds = war.capitals;
 
   const handleMouseEnter = (e: React.MouseEvent, province: Province) => {
     onProvinceHover(province.id);
@@ -82,11 +110,13 @@ export const GameMap: React.FC<MapProps> = ({
   };
 
   const handleClick = (provinceId: string) => {
+    closeStack();
     onProvinceClick(provinceId);
   };
 
   return (
-    <div className="map-container">
+    <div className="map-container" ref={containerRef}>
+      <MapModeBar mode={mapMode} onChange={setMapMode} max={mapValues.max} />
       {/* === Controles de Zoom === */}
       <div className="map__zoom-controls">
         <button className="map__zoom-btn" onClick={handleZoomIn} title="Zoom In">
@@ -143,11 +173,14 @@ export const GameMap: React.FC<MapProps> = ({
           recruitments={recruitments}
           selectedProvince={selectedProvince}
           hoveredProvince={hoveredProvince}
+          mapMode={mapMode}
+          mapValues={mapValues}
           onProvinceClick={handleClick}
           onMouseEnter={handleMouseEnter}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         />
+        <OperationalOverlay provinces={provinces} war={war} selectedArmyLocation={selectedArmy ? presentation.armyById.get(selectedArmy)?.location : null} />
 
         {/* === Marcadores de capitais === */}
         {provinces
@@ -179,12 +212,13 @@ export const GameMap: React.FC<MapProps> = ({
 
         {/* === Linhas e Marcadores de Exércitos === */}
         <ArmyMovementLayer
-          armies={armies}
-          countries={countries}
-          provinces={provinces}
+          presentation={presentation}
+          countries={countryByTag}
           selectedArmy={selectedArmy}
           hoveredArmyId={hoveredArmyId}
-          onArmyClick={onArmyClick}
+          openStackKey={openGroup?.key ?? null}
+          onStackOpen={openStackAt}
+          onArmyClick={selectArmy}
           onArmyHover={setHoveredArmyId}
         />
 
@@ -206,7 +240,8 @@ export const GameMap: React.FC<MapProps> = ({
       </svg>
 
       {/* === Tooltip === */}
-      <GameMapTooltip tooltip={tooltip} countries={countries} />
+      {!openGroup && <GameMapTooltip tooltip={tooltip} countries={countryByTag} presentation={presentation} war={war} />}
+      {openGroup && openStack && <ArmyStackPopover group={openGroup} province={openGroup.provinceId ? presentation.provinceById.get(openGroup.provinceId) : undefined} countries={countryByTag} presentation={presentation} selectedArmy={selectedArmy} anchor={openStack.anchor} onSelect={selectArmy} onClose={closeStack} />}
     </div>
   );
 };

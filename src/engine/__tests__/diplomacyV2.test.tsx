@@ -257,7 +257,7 @@ describe('Diplomacy V2 calls and AI', () => {
     ctx.relations = D.setOpinion(ctx.relations,'BRA','ARG',-60);
     const refused = D.processDiplomacyAI(ctx,'BRA'); expect(D.offerNonAggressionPact(refused,'BRA','ARG').ok).toBe(false);
   });
-  it('AI proactively offers alliances, NAP and access, guarantees weaker friends and breaks extreme relations', () => {
+  it('AI proposes relevant alliances/NAP, avoids useless access, guarantees friends and breaks extreme relations', () => {
     const interval = D.DIPLOMACY_BALANCE.aiInterval;
     const scheduled = (ctx: DiplomacyContext) => advance(ctx,(interval-D.diplomacyDay(ctx.date)%interval)%interval);
     let ctx = scheduled(friendly('BRA','ARG',60,80));
@@ -267,10 +267,10 @@ describe('Diplomacy V2 calls and AI', () => {
     expect(D.getGuarantors(offer.relations,'ARG')).toContain('BRA');
     const second = D.processDiplomacyAI({...offer,date: advance(offer,1).date},'ARG');
     expect(second.relations.flatMap(r => r.proposals ?? [])).toEqual(offer.relations.flatMap(r => r.proposals ?? []));
-    ctx.relations = D.setOpinion(ctx.relations,'BRA','ARG',10);
+    ctx.relations = D.setOpinion(ctx.relations,'BRA','ARG',25);
     expect(D.processDiplomacyAI(ctx,'ARG').relations.flatMap(r => r.proposals ?? []).some(p => p.kind === 'nap')).toBe(true);
-    ctx = nap({...ctx,relations: D.setOpinion(ctx.relations,'BRA','ARG',30)});
-    expect(D.processDiplomacyAI(ctx,'ARG').relations.flatMap(r => r.proposals ?? []).some(p => p.kind === 'access')).toBe(true);
+    ctx = nap({...ctx,relations: D.setOpinion(ctx.relations,'BRA','ARG',35)});
+    expect(D.processDiplomacyAI(ctx,'ARG').relations.flatMap(r => r.proposals ?? []).some(p => p.kind === 'access')).toBe(false);
     ctx = allied(scheduled(friendly())); ctx.relations = D.setTrust(D.setOpinion(ctx.relations,'BRA','ARG',-80),'BRA','ARG',10);
     expect(D.areAllied(D.processDiplomacyAI(ctx,'ARG').relations,'BRA','ARG')).toBe(false);
   });

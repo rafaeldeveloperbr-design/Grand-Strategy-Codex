@@ -206,8 +206,28 @@ IA oferece alianças/NAP/acesso, aceita/recusa pedidos, garante amigos menores,
 chama aliados e rompe alianças/NAP em relações extremamente hostis e sem confiança.
 Acesso é recusado quando favoreceria inimigos de aliados/protegidos.
 
-Propostas proativas ocorrem a cada 30 dias; cooldowns persistidos de 90 dias por
-ação/par evitam spam diário. Chamadas defensivas exigem trust 50; ofensivas 65;
+Propostas proativas ocorrem a cada 90 dias, com limite global de três novas
+propostas por ciclo, incluindo ofertas entre bots e ao jogador. Candidatos são
+ordenados por score determinístico de opinião, trust, fronteira, inimigo comum,
+ameaça estratégica, vínculo político e utilidade de rota; empates usam tags/tipo.
+Somente um acordo novo por par é selecionado, sem acumular tipos enquanto houver
+proposta pendente. Cooldown de ofertas **iniciadas pela IA** é 180 dias por
+país/par/ação. Requisitos proativos: aliança 60 opinião/60 trust, NAP 25/45,
+acesso 35/50. Ofertas e aceitação de propostas iniciadas pelo jogador mantêm os
+requisitos originais e cooldown de 90 dias.
+
+Alianças exigem vizinhança, inimigo comum ou ameaça forte e hostil junto aos dois
+países. NAP exige relevância geográfica/política, evitando ofertas redundantes
+entre aliados. Acesso só é solicitado se atravessar o concedente reconectar
+território próprio ou abrir passagem até um inimigo atual que não era acessível.
+Essa consulta é somente de utilidade para a IA; o pathfinding militar é preservado.
+
+A manutenção de garantias, chamadas e rupturas extremas mantém sua cadência
+original de 30 dias; respostas a propostas continuam processadas diariamente.
+Um marcador de ciclo no mapa existente de cooldowns preserva o teto global mesmo
+após aceitação/recusa ou reload no mesmo dia. Não há mudança de schema ou migração
+adicional de saves: cooldowns e propostas salvos anteriormente permanecem válidos.
+Chamadas defensivas exigem trust 50; ofensivas 65;
 força combinada e quantidade de campanhas limitam aceitação. Não foi adicionada
 uma nova política de declaração de guerra à IA militar ou reescrita sua economia.
 Fronteiras participam do seed inicial; difficulty/aggressiveness ainda não modificam
@@ -293,6 +313,13 @@ federações, sanções, espionagem, world tension, conferências de paz e multi
 não foram implementados.
 
 ## Validação final
+
+Rebalance de spam da IA: a suíte `diplomacyAIProposals.test.ts` acrescenta cobertura
+de teto global, score, empates determinísticos, cooldown de 180 dias, ausência de
+spam mensal, requisitos proativos, relevância, utilidade de rota, saves/reload,
+propostas pendentes e preservação das ações do jogador, garantias e calls.
+Resultados desse rebalance são descritos no relatório da tarefa; os números abaixo
+registram a implementação inicial da Diplomacy V2.
 
 - `npm run lint`: passou, sem erros ou avisos.
 - `npm run typecheck`: passou.

@@ -1,3 +1,4 @@
+import { getTerrainDefinition } from '../terrain';
 import { Army } from '../../types/army';
 import { Province } from '../../types/province';
 import { getBuildingLevel } from '../../data/buildings';
@@ -99,7 +100,7 @@ export function calculateDefenderTotalPower(
 ): { totalPower: number; hasTerritorialBonus: boolean; bonusMultiplier: number } {
   const basePower = calculateArmyBasePower(army, techBonuses);
   
-  let bonusMultiplier = 1.0;
+  let bonusMultiplier = getTerrainDefinition(province).defenseModifier;
   let hasTerritorialBonus = false;
 
   // Bônus de defesa em território próprio

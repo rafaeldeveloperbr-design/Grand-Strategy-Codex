@@ -1,5 +1,6 @@
 import type { Building, ProvinceMarket } from '../../../../types';
 import type { ProvinceGameplay } from '../../types';
+import { SOUTH_AMERICA_TERRAIN } from './terrain';
 import { countries } from './countries';
 
 // Approximate gameplay values, not census data or official administrative regions.
@@ -82,6 +83,7 @@ export const provinceGameplay: ProvinceGameplay[] = definitions.map(([id, name, 
     { type: 'infrastructure', level: development >= 7 ? 2 : 1, daysRemaining: 0 },
   );
   return {
+    terrain: SOUTH_AMERICA_TERRAIN[id],
     id, name, owner, originalOwner: owner, color: countries.find(country => country.tag === owner)!.color,
     population: { total, growthRate: .002, employed: Math.round(total * .5), unemployed: Math.round(total * .1), satisfaction: 65 },
     maxPopulation: total * 2, development, buildings, defense: development >= 7 ? 4 : 2,

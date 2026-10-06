@@ -42,6 +42,8 @@ export interface BuildingConstruction {
  * Cada província é uma entidade territorial básica.
  */
 export interface Province {
+  /** Optional at legacy/synthetic map boundaries; South America defines all provinces. */
+  terrain?: import('../engine/terrain').TerrainType;
   rebellion?: import('../engine/rebellion/types').ProvincialRebellion;
   unrestExplanation?: import('../engine/rebellion/types').UnrestExplanation;
   /** Identificador único da província */

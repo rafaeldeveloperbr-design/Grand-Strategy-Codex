@@ -3,6 +3,7 @@ import type { Province, Country, GameDate, Army, Recruitment, BuildingConstructi
 import type { CountryTechState } from '../types/technology';
 import type { DiplomaticRelation, War } from '../types/diplomacy';
 import { normalizeSavedFactions, normalizeSavedRebellion, migrateLegacyRebels } from './rebellion';
+import { isTerrainType } from './terrain';
 import { normalizePopulation } from './population';
 import { normalizeMarket } from './market';
 import { normalizeTechState } from './technology';
@@ -96,7 +97,11 @@ function isSerializedV2(value: unknown): value is SerializedSaveGameV2 {
 
 // ============ SERIALIZAÇÃO ============
 function serializeV2(save: SaveGameV2): SerializedSaveGameV2 {
-  return { ...save, technology: { player: save.technology.player, bots: Array.from(save.technology.bots.entries()) } };
+  return { ...save, world: { ...save.world, provinces: save.world.provinces.map(province => {
+    const base = provincesData.find(item => item.id === province.id);
+    if (base?.terrain !== province.terrain) return province;
+    const copy = { ...province }; delete copy.terrain; return copy;
+  }) }, technology: { player: save.technology.player, bots: Array.from(save.technology.bots.entries()) } };
 }
 function deserializeV2(raw: SerializedSaveGameV2): SaveGameV2 {
   return {
@@ -127,6 +132,7 @@ export function migrateLegacyBuildings(buildings: Province['buildings']): Provin
 function normalizeSavedProvince(province: Province): Province {
   return {
     ...province,
+    terrain: isTerrainType(province.terrain) ? province.terrain : provincesData.find(base => base.id === province.id)?.terrain ?? 'plains',
     rebellion: normalizeSavedRebellion(province.rebellion),
     unrestExplanation: undefined,
     buildings: migrateLegacyBuildings(province.buildings),

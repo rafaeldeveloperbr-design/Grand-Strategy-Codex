@@ -2,6 +2,8 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useGameRefs } from './hooks/useGameRefs';
 import { useGameLoop } from './hooks/useGameLoop';
 import { TopBar } from './components/TopBar';
+import { NationalEconomyPanel } from './components/NationalEconomyPanel';
+import { normalizeNationalTrade, normalizeTariffRate } from './engine/economy/tradeState';
 import { GameMap } from './components/GameMap';
 import { applyRebellionAction, type RebellionAction } from './engine/rebellion';
 import { ProvincePanel } from './components/ProvincePanel';
@@ -84,6 +86,8 @@ const App: React.FC = () => {
   const [showCheatPanel, setShowCheatPanel] = useState(false);
   const [showFocusModal, setShowFocusModal] = useState(false);
   const [showResearchModal, setShowResearchModal] = useState(false);
+  const [showEconomyPanel, setShowEconomyPanel] = useState(false);
+  const closeEconomyPanel = useCallback(() => setShowEconomyPanel(false),[]);
 
 
   const addLog = useCallback((msg: string) => console.log(msg), []);
@@ -111,6 +115,11 @@ const App: React.FC = () => {
   useGameLoop({ provincesRef, countriesRef, armiesRef, recruitmentsRef, warsRef, diplomaticRelationsRef, dateRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, aiDifficultyRef, activeBattlesRef, ceilingLogRef, gameLoopRef, playerCountryTag, battleHistory, hasTriggeredEndGame, gameSpeed, isPaused: modals.isPaused, allCountries, setProvinces, setAllCountries, setArmies, setWars, setDiplomaticRelations, setRecruitments, setBuildingConstructions, setPlayerTechState, setBotTechStates, setDate, setActiveBattles, setEndGameType, setGameStats, setHasTriggeredEndGame, setIsPaused: modals.setIsPaused, setBattleHistory, setBattleReport: modals.setBattleReport, addLog, addToast, addAILog, formatGameDate });
 
   const economy = useEconomyActions({ provinces, playerCountry, playerCountryTag, playerTechState, buildingConstructions, setBuildingConstructions, setProvinces, setAllCountries, recruitments, setRecruitments, addLog, addToast, formatGameDate, dateRef });
+  const handleTariffChange = (rate: number) => {
+    const countries = countriesRef.current.map(c => c.tag === playerCountryTag ? {...c,trade: {...normalizeNationalTrade(c.trade),tariffRate: normalizeTariffRate(rate)}} : c);
+    countriesRef.current = countries;
+    setAllCountries(countries);
+  };
   const handleRebellionAction = (provinceId: string, action: RebellionAction) => {
     const result = applyRebellionAction(provincesRef.current, countriesRef.current, armiesRef.current, playerCountryTag, provinceId, action, dateRef.current);
     if (result.accepted) {
@@ -187,6 +196,7 @@ const App: React.FC = () => {
         onFocusClick={() => setShowFocusModal(true)}
         onSettingsClick={() => modals.setShowSettingsModal(true)}
         onGovernmentClick={() => modals.setShowGovernmentModal(true)}
+        onEconomyClick={() => setShowEconomyPanel(true)}
       />      <div className="game__main">
         <GameMap provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} wars={wars} diplomaticRelations={diplomaticRelations} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} onProvinceHover={selection.handleProvinceHover} onProvinceClick={selection.handleProvinceClick} onArmyClick={selection.handleArmyClick} onProvinceRightClick={armyActions.handleProvinceRightClick} />
         {selection.isPanelOpen && selectedProvinceData && <ProvincePanel onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
@@ -251,6 +261,7 @@ const App: React.FC = () => {
         {modals.showWarPanel && <WarPanel wars={wars} playerCountry={playerCountry} allCountries={allCountries} onClose={() => modals.setShowWarPanel(false)} onMakePeace={diplomacy.handleMakePeace} />}
         {modals.battleReport && <BattleReportModal battleResult={modals.battleReport} playerCountry={playerCountry} allCountries={allCountries} onClose={() => { modals.setBattleReport(null); modals.setIsPaused(false); }} />}
         {modals.showBattleHistory && <BattleHistoryModal playerCountryTag={playerCountryTag} battleHistory={battleHistory} allCountries={allCountries} onClose={() => modals.setShowBattleHistory(false)} onViewBattle={(b) => { modals.setShowBattleHistory(false); modals.setBattleReport(b); modals.setIsPaused(true); }} />}
+        {showEconomyPanel && <NationalEconomyPanel country={playerCountry} countries={allCountries} provinces={provinces} onTariffChange={handleTariffChange} onClose={closeEconomyPanel} />}
         {showFocusModal &&
           <FocusModal
             techState={playerTechState}

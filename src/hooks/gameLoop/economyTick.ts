@@ -5,9 +5,10 @@
  */
 import { calculateArmyMaintenance, processRecruitments, recoverArmy } from '../../engine/military';
 import { processConstructions } from '../../engine/buildings';
-import { processDailyTick } from '../../engine/economy';
+import { prepareCountryMarkets, processDailyTick } from '../../engine/economy';
+import { processInternationalTrade } from '../../engine/economy/internationalTrade';
 import { getBuildingName, getUnitName } from '../../utils/translations';
-import type { Province, Country, Army, Recruitment, BuildingConstruction, War } from '../../types';
+import type { Province, Country, Army, Recruitment, BuildingConstruction, War, DiplomaticRelation } from '../../types';
 import type { GameDate } from '../../types/date';
 import type { ToastType } from '../../types/toast';
 import type { AIActionType } from '../../types/aiLog';
@@ -23,6 +24,7 @@ type Params = {
   provinces: Province[];
   buildingConstructions: BuildingConstruction[];
   wars: War[];
+  relations?: DiplomaticRelation[];
   playerCountryTag: string;
   date: GameDate;
   allCountries: Country[];
@@ -131,11 +133,17 @@ export function processEconomyTick(p: Params) {
     stationedTroops: armies.filter(army => army.location === province.id).flatMap(army => army.regiments).reduce((sum, regiment) => sum + regiment.strength, 0),
     stationedMilitaryMaintenance: armies.filter(army => army.location === province.id).reduce((sum, army) => sum + calculateArmyMaintenance(army), 0),
   }));
+  const prepared = new Map(countries.flatMap(country => {
+    const state = stateFor(country.tag);
+    return prepareCountryMarkets(country,provinces.filter(pr => pr.owner === country.tag),state ? calculateTechBonuses(state) : undefined).map(pr => [pr.id,pr] as const);
+  }));
+  provinces = provinces.map(pr => prepared.get(pr.id) ?? pr);
+  ({countries,provinces} = processInternationalTrade({countries,provinces,wars: p.wars,relations: p.relations ?? [],date}));
   countries = countries.map(country => {
     const countryProvinces = provinces.filter(pr => pr.owner === country.tag);
     const atWar = p.wars.some(war => war.attacker === country.tag || war.defender === country.tag);
     const state = stateFor(country.tag);
-    const { country: updatedCountry, provinces: updatedProvs } = processDailyTick(country, countryProvinces, state ? calculateTechBonuses(state) : undefined, atWar);
+    const { country: updatedCountry, provinces: updatedProvs } = processDailyTick(country, countryProvinces, state ? calculateTechBonuses(state) : undefined, atWar, true);
 
     for (const updatedProv of updatedProvs) {
       const idx = provinces.findIndex(pr => pr.id === updatedProv.id);

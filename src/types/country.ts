@@ -31,6 +31,8 @@ export interface Country {
   activeLaws: ActiveLaws;
   /** Indica se o país já foi totalmente anexado (para evitar processamento repetido) */
   isAnnexed?: boolean;
+  /** Tariff and external flows; national market aggregates remain derived. */
+  trade?: import('./economy').NationalTradeState;
 }
 
 /**

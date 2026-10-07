@@ -1,5 +1,5 @@
 import type { GoodId, Province } from '../types';
-import { ALL_GOODS, GOOD_IDS, calculateLocalPrice, calculatePurchasingPower, normalizeMarket } from './market';
+import { ALL_GOODS, GOOD_IDS, normalizeMarket, refreshProvinceMarket } from './market';
 
 
 const RESERVE_DAYS = 1.5;
@@ -98,17 +98,7 @@ export function processInternalTrade(provinces: Province[], efficiencyMultiplier
     }
   }
 
-  return result.map(province => {
-    const market = province.market!;
-    for (const id of ALL_GOODS) {
-      const good = market.goods[id];
-      const effectiveSupply = good.consumption + good.stock;
-      good.shortage = round(Math.max(0, good.demand - effectiveSupply));
-      good.price = calculateLocalPrice(id, effectiveSupply, good.demand);
-    }
-    market.purchasingPower = Math.max(0, Math.min(100, calculatePurchasingPower(province, market.goods) * purchasingPowerMultiplier));
-    return province;
-  });
+  return result.map(province => ({...province,market: refreshProvinceMarket(province,purchasingPowerMultiplier)}));
 }
 
 /**

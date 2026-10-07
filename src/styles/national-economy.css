@@ -1,0 +1,42 @@
+.national-economy-overlay {
+  position: fixed; inset: 0; z-index: 900; display: grid; place-items: center;
+  padding: 20px; background: rgb(8 12 18 / 78%);
+}
+.national-economy {
+  width: min(1180px, 100%); max-height: 90vh; overflow: auto; color: #ece8dc;
+  background: #18212b; border: 1px solid #64717f; border-radius: 12px;
+  box-shadow: 0 16px 60px rgb(0 0 0 / 55%);
+}
+.national-economy__header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #3b4855; }
+.national-economy__header h2 { margin: 0; font-size: 22px; }
+.national-economy__header p { color: #d4b56b; margin: 6px 0 0; letter-spacing: .12em; }
+.national-economy__header button { min-width: 38px; min-height: 38px; background: #303d4a; border: 1px solid #64717f; border-radius: 6px; color: inherit; cursor: pointer; }
+.national-economy__content { padding: 20px 24px; }
+.national-economy__totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.national-economy__totals > div { padding: 14px; background: #222f3b; border-radius: 6px; }
+.national-economy__totals span { display: block; color: #b9c4ce; font-size: 13px; margin-bottom: 8px; }
+.national-economy__totals strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.national-economy__positive { color: #96d8a7; }
+.national-economy__negative { color: #ffaaa0; }
+.national-economy__tariff { display: flex; align-items: center; gap: 16px; margin: 22px 0; }
+.national-economy__tariff input { width: min(280px, 45%); accent-color: #d4b56b; }
+.national-economy__note { color: #b9c4ce; font-size: 13px; line-height: 1.6; margin: 16px 0; }
+.national-economy__table-wrap { overflow-x: auto; }
+.national-economy table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.national-economy caption { text-align: left; padding: 10px 0; color: #d4b56b; }
+.national-economy th, .national-economy td { padding: 12px 9px; border-bottom: 1px solid #3b4855; text-align: right; }
+.national-economy th:first-child { text-align: left; }
+.national-economy thead { color: #c8d3df; background: #222f3b; }
+.national-economy__partners { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+.national-economy__partners h3 { margin: 0 0 12px; font-size: 16px; }
+.national-economy__partners p { color: #b9c4ce; font-size: 14px; }
+.national-economy__partners ul { list-style: none; padding: 0; margin: 0; }
+.national-economy__partners li { padding: 10px 0; border-bottom: 1px solid #3b4855; }
+.national-economy__partners li span { display: block; color: #b9c4ce; font-size: 13px; margin-top: 5px; }
+@media (max-width: 700px) {
+  .national-economy-overlay { padding: 8px; }
+  .national-economy__totals { grid-template-columns: 1fr 1fr; }
+  .national-economy__partners { grid-template-columns: 1fr; }
+  .national-economy__content, .national-economy__header { padding: 16px; }
+  .national-economy__header h2 { font-size: 18px; }
+}

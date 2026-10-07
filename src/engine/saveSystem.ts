@@ -9,6 +9,7 @@ import { normalizePopulation } from './population';
 import { normalizeMarket } from './market';
 import { normalizeTechState } from './technology';
 import { normalizeActiveLaws } from './government';
+import { normalizeNationalTrade } from './economy/tradeState';
 import { mapMetadata, mapCapitals, provincesData } from '../data/map';
 
 // ============ META ============
@@ -116,7 +117,7 @@ function normalizeSavedCountry(country: Country): Country {
   const knownCapital = mapCapitals[country.tag];
   const capitalId = country.capitalId ?? country.capital ??
     (country.provinces.includes(knownCapital) ? knownCapital : country.provinces[0]);
-  return { ...country, capitalId, rebellions: normalizeSavedFactions(country.rebellions), activeLaws: normalizeActiveLaws(country.activeLaws) };
+  return { ...country, capitalId, trade: normalizeNationalTrade(country.trade), rebellions: normalizeSavedFactions(country.rebellions), activeLaws: normalizeActiveLaws(country.activeLaws) };
 }
 export function migrateLegacyBuildings(buildings: Province['buildings']): Province['buildings'] {
   const aliases: Record<string, Province['buildings'][number]['type']> = {

@@ -3,6 +3,7 @@ import type { Army, Country, Province } from '../../types';
 import { normalizeMarket } from '../market';
 import { MILITARY_BALANCE } from './balance';
 import { getArmySupply } from './supplyEngine';
+import { politicsModifiers } from '../politics';
 import { getRegimentMaximum, getRegimentOrganization } from './armyStats';
 import type { LogisticsSnapshot } from '../logistics';
 
@@ -10,6 +11,7 @@ import type { LogisticsSnapshot } from '../logistics';
 export function recoverArmy(army: Army, country: Country, province: Province, colocatedArmies: Army[] = [army], logistics?: LogisticsSnapshot): { army: Army; country: Country; province: Province; reinforced: number } {
   if (army.inCombat || army.destination) return { army, country, province, reinforced: 0 };
   const supply = getArmySupply(army, province, colocatedArmies, logistics);
+  const recoveryModifier = politicsModifiers(country).recovery;
   const market = normalizeMarket(province.market);
   let manpower = country.resources.manpower;
   let gold = country.resources.gold;
@@ -17,7 +19,7 @@ export function recoverArmy(army: Army, country: Country, province: Province, co
   const regiments = army.regiments.map(regiment => {
     const definition = UNIT_DEFINITIONS[regiment.type];
     const missing = Math.max(0, getRegimentMaximum(regiment) - regiment.strength);
-    const desired = Math.min(missing, MILITARY_BALANCE.dailyReinforcementRate * supply.ratio);
+    const desired = Math.min(missing, MILITARY_BALANCE.dailyReinforcementRate * supply.ratio * recoveryModifier);
     const affordable = Math.min(desired, manpower, gold / MILITARY_BALANCE.reinforcementGoldPerMan, market.goods.iron.stock / MILITARY_BALANCE.reinforcementIronPerMan, market.goods.tools.stock / MILITARY_BALANCE.reinforcementToolsPerMan);
     const amount = Math.max(0, Math.floor(affordable));
     manpower -= amount; gold -= amount * MILITARY_BALANCE.reinforcementGoldPerMan;
@@ -26,11 +28,11 @@ export function recoverArmy(army: Army, country: Country, province: Province, co
     reinforced += amount;
     const organizationDelta =
       MILITARY_BALANCE.dailyOrganizationRecovery *
-      supply.ratio;
+      supply.ratio * recoveryModifier;
 
     const moraleDelta =
       MILITARY_BALANCE.dailyMoraleRecovery *
-      supply.ratio;
+      supply.ratio * recoveryModifier;
 
     return {
       ...regiment,

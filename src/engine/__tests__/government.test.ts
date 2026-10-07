@@ -16,7 +16,7 @@ const country = (laws=DEFAULT_LAWS,gold=10000): Country => ({tag:'TST',name:'Tes
 
 describe('Governo e Leis integrados',()=>{
   it('possui três leis válidas em todas as categorias',()=>{
-    expect(LAW_CATEGORIES).toEqual(['conscription','taxation','governance','economy','intelligence','agrarian','trade']);
+    expect(LAW_CATEGORIES).toEqual(['conscription','taxation','governance','economy','intelligence','agrarian','trade','militarySpending','social']);
     for(const category of LAW_CATEGORIES){expect(LAWS_BY_CATEGORY[category]).toHaveLength(3);expect(LAWS_BY_CATEGORY[category].every(id=>LAWS[id]?.category===category)).toBe(true)}
   });
   it('normaliza leis ausentes e inválidas de saves antigos',()=>{

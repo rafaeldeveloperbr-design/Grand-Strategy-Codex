@@ -113,7 +113,7 @@ export function processAIEconomicDecisions(
   }
 
   // Laws are considered after research so policy churn cannot starve Technology V2.
-  const selectedLaw = chooseAILaw(updatedCountry, updatedProvinces, { atWar });
+  const selectedLaw = updatedCountry.politics ? null : chooseAILaw(updatedCountry, updatedProvinces, { atWar });
 
   if (selectedLaw) {
     const result = enactLaw(

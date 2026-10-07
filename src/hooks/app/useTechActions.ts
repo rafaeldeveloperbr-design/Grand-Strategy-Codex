@@ -2,9 +2,9 @@ import { useCallback } from 'react';
 import { startNationalFocus, startTechnologyResearch } from '../../engine/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
 import { LAWS } from '../../constants/laws';
-import { enactLaw } from '../../engine/government';
+import { changeGovernmentPolicy } from '../../engine/politics';
 import type { LawCategory } from '../../types/government';
-import type { Country } from '../../types';
+import type { Country, GameDate, War } from '../../types';
 import type { CountryTechState } from '../../types/technology';
 import type { ToastType } from '../../types/toast';
 import type { AIDifficulty } from '../../types/difficulty';
@@ -28,9 +28,11 @@ export function useTechActions(params: {
   setGameStats: React.Dispatch<React.SetStateAction<GameStats | null>>;
   setGameSpeed: React.Dispatch<React.SetStateAction<number>>;
   setIsPaused: React.Dispatch<React.SetStateAction<boolean>>;
-  playerAtWar: boolean;
+  countriesRef: React.MutableRefObject<Country[]>;
+  dateRef: React.MutableRefObject<GameDate>;
+  warsRef: React.MutableRefObject<War[]>;
 }) {
-  const { playerCountry, playerCountryTag, playerTechState, setPlayerTechState, setAllCountries, addLog, addToast, playerTechStateRef, setAiDifficulty, setEndGameType, setGameSpeed, setIsPaused, playerAtWar } = params;
+  const { playerCountry, playerCountryTag, playerTechState, setPlayerTechState, setAllCountries, addLog, addToast, playerTechStateRef, setAiDifficulty, setEndGameType, setGameSpeed, setIsPaused, countriesRef, dateRef, warsRef } = params;
 
   const handleStartFocus = useCallback((focusId: string) => {
     if (!focusId || !playerTechState) return;
@@ -96,11 +98,16 @@ export function useTechActions(params: {
   const handleEnactLaw = useCallback((category: LawCategory, lawId: string) => {
     const law = LAWS[lawId];
     if (!law || law.category !== category) return;
-    const result = enactLaw(playerCountry.activeLaws, lawId, playerCountry.resources.gold, {atWar:playerAtWar});
+    const current = countriesRef.current.find(c => c.tag===playerCountryTag);
+    if (!current) return;
+    const result = changeGovernmentPolicy(current, lawId, dateRef.current, warsRef.current.some(w => w.attacker===playerCountryTag || w.defender===playerCountryTag));
     if (!result.allowed) { addToast(result.reason ?? 'Mudança bloqueada', 'error', 'Lei bloqueada'); return; }
-    setAllCountries(prev => prev.map(c => c.tag === playerCountryTag ? { ...c, resources: { ...c.resources, gold: result.gold }, activeLaws: result.activeLaws } : c));
-    addToast(`Lei "${law.name}" promulgada!`, 'success', 'Nova Lei');
-  }, [playerCountry, playerCountryTag, playerAtWar, addToast, setAllCountries]);
+    const updated = countriesRef.current.map(c => c.tag===playerCountryTag ? result.country : c);
+    countriesRef.current = updated;
+    setAllCountries(updated);
+    addLog(result.message);
+    addToast(result.message, 'success', 'Política adotada');
+  }, [playerCountryTag, countriesRef, dateRef, warsRef, addLog, addToast, setAllCountries]);
   const handleSpeedChange = useCallback((speed: number) => setGameSpeed(speed), [setGameSpeed]);
 
   return { handleStartFocus, handleStartResearch, handleEndGameContinue, handleEndGameRestart, handleDifficultyChange, handleEnactLaw, handleSpeedChange };

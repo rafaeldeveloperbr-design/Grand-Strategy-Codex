@@ -11,6 +11,7 @@ export type GameTickPhase =
   | 'production'      // 1. Gera recursos das províncias
   | 'economy'         // 2. Constrói prédios, consome recursos
   | 'population'      // 3. Cresce/morre, migra (FUTURO)
+  | 'politics'        // 3b. Tick nacional mensal antes do unrest; depende da economia/população
   | 'stability'       // 4. Calcula unrest/satisfação (unrestTick)
   | 'diplomacy'       // 5. Relações, tech diplomática (diplomacyTechTick)
   | 'technology'      // 6. Pesquisa (dentro de diplomacyTechTick hoje)
@@ -40,6 +41,7 @@ export const GAME_LOOP_ORDER: GameTickPhase[] = [
   'production',
   'economy',
   'population',
+  'politics',
   'stability',
   'diplomacy',
   'technology',

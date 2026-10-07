@@ -155,7 +155,8 @@ describe('Rebellion V2 factions and objectives', () => {
     f.objective.heldDays = f.objective.requiredDays - 1;
     const victory = processRebellionObjectives([{ ...result.provinces[0], owner: f.id }], result.countries, result.armies, result.wars, result.relations);
     expect(victory.countries[0].activeLaws.governance).toBe(type === 'pretenders' ? 'governance_balanced' : 'governance_decentralized');
-    expect(victory.countries[0].resources.stability).toBe(B.victoryStability);
+    expect(victory.countries[0].resources.stability).toBe(30);
+    expect(victory.countries[0].politics?.governmentType).toBe(type === 'pretenders' ? 'military_government' : 'republic');
   });
   it('contested control prevents victory even on the last objective day', () => {
     const result = spawn(), f = result.countries[0].rebellions![0]; f.objective.heldDays = f.objective.requiredDays - 1;

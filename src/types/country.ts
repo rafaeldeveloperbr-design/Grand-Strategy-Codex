@@ -4,6 +4,7 @@
 import type { ActiveLaws } from './government';
 
 export interface Country {
+  politics?: import('./politics').PoliticsState;
   /** Explicit capital province. Optional for legacy saves and synthetic countries. */
   capitalId?: string;
   /** Legacy explicit alias supported at the load boundary. */

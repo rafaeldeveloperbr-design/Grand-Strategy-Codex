@@ -1,4 +1,5 @@
 import { migrateDiplomacy } from './diplomacy';
+import { initializePolitics } from './politics';
 // src/engine/saveSystem.ts - V2 Tipado e Versionado com fronteira unknown
 import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../types';
 import type { CountryTechState } from '../types/technology';
@@ -117,7 +118,7 @@ function normalizeSavedCountry(country: Country): Country {
   const knownCapital = mapCapitals[country.tag];
   const capitalId = country.capitalId ?? country.capital ??
     (country.provinces.includes(knownCapital) ? knownCapital : country.provinces[0]);
-  return { ...country, capitalId, trade: normalizeNationalTrade(country.trade), rebellions: normalizeSavedFactions(country.rebellions), activeLaws: normalizeActiveLaws(country.activeLaws) };
+  return initializePolitics({ ...country, capitalId, trade: normalizeNationalTrade(country.trade), rebellions: normalizeSavedFactions(country.rebellions), activeLaws: normalizeActiveLaws(country.activeLaws) });
 }
 export function migrateLegacyBuildings(buildings: Province['buildings']): Province['buildings'] {
   const aliases: Record<string, Province['buildings'][number]['type']> = {

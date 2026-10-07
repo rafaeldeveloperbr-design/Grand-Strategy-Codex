@@ -21,6 +21,7 @@ import { processProvinceMarket } from './market';
 import { processInternalTrade } from './internalTrade';
 import type { TechnologyBonuses } from './technology';
 import { calculateLawModifiers } from './government';
+import { politicsModifiers } from './politics';
 
 /**
  * Constantes de balanceamento do jogo
@@ -186,7 +187,8 @@ export function processDailyTick(
   const stabilityModifiers = getStabilityModifiers(effectiveStability);
 
   // Combina multiplicadores de tecnologia, leis e estabilidade
-  const goldIncomeMultiplier = (techBonuses?.goldIncomeMultiplier ?? 1.0) * lawModifiers.goldIncomeMultiplier * stabilityModifiers.goldIncome;
+  const politicalModifiers = politicsModifiers(country);
+  const goldIncomeMultiplier = (techBonuses?.goldIncomeMultiplier ?? 1.0) * lawModifiers.goldIncomeMultiplier * stabilityModifiers.goldIncome * politicalModifiers.tax;
   const manpowerMultiplier = (techBonuses?.manpowerMultiplier ?? 1.0) * lawModifiers.manpowerMultiplier * stabilityModifiers.manpowerGrowth;
   const capacityMultiplier = (techBonuses?.populationCapacityMultiplier ?? 1) * lawModifiers.populationCapacityMultiplier;
 
@@ -214,7 +216,8 @@ export function processDailyTick(
   const baseExpenses = calculateCountryExpenses(country, updatedProvinces);
   const militaryMaintenance = updatedProvinces.reduce((sum, province) => sum + (province.stationedMilitaryMaintenance ?? (province.stationedTroops ?? 0) / 1000 * 0.1), 0)
     * (techBonuses?.militaryMaintenanceMultiplier ?? 1) * lawModifiers.militaryMaintenanceMultiplier;
-  const expenses = baseExpenses + militaryMaintenance;
+  const socialExpense = updatedProvinces.reduce((sum,province) => sum+province.population.total,0)*politicalModifiers.socialCostPerPerson;
+  const expenses = baseExpenses + militaryMaintenance*politicalModifiers.maintenance + socialExpense;
   const goldBalance = totalGoldIncome - expenses;
 
   // Atualiza manpower
@@ -240,7 +243,7 @@ export function processDailyTick(
   };
 
   // Aplica recuperação diária de estabilidade
-  updatedCountry = processDailyStabilityRecovery(updatedCountry);
+  if (!updatedCountry.politics) updatedCountry = processDailyStabilityRecovery(updatedCountry);
 
   return { country: updatedCountry, provinces: updatedProvinces };
 }

@@ -9,6 +9,7 @@ export const OBJECTIVE_LABELS: Record<RebellionObjective['kind'], string> = {
   tax_relief: 'Alívio fiscal', independence: 'Independência', replace_government: 'Substituição do governo', reform: 'Reforma política',
 };
 export const UNREST_SOURCE_LABELS: Record<string, string> = {
+  politics: 'Legitimidade e grupos políticos',
   dissatisfaction: 'Insatisfação', food_shortage: 'Falta de alimentos', poverty: 'Baixo poder de compra',
   low_development: 'Baixo desenvolvimento', recent_conquest: 'Conquista recente', stability: 'Estabilidade nacional',
   prestige: 'Prestígio', taxation: 'Impostos', mobilization: 'Mobilização total', deficit: 'Déficit econômico',

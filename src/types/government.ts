@@ -1,4 +1,4 @@
-export type LawCategory = 'conscription' | 'taxation' | 'governance' | 'economy' | 'intelligence' | 'agrarian' | 'trade';
+export type LawCategory = 'conscription' | 'taxation' | 'governance' | 'economy' | 'intelligence' | 'agrarian' | 'trade' | 'militarySpending' | 'social';
 export type CoreLawCategory = Exclude<LawCategory, 'agrarian' | 'trade'>;
 
 export interface LawModifiers {
@@ -32,6 +32,8 @@ export interface Law {
 }
 
 export interface ActiveLaws {
+  militarySpending?: string;
+  social?: string;
   conscription: string;
   taxation: string;
   governance: string;

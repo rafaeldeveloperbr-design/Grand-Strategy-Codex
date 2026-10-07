@@ -1,6 +1,12 @@
 import type { ActiveLaws, Law, LawCategory } from '../types/government';
 
 const laws = [
+  {id:'military_spending_low',category:'militarySpending',name:'Gasto Militar Baixo',description:'Reduz manutenção em 15% e recuperação em 5%; desagrada militares.',costGold:200,modifiers:{militaryMaintenanceMultiplier:.85}},
+  {id:'military_spending_normal',category:'militarySpending',name:'Gasto Militar Normal',description:'Mantém manutenção e recuperação normais.',costGold:200,modifiers:{}},
+  {id:'military_spending_high',category:'militarySpending',name:'Gasto Militar Alto',description:'Aumenta manutenção em 15% e recuperação em 5%; agrada militares.',costGold:500,modifiers:{militaryMaintenanceMultiplier:1.15}},
+  {id:'social_restrictive',category:'social',name:'Política Social Restritiva',description:'Sem despesa social; reduz satisfação em 2 e apoio popular.',costGold:200,modifiers:{satisfactionModifier:-2}},
+  {id:'social_balanced',category:'social',name:'Política Social Equilibrada',description:'Despesa diária de 0,005 ouro por mil habitantes.',costGold:200,modifiers:{}},
+  {id:'social_supportive',category:'social',name:'Política Social de Apoio',description:'Despesa diária de 0,02 ouro por mil habitantes; satisfação +3 e apoio popular.',costGold:500,modifiers:{satisfactionModifier:3}},
   {id:'conscription_peacetime',category:'conscription',name:'Recrutamento em Tempo de Paz',description:'Forças voluntárias preservam trabalhadores e bem-estar.',costGold:0,modifiers:{manpowerMultiplier:1,recruitmentTimeMultiplier:1.1,militaryMaintenanceMultiplier:.95,satisfactionModifier:1}},
   {id:'conscription_limited',category:'conscription',name:'Recrutamento Limitado',description:'Mobilização moderada amplia as reservas com impacto controlado.',costGold:800,modifiers:{manpowerMultiplier:1.15,recruitmentTimeMultiplier:.95,recruitmentCostMultiplier:.95,populationGrowthMultiplier:.98,satisfactionModifier:-1}},
   {id:'conscription_total',category:'conscription',name:'Mobilização Total',description:'Mobilização de emergência amplia o exército, retirando mão de obra da economia.',costGold:2200,requirements:{atWar:true},modifiers:{manpowerMultiplier:1.3,recruitmentTimeMultiplier:.85,recruitmentCostMultiplier:1.1,militaryMaintenanceMultiplier:1.15,productionMultipliers:{food:.9,wood:.9,iron:.9,tools:.9},populationGrowthMultiplier:.9,satisfactionModifier:-6,purchasingPowerMultiplier:.9}},
@@ -31,8 +37,9 @@ const laws = [
 ] as const satisfies readonly Law[];
 
 export const LAWS: Readonly<Record<string, Law>> = Object.fromEntries(laws.map(law => [law.id, law]));
-export const LAW_CATEGORIES: readonly LawCategory[] = ['conscription','taxation','governance','economy','intelligence','agrarian','trade'];
+export const LAW_CATEGORIES: readonly LawCategory[] = ['conscription','taxation','governance','economy','intelligence','agrarian','trade','militarySpending','social'];
 export const LAWS_BY_CATEGORY: Readonly<Record<LawCategory, readonly string[]>> = {
+  militarySpending:['military_spending_low','military_spending_normal','military_spending_high'],social:['social_restrictive','social_balanced','social_supportive'],
   conscription:['conscription_peacetime','conscription_limited','conscription_total'], taxation:['taxation_low','taxation_normal','taxation_high'], governance:['governance_decentralized','governance_balanced','governance_centralized'], economy:['economy_civilian','economy_war_early','economy_war_total'], intelligence:['intel_disorganized','intel_agency','intel_total'], agrarian:['agrarian_traditional','agrarian_incentives','agrarian_intensive'], trade:['trade_provincial','trade_integrated','trade_controlled'],
 };
-export const DEFAULT_LAWS: ActiveLaws = {conscription:'conscription_peacetime',taxation:'taxation_normal',governance:'governance_balanced',economy:'economy_civilian',intelligence:'intel_disorganized',agrarian:'agrarian_traditional',trade:'trade_provincial'};
+export const DEFAULT_LAWS: ActiveLaws = {conscription:'conscription_peacetime',taxation:'taxation_normal',governance:'governance_balanced',economy:'economy_civilian',intelligence:'intel_disorganized',agrarian:'agrarian_traditional',trade:'trade_provincial',militarySpending:'military_spending_normal',social:'social_balanced'};

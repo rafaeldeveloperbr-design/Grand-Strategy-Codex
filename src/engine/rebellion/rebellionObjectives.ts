@@ -1,5 +1,6 @@
 import type { Army, Country, Province } from '../../types';
 import { transferProvince, type TerritoryTransferState } from '../territoryTransfer';
+import { forcedGovernmentChange } from '../politics';
 import { REBELLION_BALANCE as B } from './balance';
 import { normalizeRebellion, troopCount } from './rebellionUtils';
 import type { RebellionFaction } from './types';
@@ -42,7 +43,8 @@ export function resolveRebellion(faction: RebellionFaction, provinces: Province[
       if (c.tag === recipient && restored) return { ...c, isAnnexed: false };
       if (c.tag !== faction.owner || !victory) return c;
       const kind = faction.objective.kind;
-      return { ...c, resources: { ...c.resources, stability: kind === 'replace_government' || kind === 'reform' ? B.victoryStability : c.resources.stability, prestige: c.resources.prestige - B.repressionPrestige },
+      const government = kind === 'replace_government' || kind === 'reform' ? forcedGovernmentChange(c,kind) : c;
+      return { ...government, resources: { ...government.resources, prestige: c.resources.prestige - B.repressionPrestige },
         activeLaws: { ...c.activeLaws, taxation: kind === 'tax_relief' ? 'taxation_low' : c.activeLaws.taxation,
           governance: kind === 'replace_government' ? 'governance_balanced' : kind === 'reform' ? 'governance_decentralized' : c.activeLaws.governance } };
     }) };

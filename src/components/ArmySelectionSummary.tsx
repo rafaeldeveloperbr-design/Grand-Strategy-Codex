@@ -1,4 +1,5 @@
 import type { Army, Province } from '../types';
+import type { ReactNode } from 'react';
 import type { LogisticsSnapshot } from '../engine/logistics';
 import {
   calculateArmySize,
@@ -15,6 +16,7 @@ export function ArmySelectionSummary({
   logistics,
   onClear,
   onClearRoutes,
+  children,
 }: {
   armies: Army[];
   allArmies: Army[];
@@ -22,6 +24,7 @@ export function ArmySelectionSummary({
   logistics?: LogisticsSnapshot;
   onClear: () => void;
   onClearRoutes?: () => void;
+  children?: ReactNode;
 }) {
   const total = armies.reduce((sum, army) => sum + calculateArmySize(army), 0);
 
@@ -96,6 +99,7 @@ export function ArmySelectionSummary({
         ))}
       </div>
 
+      {children}
       <div className="army-info-panel__group-command">
         <strong>Comando em grupo</strong>
         <span>{armies.filter(a => a.destination && !a.inCombat).length} com rota ativa · {armies.filter(a => !a.destination || a.inCombat).length} sem movimento ativo</span>

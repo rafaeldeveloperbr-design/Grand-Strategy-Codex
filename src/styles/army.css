@@ -1,22 +1,22 @@
 /* === Army Marker no SVG === */
-.army-marker{
+.army-marker {
   transition: transform 0.3s ease;
 }
 
-.army-marker:hover .army-marker__body{
+.army-marker:hover .army-marker__body {
   filter: brightness(1.3);
 }
 
-.army-marker--selected .army-marker__body{
+.army-marker--selected .army-marker__body {
   filter: brightness(1.2) drop-shadow(0 0 4px var(--gold));
 }
 
 /* === Hover state para ArmyMarker === */
-.army-marker--hovered .army-marker__body{
+.army-marker--hovered .army-marker__body {
   filter: brightness(1.2);
 }
 
-.battle-report-army{
+.battle-report-army {
   flex: 1;
   background: var(--bg-tertiary);
   border: 2px solid var(--border-color);
@@ -25,18 +25,18 @@
   transition: all 0.3s;
 }
 
-.battle-report-army.winner{
+.battle-report-army.winner {
   border-color: var(--accent-green);
   box-shadow: 0 0 20px rgba(46, 204, 113, 0.2);
 }
 
-.battle-report-army.loser{
+.battle-report-army.loser {
   border-color: var(--accent-red);
   opacity: 0.85;
 }
 
 /* Cabeçalho do Exército */
-.army-header{
+.army-header {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -45,18 +45,18 @@
   border-bottom: 1px solid var(--border-color);
 }
 
-.army-flag{
+.army-flag {
   font-size: 36px;
 }
 
 /* Detalhamento por Unidade */
-.unit-breakdown{
+.unit-breakdown {
   background: var(--bg-secondary);
   border-radius: 6px;
   padding: 12px;
 }
 
-.unit-breakdown h4{
+.unit-breakdown h4 {
   margin: 0 0 12px 0;
   font-size: 13px;
   font-weight: 700;
@@ -65,28 +65,676 @@
   letter-spacing: 1px;
 }
 
-.military-stack-controls { display: flex; gap: 8px; padding: 8px 0; flex-wrap: wrap; }
-.military-stack-controls button, .military-queue-entry button, .province-panel__army-card button { padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: 5px; background: var(--bg-app); color: var(--text-primary); cursor: pointer; }
-.military-composition { color: var(--text-secondary); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-.army-stack-popover__army:disabled { cursor: default; opacity: .8; }
-.military-army--selected { outline: 2px solid var(--gold); }
-.military-overview, .military-requirements { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
-.military-stat-grid, .military-cost-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 10px 0; }
-.military-cost-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border-subtle); padding-top: 10px; }
-.military-stat-grid dt, .military-cost-grid dt { font-size: 11px; color: var(--text-muted); }
-.military-stat-grid dd, .military-cost-grid dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
-.military-recruitment-card h4, .military-recruitment-card p { margin: 0 0 7px; }
-.military-recruitment-card.province-panel__build-option--disabled { opacity: 1; }
-.military-block-reason { padding: 7px; border-left: 3px solid var(--gold); background: var(--bg-app); color: var(--text-primary); font-size: 12px; }
-.military-queue-entry { display: grid; gap: 7px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border-subtle); border-radius: 6px; font-size: 12px; }
-.military-queue-entry progress { width: 100%; accent-color: var(--gold); }
-.military-stack-controls button:focus-visible, .military-queue-entry button:focus-visible, .battle-history-item:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.military-stack-controls {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+  flex-wrap: wrap;
+}
 
-.army-movement-plan { padding: 10px 0; border-top: 1px solid var(--border-subtle); margin-top: 8px; font-size: 12px; }
-.army-movement-plan ol { padding-left: 22px; max-height: 140px; overflow-y: auto; }
-.army-movement-plan small { display: block; color: var(--text-secondary); margin-top: 8px; line-height: 1.6; }
+.military-stack-controls button,
+.military-queue-entry button,
+.province-panel__army-card button {
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  cursor: pointer;
+}
 
-.unit-row{
+.military-composition {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.army-stack-popover__army:disabled {
+  cursor: default;
+  opacity: .8;
+}
+
+.military-army--selected {
+  outline: 2px solid var(--gold);
+}
+
+.military-overview,
+.military-requirements {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.military-stat-grid,
+.military-cost-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.military-cost-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 10px;
+}
+
+.military-stat-grid dt,
+.military-cost-grid dt {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.military-stat-grid dd,
+.military-cost-grid dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.military-recruitment-card h4,
+.military-recruitment-card p {
+  margin: 0 0 7px;
+}
+
+.military-recruitment-card.province-panel__build-option--disabled {
+  opacity: 1;
+}
+
+.military-block-reason {
+  padding: 7px;
+  border-left: 3px solid var(--gold);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.military-queue-entry {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.military-queue-entry progress {
+  width: 100%;
+  accent-color: var(--gold);
+}
+
+.military-stack-controls button:focus-visible,
+.military-queue-entry button:focus-visible,
+.battle-history-item:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.army-movement-plan {
+  padding: 10px 0;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.army-movement-plan ol {
+  padding-left: 22px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.army-movement-plan small {
+  display: block;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+.army-reorganization {
+  margin: 10px 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.army-reorganization h4 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+}
+
+.army-reorganization__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.army-reorganization p,
+.army-reorganization small {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+
+/* =========================================================
+   Modal
+   ========================================================= */
+
+.army-reorganization-modal {
+  width: min(720px, 94vw);
+  max-width: 720px;
+  max-height: 88vh;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  color: var(--text-primary);
+}
+
+
+/* =========================================================
+   Header
+   ========================================================= */
+
+.army-reorganization-modal__header {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 16px 18px;
+}
+
+.army-reorganization-modal__header>div {
+  min-width: 0;
+}
+
+.army-reorganization-modal__header h2 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.army-reorganization-modal__header span {
+  display: block;
+
+  margin-top: 4px;
+
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.army-reorganization-modal__close {
+  flex-shrink: 0;
+
+  width: 40px;
+  height: 40px;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0 !important;
+
+  font-size: 18px;
+}
+
+
+/* =========================================================
+   Conteúdo
+   ========================================================= */
+
+.army-reorganization-modal__content {
+  flex: 1;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 14px;
+
+  padding: 16px 18px;
+
+  overflow: hidden;
+
+  color: var(--text-primary);
+}
+
+
+/* =========================================================
+   Destino
+   ========================================================= */
+
+.army-reorganization-target {
+  flex-shrink: 0;
+
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 12px;
+
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+
+  background: var(--bg-secondary);
+}
+
+.army-reorganization-target label {
+  font-size: 12px;
+  font-weight: 700;
+
+  color: var(--text-secondary);
+}
+
+.army-reorganization-target select {
+  width: 100%;
+}
+
+
+/* =========================================================
+   Lista de regimentos
+   ========================================================= */
+
+.army-reorganization-regiments {
+  flex: 1;
+  min-height: 180px;
+
+  display: flex;
+  flex-direction: column;
+
+  margin: 0;
+  padding: 0;
+
+  overflow: hidden;
+
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+
+  background: var(--bg-secondary);
+
+  color: var(--text-primary);
+}
+
+.army-reorganization-regiments legend {
+  width: calc(100% - 24px);
+
+  margin: 0 12px;
+  padding: 0 4px;
+
+  color: var(--text-primary);
+}
+
+.army-reorganization-regiments legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+
+  font-size: 12px;
+}
+
+.army-reorganization-regiments legend span {
+  font-weight: 700;
+}
+
+.army-reorganization-regiments legend strong {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.army-reorganization-regiments__list {
+  min-height: 0;
+  overflow-y: auto;
+
+  padding: 8px;
+}
+
+
+/* =========================================================
+   Regimento
+   ========================================================= */
+
+.army-reorganization-regiment {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  min-height: 66px;
+
+  padding: 10px 12px;
+
+  border: 1px solid transparent;
+  border-bottom-color: var(--border-subtle);
+
+  cursor: pointer;
+
+  color: var(--text-primary);
+
+  transition:
+    background .12s ease,
+    border-color .12s ease;
+}
+
+.army-reorganization-regiment:last-child {
+  border-bottom-color: transparent;
+}
+
+.army-reorganization-regiment:hover {
+  background: var(--bg-hover);
+}
+
+.army-reorganization-regiment--selected {
+  background: var(--bg-panel-elevated);
+  border-color: var(--gold);
+  border-radius: 5px;
+}
+
+.army-reorganization-regiment input {
+  width: 17px;
+  height: 17px;
+
+  flex-shrink: 0;
+
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+.army-reorganization-regiment__body {
+  flex: 1;
+  min-width: 0;
+
+  display: grid;
+  gap: 5px;
+}
+
+.army-reorganization-regiment__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+}
+
+.army-reorganization-regiment__title strong {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.army-reorganization-regiment__title>span {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+
+  color: var(--text-primary);
+
+  white-space: nowrap;
+}
+
+.army-reorganization-regiment__stats {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 6px 16px;
+
+  font-size: 11px;
+
+  color: var(--text-secondary);
+}
+
+.army-reorganization-regiment__stats strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.army-reorganization-regiment small {
+  display: block;
+
+  font-size: 10px;
+  color: var(--text-muted);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   Preview
+   ========================================================= */
+
+.army-reorganization-preview {
+  flex-shrink: 0;
+
+  margin: 0;
+  padding: 12px;
+
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+
+  background: var(--bg-app);
+
+  color: var(--text-primary);
+}
+
+.army-reorganization-preview h3 {
+  margin: 0 0 10px;
+
+  font-size: 11px;
+
+  color: var(--text-muted);
+
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+
+.army-reorganization-preview__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 10px;
+}
+
+.army-reorganization-preview__grid>div,
+.army-reorganization-preview__result {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+
+  padding: 9px 10px;
+
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+
+  background: var(--bg-secondary);
+}
+
+.army-reorganization-preview__grid span,
+.army-reorganization-preview__result span {
+  font-size: 10px;
+
+  color: var(--text-muted);
+
+  text-transform: uppercase;
+}
+
+.army-reorganization-preview__grid strong,
+.army-reorganization-preview__result strong {
+  font-size: 13px;
+  color: var(--text-primary);
+
+  font-variant-numeric: tabular-nums;
+}
+
+.army-reorganization-preview__composition {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 6px;
+
+  margin-top: 10px;
+}
+
+.army-reorganization-preview__composition span {
+  padding: 4px 7px;
+
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+
+  background: var(--bg-secondary);
+
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.army-reorganization-preview__merge {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 6px;
+
+  margin-bottom: 10px;
+}
+
+.army-reorganization-preview__merge span {
+  padding: 5px 8px;
+
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+
+  background: var(--bg-secondary);
+
+  font-size: 11px;
+
+  color: var(--text-primary);
+}
+
+.army-reorganization-preview small {
+  display: block;
+
+  margin-top: 8px;
+
+  color: var(--text-secondary);
+}
+
+
+/* =========================================================
+   Erro / bloqueio
+   ========================================================= */
+
+.army-reorganization-error {
+  flex-shrink: 0;
+
+  margin: 0;
+  padding: 8px 10px;
+
+  border-left: 3px solid var(--gold);
+
+  background: var(--bg-app);
+
+  font-size: 11px;
+
+  color: var(--text-secondary);
+}
+
+
+/* =========================================================
+   Footer fixo
+   ========================================================= */
+
+.army-reorganization-modal__footer {
+  flex-shrink: 0;
+
+  display: flex;
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  padding: 12px 18px;
+
+  border-top: 1px solid var(--border-subtle);
+
+  background: var(--bg-secondary);
+}
+
+.army-reorganization-modal button,
+.army-reorganization-modal select {
+  padding: 8px 11px;
+
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+
+  background: var(--bg-app);
+
+  color: var(--text-primary);
+}
+
+.army-reorganization-modal button {
+  cursor: pointer;
+}
+
+.army-reorganization-modal button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.army-reorganization-modal__confirm {
+  border-color: var(--gold) !important;
+}
+
+.army-reorganization-modal__confirm:not(:disabled):hover {
+  background: var(--bg-hover);
+}
+
+.army-reorganization-modal__cancel:hover {
+  background: var(--bg-hover);
+}
+
+.army-reorganization-modal input:focus-visible,
+.army-reorganization-modal select:focus-visible,
+.army-reorganization-modal button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+
+/* =========================================================
+   Responsivo
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .army-reorganization-modal {
+    width: 96vw;
+    max-height: 94vh;
+  }
+
+  .army-reorganization-target {
+    grid-template-columns: 1fr;
+  }
+
+  .army-reorganization-preview__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .army-reorganization-regiment__stats {
+    gap: 4px 10px;
+  }
+
+  .army-reorganization-modal__footer {
+    flex-direction: column-reverse;
+  }
+
+  .army-reorganization-modal__footer button {
+    width: 100%;
+  }
+}
+
+.unit-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -94,17 +742,17 @@
   font-size: 13px;
 }
 
-.unit-icon{
+.unit-icon {
   font-size: 18px;
 }
 
-.unit-name{
+.unit-name {
   flex: 1;
   color: var(--text-primary);
   font-weight: 600;
 }
 
-.unit-stats{
+.unit-stats {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -112,26 +760,26 @@
   font-size: 12px;
 }
 
-.unit-stats .initial{
+.unit-stats .initial {
   color: var(--text-secondary);
 }
 
-.unit-stats .arrow{
+.unit-stats .arrow {
   color: var(--text-muted);
 }
 
-.unit-stats .final{
+.unit-stats .final {
   color: var(--text-primary);
   font-weight: 700;
 }
 
-.unit-stats .lost{
+.unit-stats .lost {
   color: var(--accent-red);
   font-weight: 600;
 }
 
 /* === Resumo de múltiplos exércitos selecionados === */
-.army-info-panel__header > div {
+.army-info-panel__header>div {
   min-width: 0;
 }
 
@@ -139,7 +787,7 @@
   margin: 0;
 }
 
-.army-info-panel__header > div > span {
+.army-info-panel__header>div>span {
   display: block;
   margin-top: 2px;
   font-size: 12px;

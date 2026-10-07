@@ -2,6 +2,7 @@ export * from './militaryUtils';
 export * from './recruitmentEngine';
 export * from './movementEngine';
 export * from './movementCommands';
+export * from './reorganization';
 export * from './balance';
 export * from './armyStats';
 export * from './supplyEngine';

@@ -168,17 +168,6 @@ const App: React.FC = () => {
     addLog('Pesquisa cancelada pelo jogador');
   }, [addToast, addLog]);
 
-  const handleCancelFocus = useCallback(() => {
-    setPlayerTechState(prev => ({
-      ...prev,
-      activeFocusId: null,
-      focusProgressDays: 0,
-    }));
-
-    addToast('🎯 Foco cancelado', 'info');
-    addLog('Foco nacional cancelado');
-  }, [addToast, addLog]);
-
   const cheats = useCheats({
     playerCountryTag, setAllCountries, setRecruitments, setBuildingConstructions,
     setArmies, provincesRef, armiesRef, setProvinces, addLog, addToast, setGameSpeed, setDate,
@@ -254,7 +243,7 @@ const App: React.FC = () => {
           <FocusModal
             techState={playerTechState}
             onStartFocus={tech.handleStartFocus}
-            onCancelFocus={handleCancelFocus}
+            onCancelFocus={tech.handleCancelFocus}
             onClose={() => setShowFocusModal(false)}
           />}
 

@@ -9,7 +9,7 @@ import { calculateWorkforce, getFoodShortageStatus, normalizePopulation } from '
 import { normalizeMarket } from '../market';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
-import { calculateTechBonuses, startTechnologyResearch } from '../technology';
+import { calculateTechBonuses, getFocusBlockReason, startNationalFocus, startTechnologyResearch } from '../technology';
 import { chooseAILaw, enactLaw } from '../government';
 import { queueRecruitment } from '../military/recruitmentEngine';
 
@@ -44,29 +44,28 @@ export function processAIEconomicDecisions(
 
   // 1. SELEÇÃO DE FOCO NACIONAL
   if (!updatedTechState.activeFocusId) {
-    const availableFocuses = NATIONAL_FOCUSES.filter(focus => {
-      if (updatedTechState.completedFocuses.includes(focus.id)) return false;
-
-      if (focus.prerequisites && focus.prerequisites.length > 0) {
-        return focus.prerequisites.every(prereqId =>
-          updatedTechState.completedFocuses.includes(prereqId)
-        );
-      }
-      return true;
-    });
+    const availableFocuses = NATIONAL_FOCUSES.filter(focus => getFocusBlockReason(updatedTechState, focus.id) === null);
 
     if (availableFocuses.length > 0) {
       const ownedProvinces = provinces.filter(province => province.owner === country.tag);
       const famine = ownedProvinces.some(province => getFoodShortageStatus(normalizeMarket(province.market).goods.food).ratio > 0);
       const workforce = ownedProvinces.reduce((sum, province) => sum + calculateWorkforce(normalizePopulation(province.population)), 0);
       const unemployed = ownedProvinces.reduce((sum, province) => sum + normalizePopulation(province.population).unemployed, 0);
-      const categoryPriority = famine ? 'ECONOMY' : atWar ? 'MILITARY' : country.resources.stability < 40 ? 'POLITICS' : workforce > 0 && unemployed / workforce > .2 ? 'ECONOMY' : 'POLITICS';
+      const socialProblems = ownedProvinces.some(province => normalizePopulation(province.population).satisfaction < 40);
+      const lowCapacity = ownedProvinces.some(province => (province.buildings ?? []).filter(building => ['workshop', 'iron_mine', 'lumber_mill'].includes(building.type)).length < 2);
+      const isolated = (country.trade?.partners.length ?? 0) === 0;
+      const behindInResearch = updatedTechState.completedTechnologies.length < Math.ceil(TECHNOLOGIES.length / 3);
+      const categoryPriority = famine ? 'ECONOMY'
+        : atWar ? 'MILITARY'
+        : country.resources.stability < 40 || socialProblems ? 'POLITICS'
+        : (country.economy && country.economy.goldIncome < country.economy.goldExpense) || country.resources.gold < 100 || workforce > 0 && unemployed / workforce > .2 ? 'ECONOMY'
+        : lowCapacity ? 'INDUSTRY'
+        : behindInResearch ? 'RESEARCH'
+        : isolated ? 'DIPLOMACY' : 'POLITICS';
+      // Stable array order breaks ties deterministically; unavailable categories fall back.
       const selectedFocus = [...availableFocuses].sort((a, b) => Number(b.category === categoryPriority) - Number(a.category === categoryPriority))[0];
-      updatedTechState = {
-        ...updatedTechState,
-        activeFocusId: selectedFocus.id,
-        focusProgressDays: 0,
-      };
+      const started = startNationalFocus(updatedTechState, selectedFocus.id);
+      if (started) updatedTechState = started;
 
       logs.push({
         actionType: 'focus',

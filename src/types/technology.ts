@@ -1,5 +1,5 @@
 export type TechnologyCategory = 'MILITARY' | 'ECONOMY' | 'SOCIETY';
-export type FocusCategory = 'MILITARY' | 'ECONOMY' | 'POLITICS';
+export type FocusCategory = 'POLITICS' | 'ECONOMY' | 'INDUSTRY' | 'MILITARY' | 'DIPLOMACY' | 'RESEARCH';
 export type UnitKind = import('./army').UnitType;
 
 export type TechnologyEffect =
@@ -20,6 +20,8 @@ export interface NationalFocus {
   durationDays: number;
   rewardEffects: RewardEffect[];
   prerequisites?: string[];
+  mutuallyExclusive?: string[];
+  position: { column: number; row: number };
 }
 export interface Technology { id: string; title: string; description: string; category: TechnologyCategory; icon: string; costGold: number; durationDays: number; prerequisites: string[]; effects: TechnologyEffect[] }
 export interface CountryTechState { countryTag: string; activeFocusId: string | null; activeResearchId: string | null; completedFocuses: string[]; completedTechnologies: string[]; focusProgressDays: number; researchProgressDays: number }

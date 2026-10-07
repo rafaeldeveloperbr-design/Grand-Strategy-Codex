@@ -53,24 +53,40 @@ export function normalizeTechState(value: Partial<CountryTechState> | undefined,
   const activeResearchId = TECHNOLOGIES.some(technology => technology.id === value?.activeResearchId)
     ? value?.activeResearchId ?? null
     : null;
+  const activeFocusId = NATIONAL_FOCUSES.some(focus => focus.id === value?.activeFocusId) ? value?.activeFocusId ?? null : null;
   return {
     countryTag: value?.countryTag ?? countryTag,
-    activeFocusId: NATIONAL_FOCUSES.some(focus => focus.id === value?.activeFocusId) ? value?.activeFocusId ?? null : null,
+    activeFocusId,
     activeResearchId,
     completedFocuses: [...new Set((value?.completedFocuses ?? []).filter(id => NATIONAL_FOCUSES.some(focus => focus.id === id)))],
     completedTechnologies: [...new Set((value?.completedTechnologies ?? []).filter(id => TECHNOLOGIES.some(technology => technology.id === id)))],
-    focusProgressDays: Number.isFinite(value?.focusProgressDays) ? value?.focusProgressDays ?? 0 : 0,
+    focusProgressDays: activeFocusId && Number.isFinite(value?.focusProgressDays) ? Math.max(0, value?.focusProgressDays ?? 0) : 0,
     researchProgressDays: activeResearchId && Number.isFinite(value?.researchProgressDays) ? Math.max(0, value?.researchProgressDays ?? 0) : 0,
   };
 }
 
 export const createInitialTechState = (countryTag: string): CountryTechState => normalizeTechState(undefined, countryTag);
 
-export function startNationalFocus(state: CountryTechState, id: string): CountryTechState | null {
+/** Canonical start validation. An already active focus cannot be restarted. */
+export function getFocusBlockReason(state: CountryTechState, id: string): string | null {
   const focus = NATIONAL_FOCUSES.find(item => item.id === id);
-  if (!focus || state.activeFocusId || state.completedFocuses.includes(id)
-    || !(focus.prerequisites ?? []).every(prerequisite => state.completedFocuses.includes(prerequisite))) return null;
+  if (!focus) return 'Foco inexistente';
+  if (state.completedFocuses.includes(id)) return 'Foco já concluído';
+  if (state.activeFocusId) return state.activeFocusId === id ? 'Foco já ativo' : 'Outro foco já ativo';
+  if (!(focus.prerequisites ?? []).every(prerequisite => state.completedFocuses.includes(prerequisite))) return 'Pré-requisitos incompletos';
+  // Check both directions so an asymmetric definition still blocks the choice.
+  if (NATIONAL_FOCUSES.some(other => state.completedFocuses.includes(other.id)
+    && ((focus.mutuallyExclusive ?? []).includes(other.id) || (other.mutuallyExclusive ?? []).includes(id)))) return 'Escolha mutuamente exclusiva já concluída';
+  return null;
+}
+
+export function startNationalFocus(state: CountryTechState, id: string): CountryTechState | null {
+  if (getFocusBlockReason(state, id)) return null;
   return { ...state, activeFocusId: id, focusProgressDays: 0 };
+}
+
+export function cancelNationalFocus(state: CountryTechState): CountryTechState {
+  return { ...state, activeFocusId: null, focusProgressDays: 0 };
 }
 
 export function startTechnologyResearch(state: CountryTechState, id: string, country: Country): { techState: CountryTechState | null; cost: number } {
@@ -91,10 +107,10 @@ export function getResearchProgress(state: CountryTechState): ResearchProgress |
   return { current, required: technology.durationDays, remainingProgress, percent: technology.durationDays ? current / technology.durationDays * 100 : 100, estimatedDaysRemaining: Math.ceil(remainingProgress / speed) };
 }
 
-export function processDailyTechProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false) {
+export function processDailyFocusProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false) {
   const normalized = normalizeTechState(state, country.tag);
   const notifications: string[] = [];
-  const next = { ...normalized, completedFocuses: [...normalized.completedFocuses], completedTechnologies: [...normalized.completedTechnologies] };
+  const next = { ...normalized, completedFocuses: [...normalized.completedFocuses] };
   const difficultySpeed = isPlayer ? 1 : DIFFICULTY_SPEED_MULTIPLIERS[difficulty];
   const lawModifiers = calculateLawModifiers(country.activeLaws);
   if (next.activeFocusId) {
@@ -102,11 +118,21 @@ export function processDailyTechProgress(state: CountryTechState, country: Count
     if (focus) {
       next.focusProgressDays += difficultySpeed * lawModifiers.focusSpeedMultiplier;
       if (next.focusProgressDays >= focus.durationDays) {
-        next.completedFocuses.push(focus.id); next.activeFocusId = null; next.focusProgressDays = 0;
+        if (!next.completedFocuses.includes(focus.id)) next.completedFocuses.push(focus.id);
+        next.activeFocusId = null;
+        next.focusProgressDays = 0;
         notifications.push(`✅ Foco concluído: ${focus.title}`);
       }
     }
   }
+  return { techState: next, notifications };
+}
+
+export function processDailyTechProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false) {
+  const { techState: focusState, notifications } = processDailyFocusProgress(state, country, difficulty, isPlayer);
+  const next = { ...focusState, completedTechnologies: [...focusState.completedTechnologies] };
+  const difficultySpeed = isPlayer ? 1 : DIFFICULTY_SPEED_MULTIPLIERS[difficulty];
+  const lawModifiers = calculateLawModifiers(country.activeLaws);
   if (next.activeResearchId) {
     const technology = TECHNOLOGIES.find(item => item.id === next.activeResearchId);
     if (technology) {

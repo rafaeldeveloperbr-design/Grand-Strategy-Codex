@@ -2,9 +2,10 @@ import React from 'react';
 import type {
   CountryTechState,
   NationalFocus,
+  FocusCategory,
 } from '../types/technology';
 import { NATIONAL_FOCUSES } from '../data/technology';
-import { formatFocusEffect } from '../engine/technology';
+import { formatFocusEffect, getFocusBlockReason } from '../engine/technology';
 import '../styles/tech-modal.css'; 
 
 interface Props {
@@ -16,19 +17,14 @@ interface Props {
 
 export const FocusModal: React.FC<Props> = ({ techState, onStartFocus, onCancelFocus, onClose }) => {
 
-    const canStart = (id: string) => {
-        const f = NATIONAL_FOCUSES.find(x => x.id === id);
-        if (!f) return false;
-        if (techState.completedFocuses.includes(f.id)) return false;
-        if (techState.activeFocusId) return false;
-        return f.prerequisites?.every(p => techState.completedFocuses.includes(p)) ?? true;
-    };
-
-    const columns = {
-        military: NATIONAL_FOCUSES.filter(f => f.category === 'MILITARY'),
-        economy: NATIONAL_FOCUSES.filter(f => f.category === 'ECONOMY'),
-        political: NATIONAL_FOCUSES.filter(f => f.category === 'POLITICS'),
-    };
+    const categories: { id: FocusCategory; title: string; color: string }[] = [
+        { id: 'MILITARY', title: '⚔️ MILITAR', color: '#ef4444' },
+        { id: 'ECONOMY', title: '💰 ECONOMIA', color: '#22c55e' },
+        { id: 'POLITICS', title: '👑 POLÍTICA', color: '#3b82f6' },
+        { id: 'INDUSTRY', title: '🏭 INDÚSTRIA', color: '#f59e0b' },
+        { id: 'DIPLOMACY', title: '🌐 DIPLOMACIA', color: '#06b6d4' },
+        { id: 'RESEARCH', title: '🔬 PESQUISA', color: '#a855f7' },
+    ];
 
     const renderCard = (focus: NationalFocus) => {
         const isActive = techState.activeFocusId === focus.id;
@@ -36,7 +32,8 @@ export const FocusModal: React.FC<Props> = ({ techState, onStartFocus, onCancelF
         const progressDays = isActive ? techState.focusProgressDays : 0;
         const remaining = focus.durationDays - progressDays;
         const progress = (progressDays / focus.durationDays) * 100;
-        const locked = !canStart(focus.id) && !isDone && !isActive;
+        const blockReason = getFocusBlockReason(techState, focus.id);
+        const locked = blockReason !== null && !isDone && !isActive;
 
         return (
             <div key={focus.id} className={`tree-node research-node ${isDone ? 'completed' : ''} ${isActive ? 'active' : ''} ${locked ? 'locked' : ''}`}>
@@ -65,6 +62,7 @@ export const FocusModal: React.FC<Props> = ({ techState, onStartFocus, onCancelF
                 <button
                     className={`tree-btn ${isActive ? 'cancel-btn' : ''}`}
                     disabled={locked || isDone}
+                    title={locked ? blockReason ?? undefined : undefined}
                     onClick={() => isActive ? onCancelFocus() : onStartFocus(focus.id)}
                 >
                     {isDone ? '✓ Concluído' : isActive ? '✕ Cancelar' : 'Iniciar Foco'}
@@ -83,20 +81,12 @@ export const FocusModal: React.FC<Props> = ({ techState, onStartFocus, onCancelF
                 </div>
 
                 <div className="research-columns focus-columns">
-                    <div className="research-col" style={{ borderTopColor: '#ef4444' }}>
-                        <h3>⚔️ MILITAR</h3>
-                        <div className="tree-column">{columns.military.map(renderCard)}</div>
-                    </div>
-
-                    <div className="research-col" style={{ borderTopColor: '#22c55e' }}>
-                        <h3>💰 ECONOMIA</h3>
-                        <div className="tree-column">{columns.economy.map(renderCard)}</div>
-                    </div>
-
-                    <div className="research-col" style={{ borderTopColor: '#3b82f6' }}>
-                        <h3>👑 POLÍTICA</h3>
-                        <div className="tree-column">{columns.political.map(renderCard)}</div>
-                    </div>
+                    {categories.map(category => (
+                        <div key={category.id} className="research-col" style={{ borderTopColor: category.color }}>
+                            <h3>{category.title}</h3>
+                            <div className="tree-column">{NATIONAL_FOCUSES.filter(focus => focus.category === category.id).map(renderCard)}</div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

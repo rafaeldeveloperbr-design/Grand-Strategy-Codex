@@ -16,7 +16,7 @@ const withFocuses = (...ids: string[]) => ({ ...createInitialTechState('TST'), c
 
 describe('árvore integrada de focos nacionais', () => {
   it('possui categorias tipadas, cadeias e durações balanceadas', () => {
-    expect(new Set(NATIONAL_FOCUSES.map(focus => focus.category))).toEqual(new Set(['MILITARY', 'ECONOMY', 'POLITICS']));
+    expect(new Set(NATIONAL_FOCUSES.map(focus => focus.category))).toEqual(new Set(['MILITARY', 'ECONOMY', 'POLITICS', 'INDUSTRY', 'DIPLOMACY', 'RESEARCH']));
     expect(NATIONAL_FOCUSES.length).toBeGreaterThanOrEqual(20);
     expect(NATIONAL_FOCUSES.every(focus => focus.durationDays >= 50 && focus.durationDays <= 140)).toBe(true);
     expect(NATIONAL_FOCUSES.every(focus => (focus.prerequisites ?? []).every(id => NATIONAL_FOCUSES.some(candidate => candidate.id === id)))).toBe(true);

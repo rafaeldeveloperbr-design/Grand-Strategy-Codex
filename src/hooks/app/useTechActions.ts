@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { startNationalFocus, startTechnologyResearch } from '../../engine/technology';
+import { cancelNationalFocus, startNationalFocus, startTechnologyResearch } from '../../engine/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
 import { LAWS } from '../../constants/laws';
 import { changeGovernmentPolicy } from '../../engine/politics';
@@ -44,6 +44,14 @@ export function useTechActions(params: {
       if (focus) addLog(`🎯 Foco iniciado: ${focus.title}`);
     }
   }, [playerTechState, addLog, setPlayerTechState, playerTechStateRef]);
+
+  const handleCancelFocus = useCallback(() => {
+    const updated = cancelNationalFocus(playerTechStateRef.current);
+    playerTechStateRef.current = updated;
+    setPlayerTechState(updated);
+    addToast('🎯 Foco cancelado', 'info');
+    addLog('Foco nacional cancelado');
+  }, [playerTechStateRef, setPlayerTechState, addToast, addLog]);
 
   const handleStartResearch = useCallback((techId: string) => {
     if (!techId) return;
@@ -110,5 +118,5 @@ export function useTechActions(params: {
   }, [playerCountryTag, countriesRef, dateRef, warsRef, addLog, addToast, setAllCountries]);
   const handleSpeedChange = useCallback((speed: number) => setGameSpeed(speed), [setGameSpeed]);
 
-  return { handleStartFocus, handleStartResearch, handleEndGameContinue, handleEndGameRestart, handleDifficultyChange, handleEnactLaw, handleSpeedChange };
+  return { handleCancelFocus, handleStartFocus, handleStartResearch, handleEndGameContinue, handleEndGameRestart, handleDifficultyChange, handleEnactLaw, handleSpeedChange };
 }

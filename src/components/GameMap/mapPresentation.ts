@@ -1,7 +1,8 @@
 import type { Army, Country, Province, SupplyStatus, War, DiplomaticRelation, ActiveBattle } from '../../types';
 import { calculateArmySize, calculateArmyOrganization, calculateArmyMorale, calculateLocalSupplyCapacity, getArmySupply } from '../../engine/military';
+import { getProvinceLogistics, type LogisticsInfo, type LogisticsSnapshot } from '../../engine/logistics';
 
-export type MapMode = 'political' | 'development' | 'population' | 'unrest' | 'supply' | 'terrain';
+export type MapMode = 'political' | 'development' | 'population' | 'unrest' | 'supply' | 'terrain' | 'logistics';
 export const MAP_MODES: { id: MapMode; label: string; description: string }[] = [
   { id: 'political', label: 'Político', description: 'Controle atual por país' },
   { id: 'development', label: 'Desenvolvimento', description: 'Desenvolvimento provincial' },
@@ -9,9 +10,10 @@ export const MAP_MODES: { id: MapMode; label: string; description: string }[] = 
   { id: 'terrain', label: 'Terreno', description: 'Terreno e modificadores militares' },
   { id: 'unrest', label: 'Unrest', description: 'Maior valor entre agitação e organização rebelde' },
   { id: 'supply', label: 'Supply', description: 'Capacidade logística local base; não representa acesso militar' },
+  { id: 'logistics', label: 'Logística', description: 'Conexão terrestre com a origem nacional, distância e eficiência' },
 ];
 export const SUPPLY_LABELS: Record<SupplyStatus, string> = { good: 'Bom', low: 'Baixo', critical: 'Crítico' };
-export type ArmyReadout = { troops: number; organization: number; morale: number; supply: SupplyStatus; supplyRatio: number; status: string };
+export type ArmyReadout = { troops: number; organization: number; morale: number; supply: SupplyStatus; supplyRatio: number; status: string; logistics?: LogisticsInfo };
 export type ArmyVisualGroup = {
   key: string; owner: string; provinceId: string | null; armies: Army[]; troops: number;
   x: number; y: number; offsetX: number; offsetY: number; moving: boolean; fighting: boolean;
@@ -26,7 +28,7 @@ export function groupOffset(index: number) {
   return { offsetX: slot.offsetX * ring, offsetY: slot.offsetY * ring };
 }
 
-export function buildArmyPresentation(armies: Army[], provinces: Province[]) {
+export function buildArmyPresentation(armies: Army[], provinces: Province[], logistics?: LogisticsSnapshot) {
   const provinceById = new Map(provinces.map(province => [province.id, province]));
   const armyById = new Map(armies.map(army => [army.id, army]));
   const byLocation = new Map<string, Army[]>();
@@ -42,7 +44,7 @@ export function buildArmyPresentation(armies: Army[], provinces: Province[]) {
   const supplyByArmy = new Map<string, ReturnType<typeof getArmySupply>>();
   for (const [provinceId, owners] of byOwnerLocation) {
     for (const friendly of owners.values()) {
-      const supply = getArmySupply(friendly[0], provinceById.get(provinceId), friendly);
+      const supply = getArmySupply(friendly[0], provinceById.get(provinceId), friendly, logistics);
       for (const army of friendly) supplyByArmy.set(army.id, supply);
     }
   }
@@ -52,7 +54,8 @@ export function buildArmyPresentation(armies: Army[], provinces: Province[]) {
   for (const army of armies) {
     const supply = supplyByArmy.get(army.id) ?? getArmySupply(army);
     const troops = calculateArmySize(army);
-    readouts.set(army.id, { troops, organization: calculateArmyOrganization(army), morale: calculateArmyMorale(army), supply: supply.status, supplyRatio: supply.ratio, status: army.inCombat ? 'Combate' : army.destination ? 'Movendo' : 'Parado' });
+    readouts.set(army.id, { troops, organization: calculateArmyOrganization(army), morale: calculateArmyMorale(army), supply: supply.status, supplyRatio: supply.ratio, status: army.inCombat ? 'Combate' : army.destination ? 'Movendo' : 'Parado',
+      logistics: army.location ? getProvinceLogistics(logistics,army.owner,army.location) : undefined });
     const province = army.location ? provinceById.get(army.location) : undefined;
     const inTransit = !!(army.destination && army.position && army.movementProgress > 0);
     if (!province && !inTransit) continue;
@@ -83,11 +86,20 @@ export function buildArmyPresentation(armies: Army[], provinces: Province[]) {
 }
 export type ArmyPresentation = ReturnType<typeof buildArmyPresentation>;
 
-export function buildMapValues(provinces: Province[], mode: MapMode) {
+export function buildMapValues(provinces: Province[], mode: MapMode, logistics?: LogisticsSnapshot) {
   const values = new Map<string, number>();
+  const logisticsByProvince = new Map<string,LogisticsInfo>();
+  const origins = new Set<string>();
+  for (const province of provinces) {
+    const connection = getProvinceLogistics(logistics,province.owner,province.id);
+    if (connection) {
+      logisticsByProvince.set(province.id,connection);
+      if (connection.originId === province.id && connection.connected) origins.add(province.id);
+    }
+  }
   for (const province of provinces) values.set(province.id, mode === 'development' ? province.development : mode === 'population' ? province.population.total : mode === 'unrest' ? Math.max(province.unrest ?? 0, province.rebellion?.progress ?? 0) : mode === 'supply' ? calculateLocalSupplyCapacity(province) : 0);
   const max = mode === 'unrest' ? 100 : [...values.values()].reduce((highest, value) => Math.max(highest, value), 1);
-  return { values, min: 0, max };
+  return { values, min: 0, max, logisticsByProvince, origins };
 }
 export function numericMapColor(value: number, max: number, mode: MapMode): string {
   const ratio = Math.min(1, Math.max(0, value / max));

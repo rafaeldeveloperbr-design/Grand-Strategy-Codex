@@ -205,14 +205,14 @@ export function useGameLoop(props: Props) {
     countries = ai.countries; provinces = ai.provinces; armies = ai.armies; wars = ai.wars; relations = ai.relations; buildingConstructions = ai.buildingConstructions; recruitments = ai.recruitments; currentBotTechStates = ai.currentBotTechStates;
 
     // 8. MOVEMENT - IA já decidiu pra onde ir
-    const mov = processMovementTick({ armies, provinces, relations, countries, addLog });
+    const mov = processMovementTick({ armies, provinces, relations, countries, wars, addLog });
     armies = mov.armies; provinces = mov.provinces; countries = mov.countries; const arrivedArmies = mov.arrivedArmies;
 
     // 9. COMBAT - só depois de mover
-    const arr = processBattleArrival({ arrivedArmies, armies, provinces, countries, wars, recruitments, buildingConstructions, currentActiveBattles, snapshot, playerCountryTag, allCountries, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities });
+    const arr = processBattleArrival({ arrivedArmies, armies, provinces, countries, wars, relations, recruitments, buildingConstructions, currentActiveBattles, snapshot, playerCountryTag, allCountries, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities });
     armies = arr.armies; provinces = arr.provinces; countries = arr.countries; currentActiveBattles = arr.currentActiveBattles; recruitments = arr.recruitments; buildingConstructions = arr.buildingConstructions;
 
-    const cont = processBattleContinuous({ armies, provinces, countries, wars, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef, cancelProvinceActivities });
+    const cont = processBattleContinuous({ armies, provinces, countries, wars, relations, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef, cancelProvinceActivities });
     armies = cont.armies; provinces = cont.provinces; countries = cont.countries; currentActiveBattles = cont.currentActiveBattles; wars = cont.wars; recruitments = cont.recruitments; buildingConstructions = cont.buildingConstructions;
 
     // 10. REBELLION - por último, depende de stability + combat

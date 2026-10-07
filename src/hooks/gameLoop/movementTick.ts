@@ -6,12 +6,15 @@ import { processArmyMovement } from '../../engine/military';
 import type { Army, Province, Country } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
 import { transferProvince } from '../../engine/territoryTransfer';
+import { buildLogisticsNetworks } from '../../engine/logistics';
+import type { War } from '../../types';
 
 type Params = {
   armies: Army[];
   provinces: Province[];
   relations: DiplomaticRelation[];
   countries: Country[];
+  wars?: War[];
   addLog: (msg: string) => void;
 };
 
@@ -20,7 +23,8 @@ export function processMovementTick(p: Params) {
   const { addLog } = p;
 
   // PASSO B: MOVIMENTAÇÃO
-  const moveResult = processArmyMovement(armies, provinces, relations);
+  const logistics = buildLogisticsNetworks({countries,provinces,relations,wars: p.wars});
+  const moveResult = processArmyMovement(armies, provinces, relations, logistics);
   armies = moveResult.updatedArmies;
   const arrivedArmies = moveResult.arrivedArmies;
   provinces = moveResult.updatedProvinces;

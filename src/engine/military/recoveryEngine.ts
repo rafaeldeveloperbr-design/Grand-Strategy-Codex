@@ -4,11 +4,12 @@ import { normalizeMarket } from '../market';
 import { MILITARY_BALANCE } from './balance';
 import { getArmySupply } from './supplyEngine';
 import { getRegimentMaximum, getRegimentOrganization } from './armyStats';
+import type { LogisticsSnapshot } from '../logistics';
 
 /** Daily recovery consumes the canonical national manpower and local market. */
-export function recoverArmy(army: Army, country: Country, province: Province, colocatedArmies: Army[] = [army]): { army: Army; country: Country; province: Province; reinforced: number } {
+export function recoverArmy(army: Army, country: Country, province: Province, colocatedArmies: Army[] = [army], logistics?: LogisticsSnapshot): { army: Army; country: Country; province: Province; reinforced: number } {
   if (army.inCombat || army.destination) return { army, country, province, reinforced: 0 };
-  const supply = getArmySupply(army, province, colocatedArmies);
+  const supply = getArmySupply(army, province, colocatedArmies, logistics);
   const market = normalizeMarket(province.market);
   let manpower = country.resources.manpower;
   let gold = country.resources.gold;

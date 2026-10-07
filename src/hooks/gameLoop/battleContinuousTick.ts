@@ -26,6 +26,8 @@ import { applyMilitaryCasualties } from '../../engine/population';
 import type { CountryTechState } from '../../types/technology';
 import { calculateTechBonuses } from '../../engine/technology';
 import { getBuildingLevel } from '../../data/buildings';
+import { buildLogisticsNetworks } from '../../engine/logistics';
+import type { DiplomaticRelation } from '../../types';
 
 
 
@@ -61,6 +63,7 @@ type Params = {
   provinces: Province[];
   countries: Country[];
   wars: War[];
+  relations?: DiplomaticRelation[];
   currentActiveBattles: BattleExtended[];
   recruitments: Recruitment[];
   buildingConstructions: BuildingConstruction[];
@@ -142,6 +145,7 @@ export function processBattleContinuous(p: Params) {
     winner: 'attacker' | 'defender';
   }> = [];
   const stillActiveBattles: BattleExtended[] = [];
+  const logistics = buildLogisticsNetworks({countries,provinces,wars,relations: p.relations ?? []});
 
   for (const battle of currentActiveBattles) {
     const province = provinces.find(pr => pr.id === battle.provinceId);
@@ -160,7 +164,7 @@ export function processBattleContinuous(p: Params) {
       const state = country.tag === p.playerCountryTag ? p.playerTechState : p.botTechStates.get(country.tag);
       return [country.tag, state ? calculateTechBonuses(state).fortificationMultiplier : 1];
     }));
-    const result = processBattleDay(repaired, armies, province, provinces, combatMultipliers, fortificationMultipliers);
+    const result = processBattleDay(repaired, armies, province, provinces, combatMultipliers, fortificationMultipliers, logistics);
     armies = result.armies;
     provinces = applyMilitaryCasualties(provinces, armiesBeforeCombat, armies);
 

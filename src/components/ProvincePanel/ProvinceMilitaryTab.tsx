@@ -1,10 +1,12 @@
 import React from 'react';
+import { getProvinceLogistics, type LogisticsSnapshot } from '../../engine/logistics';
 import { Province, Country, Army, UnitType } from '../../types';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { calculateArmyMorale, calculateArmyOrganization, calculateArmySize, getArmySupply, getEffectiveRecruitmentCost, getRecruitmentBlockReason } from '../../engine/military';
 import type { CountryTechState } from '../../types/technology';
 
 interface ProvinceMilitaryTabProps {
+  logistics?: LogisticsSnapshot;
   province: Province;
   playerCountry: Country;
   armiesHere: Army[];
@@ -13,6 +15,7 @@ interface ProvinceMilitaryTabProps {
 }
 
 export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
+  logistics,
   province,
   playerCountry,
   armiesHere,
@@ -42,7 +45,8 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
                   </span>
                 ))}
               </div>
-              <div className="province-panel__build-desc">Moral {Math.round(calculateArmyMorale(army))} · Organização {Math.round(calculateArmyOrganization(army))} · Supply {getArmySupply(army, province, armiesHere).status}</div>
+              <div className="province-panel__build-desc">Moral {Math.round(calculateArmyMorale(army))} · Organização {Math.round(calculateArmyOrganization(army))} · Supply {`${Math.round(getArmySupply(army, province, armiesHere, logistics).ratio*100)}%`}</div>
+              {getProvinceLogistics(logistics,army.owner,province.id) && <div className="province-panel__build-desc">Logística: {getProvinceLogistics(logistics,army.owner,province.id)?.connected ? 'Conectada' : 'Desconectada'} · Distância: {getProvinceLogistics(logistics,army.owner,province.id)?.distance ?? '—'}</div>}
               {army.destination && (
                 <div className="province-panel__army-card-moving">
                   🚶 Marchando... ({Math.round(army.movementProgress * 100)}%)

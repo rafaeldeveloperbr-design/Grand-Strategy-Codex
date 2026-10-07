@@ -38,6 +38,7 @@ export function ArmyStackPopover({ group, province, countries, presentation, sel
     } as CSSProperties} aria-pressed={army.id === selectedArmy} onClick={() => onSelect(army.id)}>
           <strong>{army.name}</strong><span>{country?.flag ?? '🏴'} {country?.name ?? army.owner} · {stats.status}</span>
           <span className="army-stack-popover__stats"><span>{stats.troops.toLocaleString('pt-BR')} tropas</span><span>Org {Math.round(stats.organization)}%</span><span>Moral {Math.round(stats.morale)}%</span><span>Supply {SUPPLY_LABELS[stats.supply]} ({Math.round(stats.supplyRatio * 100)}%)</span></span>
+          {stats.logistics && <span>Logística: {stats.logistics.connected ? 'Conectada' : 'Desconectada'} · Distância: {stats.logistics.distance ?? '—'}</span>}
         </button>);
       })}
     </div>

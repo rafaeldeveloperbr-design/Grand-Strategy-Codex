@@ -4,6 +4,7 @@ import { Army, Province } from '../../types';
 import { DiplomaticRelation } from '../../types/diplomacy';
 import { calculateArmySpeed, generateArmyId } from './militaryUtils';
 import { getArmySupply } from './supplyEngine';
+import type { LogisticsSnapshot } from '../logistics';
 
 export function canMoveToProvince(
   armyCountryId: string,
@@ -111,7 +112,7 @@ export function moveArmy(
 }
 
 export function processArmyMovement(
-  armies: Army[], provinces: Province[], diplomacy: DiplomaticRelation[]
+  armies: Army[], provinces: Province[], diplomacy: DiplomaticRelation[], logistics?: LogisticsSnapshot
 ): { updatedArmies: Army[]; arrivedArmies: Army[]; updatedProvinces: Province[] } {
   const index = new Map(provinces.map(province => [province.id, province]));
   const colocated = new Map<string, Army[]>();
@@ -142,7 +143,7 @@ export function processArmyMovement(
       updatedArmies.push(cancel(army)); continue;
     }
     const progress = army.movementProgress + army.movementSpeed *
-      getArmySupply(army, origin, colocated.get(origin.id)).movementMultiplier / getTerrainDefinition(next).movementCost;
+      getArmySupply(army, origin, colocated.get(origin.id), logistics).movementMultiplier / getTerrainDefinition(next).movementCost;
     if (progress < 1) {
       updatedArmies.push({ ...army, movementProgress: progress, position: {
         x: origin.center.x + (next.center.x - origin.center.x) * progress,

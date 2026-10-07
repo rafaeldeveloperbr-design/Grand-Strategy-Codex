@@ -1,3 +1,4 @@
+import { buildLogisticsNetworks } from '../../engine/logistics';
 import { processDiplomacyAI } from '../../engine/diplomacy';
 /**
  * aiTick.ts - 180 linhas - PASSO 4.7 - CORRIGIDO
@@ -57,6 +58,7 @@ export function processAiTick(p: Params) {
   const rebellionResponse = respondToRebellions(provinces, countries, armies, relations, p.snapshot.date, p.playerCountryTag);
   ({ provinces, countries, armies } = rebellionResponse);
   rebellionResponse.logs.forEach(message => addAILog('Rebeliões', 'government', message, formatGameDate(snapshot.date), '#e67e22'));
+  const logistics = buildLogisticsNetworks({countries,provinces,relations,wars});
   const activeBots = countries.filter(c => c && c.tag !== playerCountryTag);
   const dateString = formatGameDate(snapshot.date);
 
@@ -99,7 +101,7 @@ export function processAiTick(p: Params) {
       provinces,
       relations,
       wars,
-      countries);
+      countries,logistics);
     const armiesAfter = armies.filter(a => a.owner === country.tag);
     armiesAfter.forEach(armyAfter => {
       const armyBefore = armiesBefore.find(a => a.id === armyAfter.id);

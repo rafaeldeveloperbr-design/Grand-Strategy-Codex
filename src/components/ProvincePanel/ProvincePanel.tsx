@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { LogisticsSnapshot } from '../../engine/logistics';
 import { Province, Country, BuildingType, Army, Recruitment, UnitType, BuildingConstruction } from '../../types';
 import { getCountryByTag } from '../../data/countries';
 
@@ -10,6 +11,7 @@ import { getProvinceRebellion, type RebellionAction } from '../../engine/rebelli
 import type { CountryTechState } from '../../types/technology';
 
 export interface ProvincePanelProps {
+  logistics?: LogisticsSnapshot;
   onRebellionAction?: (provinceId: string, action: RebellionAction) => void;
   province: Province;
   provinces: Province[];
@@ -31,6 +33,7 @@ export interface ProvincePanelProps {
 type PanelTab = 'info' | 'buildings' | 'military';
 
 export const ProvincePanel: React.FC<ProvincePanelProps> = ({
+  logistics,
   province,
   provinces,
   countries,
@@ -134,6 +137,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
 
             {activeTab === 'military' && isPlayerOwned && (
               <ProvinceMilitaryTab
+                logistics={logistics}
                 province={province}
                 playerCountry={playerCountry}
                 armiesHere={armiesHere}

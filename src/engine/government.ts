@@ -3,6 +3,8 @@ import type { ActiveLaws, EnactLawResult, Law, LawContext, LawModifiers } from '
 import type { Country, Province } from '../types';
 import { calculateWorkforce, getFoodShortageStatus, normalizePopulation } from './population';
 import { normalizeMarket } from './market';
+import { getGoodName } from '../utils/translations';
+
 
 export const createNeutralLawModifiers = (): LawModifiers => ({
   goldIncomeMultiplier:1, manpowerMultiplier:1, populationGrowthMultiplier:1, populationCapacityMultiplier:1,
@@ -61,7 +63,7 @@ export function formatLawModifierEntries(law: Law): Array<{text:string;positive:
   const percent = (value:number, positiveWhenHigh=true) => ({amount:`${value >= 1 ? '+' : ''}${Math.round((value-1)*100)}%`,positive:positiveWhenHigh ? value>=1 : value<=1});
   const add = (label:string,value:number|undefined,positiveWhenHigh=true) => { if (value === undefined || value === 1) return; const formatted=percent(value,positiveWhenHigh); result.push({text:`${label}: ${formatted.amount}`,positive:formatted.positive}); };
   add('Renda',law.modifiers.goldIncomeMultiplier); add('Manpower máximo e recuperação',law.modifiers.manpowerMultiplier); add('Crescimento populacional',law.modifiers.populationGrowthMultiplier); add('Capacidade populacional',law.modifiers.populationCapacityMultiplier); add('Velocidade de construção',law.modifiers.constructionSpeedMultiplier); add('Tempo de recrutamento',law.modifiers.recruitmentTimeMultiplier,false); add('Custo de recrutamento',law.modifiers.recruitmentCostMultiplier,false); add('Manutenção militar',law.modifiers.militaryMaintenanceMultiplier,false); add('Pesquisa',law.modifiers.researchSpeedMultiplier); add('Progresso de focos',law.modifiers.focusSpeedMultiplier); add('Poder de compra',law.modifiers.purchasingPowerMultiplier); add('Atração migratória',law.modifiers.migrationAttractionMultiplier); add('Comércio interno',law.modifiers.internalTradeMultiplier);
-  for (const good of ['food','wood','iron','tools'] as const) add(`Produção de ${good.toUpperCase()}`,law.modifiers.productionMultipliers?.[good]);
+  for (const good of ['food','wood','iron','tools'] as const) add(`Produção de ${getGoodName(good)}`, law.modifiers.productionMultipliers?.[good]);
   if (law.modifiers.satisfactionModifier) result.push({text:`Satisfação: ${law.modifiers.satisfactionModifier>0?'+':''}${law.modifiers.satisfactionModifier} pontos`,positive:law.modifiers.satisfactionModifier>0});
   if (law.modifiers.stabilityModifier) result.push({text:`Estabilidade administrativa: ${law.modifiers.stabilityModifier>0?'+':''}${Math.round(law.modifiers.stabilityModifier*100)}%`,positive:law.modifiers.stabilityModifier>0});
   return result;

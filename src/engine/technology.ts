@@ -4,6 +4,7 @@ import type { AIDifficulty } from '../types/difficulty';
 import { DIFFICULTY_SPEED_MULTIPLIERS } from '../types/difficulty';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../data/technology';
 import { calculateLawModifiers } from './government';
+import { getGoodName, getUnitName } from '../utils/translations';
 
 export interface TechnologyBonuses {
   combatPowerBonus: { infantry: number; cavalry: number; artillery: number };
@@ -177,7 +178,7 @@ const signedPercent = (value: number) => Math.round(value * 100);
 export function formatTechnologyEffect(effect: TechnologyEffect): string {
   const amount = `${effect.value >= 0 ? '+' : ''}${signedPercent(effect.value)}%`;
   switch (effect.type) {
-    case 'GOOD_PRODUCTION': return `Produção de ${effect.good.toUpperCase()}: ${amount}`;
+    case 'GOOD_PRODUCTION': return `Produção de ${getGoodName(effect.good)}: ${amount}`;
     case 'PRODUCTION_EFFICIENCY': return `Eficiência produtiva geral: ${amount}`;
     case 'RECRUITMENT_TIME': return `Tempo de recrutamento: ${amount}`;
     case 'COMBAT_POWER': return `Poder de combate: ${amount}`;
@@ -193,8 +194,8 @@ export function formatTechnologyEffect(effect: TechnologyEffect): string {
 export function formatFocusEffect(effect: RewardEffect): string {
   const percent = `${effect.value >= 0 ? '+' : ''}${signedPercent(effect.value)}%`;
   switch (effect.type) {
-    case 'COMBAT_POWER': return `Poder de ${effect.unitType}: ${percent}`;
-    case 'GOOD_PRODUCTION': return `Produção de ${effect.good.toUpperCase()}: ${percent}`;
+    case 'COMBAT_POWER': return `Poder de ${getUnitName(effect.unitType)}: ${percent}`;
+    case 'GOOD_PRODUCTION': return `Produção de ${getGoodName(effect.good)}: ${percent}`;
     case 'GOLD_INCOME': return `Renda nacional: ${percent}`;
     case 'BUILD_COST': return `Custo de construção: ${percent}`;
     case 'BUILD_TIME': return `Velocidade de construção: ${percent}`;
@@ -216,7 +217,7 @@ export function getActiveTechnologyModifierEntries(state: CountryTechState): Tec
   const bonuses = calculateTechnologyBonuses(state);
   const entries: TechnologyModifierEntry[] = [];
   const add = (label: string, value: number, neutral = 1) => { if (Math.abs(value - neutral) > Number.EPSILON) entries.push({ label, percent: signedPercent(value - neutral) }); };
-  for (const good of ['food', 'wood', 'iron', 'tools'] as const) add(`Produção de ${good.toUpperCase()}`, bonuses.productionMultipliers[good]);
+  for (const good of ['food', 'wood', 'iron', 'tools'] as const) add(`Produção de ${getGoodName(good)}`, bonuses.productionMultipliers[good]);
   add('Renda', bonuses.goldIncomeMultiplier);
   add('Crescimento populacional', bonuses.populationGrowthMultiplier);
   add('Capacidade populacional', bonuses.populationCapacityMultiplier);

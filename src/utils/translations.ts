@@ -18,6 +18,18 @@ export const UNIT_NAMES: Record<string, string> = {
   siege_engine: 'Armas de Cerco',
 };
 
+
+export const GOOD_NAMES: Record<string, string> = {
+  FOOD: 'Alimentos',
+  WOOD: 'Madeira',
+  IRON: 'Ferro',
+  TOOLS: 'Ferramentas',
+};
+
+export function getGoodName(good: string): string {
+  return GOOD_NAMES[good.toUpperCase()] || good;
+}
+
 export const TECH_NAMES: Record<string, string> = {
   // Tecnologias existentes
   tech_improved_weapons: 'Armas Melhoradas',
@@ -82,3 +94,4 @@ export const DIFFICULTY_NAMES: Record<string, string> = {
 export function getDifficultyName(difficulty: string): string {
   return DIFFICULTY_NAMES[difficulty] || difficulty;
 }
+

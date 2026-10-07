@@ -1,6 +1,7 @@
 import type { BuildingCategory, BuildingConstruction, BuildingType, Country, Province } from '../../types';
 import { BUILDING_CATEGORIES, BUILDING_DEFINITIONS, getBuildingCosts, getBuildingEffect, getBuildingLevel, getBuildingTime } from '../../data/buildings';
 import { BUILDING_BLOCK_MESSAGES, getBuildingBlockReasons, getConstructionTargetLevel } from '../../engine/buildings';
+import { getGoodName } from '../../utils/translations';
 
 export function ProvinceBuildingsTab({ province, provinces, playerCountry, constructions, onBuild }: {
   province: Province; provinces: Province[]; playerCountry: Country; constructions: BuildingConstruction[];
@@ -40,7 +41,11 @@ export function ProvinceBuildingsTab({ province, provinces, playerCountry, const
               </div>
             </div>
             <div className="province-panel__build-costs">
-              <span>Ouro {costs.gold}</span><span>WOOD {costs.wood}</span><span>IRON {costs.iron}</span><span>TOOLS {costs.tools}</span><span>Tempo: {time} dias</span>
+              <span>Ouro {costs.gold}</span>
+              <span>{getGoodName('wood')} {costs.wood}</span>
+              <span>{getGoodName('iron')} {costs.iron}</span>
+              <span>{getGoodName('tools')} {costs.tools}</span>
+              <span>Tempo: {time} dias</span>
             </div>
             {reasons.length > 0 && <ul>{reasons.map(reason => <li key={reason}>{BUILDING_BLOCK_MESSAGES[reason]}</li>)}</ul>}
             <button className="province-panel__build-btn" disabled={reasons.length > 0} onClick={() => onBuild(province.id, type)}>

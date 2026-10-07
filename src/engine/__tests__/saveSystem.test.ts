@@ -122,8 +122,8 @@ describe('SAVE/LOAD', () => {
   });
 
   it('round-trips legacy focuses, normalizes bots and keeps V2 state serialization', () => {
-    const player = {...createInitialTechState('BRA'),activeFocusId:'focus_professional_cavalry',focusProgressDays:17,completedFocuses:['focus_cavalry_traditions','focus_kingdom_centralization','focus_civil_reforms']};
-    const bot = {...createInitialTechState('ARG'),activeFocusId:'removed',focusProgressDays:8,completedFocuses:['focus_national_unity','missing','focus_national_unity']};
+    const player = {...createInitialTechState('BRA'),activeResearchId:'standardized_tools',researchProgressDays:12.5,completedTechnologies:['improved_agriculture','advanced_sawmills','advanced_mining'],activeFocusId:'focus_professional_cavalry',focusProgressDays:17,completedFocuses:['focus_cavalry_traditions','focus_kingdom_centralization','focus_civil_reforms']};
+    const bot = {...createInitialTechState('ARG'),activeResearchId:'removed',researchProgressDays:-8,completedTechnologies:['medicine','missing','medicine'],activeFocusId:'removed',focusProgressDays:8,completedFocuses:['focus_national_unity','missing','focus_national_unity']};
     const refs: SaveGameRefs = {
       dateRef:{current:{day:1,month:1,year:1836}},provincesRef:{current:[]},countriesRef:{current:[]},armiesRef:{current:[]},
       warsRef:{current:[]},diplomaticRelationsRef:{current:[]},recruitmentsRef:{current:[]},buildingConstructionsRef:{current:[]},activeBattlesRef:{current:[]},
@@ -143,15 +143,15 @@ describe('SAVE/LOAD', () => {
   });
 
   it('loads V1 legacy active focuses and bot completions without renaming IDs', () => {
-    const player = {...createInitialTechState('BRA'),activeFocusId:'focus_scientific_patronage',focusProgressDays:23,completedFocuses:['focus_kingdom_centralization']};
-    const bot = {...createInitialTechState('ARG'),completedFocuses:['focus_professional_cavalry','missing','focus_professional_cavalry']};
+    const player = {...createInitialTechState('BRA'),activeResearchId:'education',researchProgressDays:23.5,completedTechnologies:['sanitation','medicine','public_administration'],activeFocusId:'focus_scientific_patronage',focusProgressDays:23,completedFocuses:['focus_kingdom_centralization']};
+    const bot = {...createInitialTechState('ARG'),activeResearchId:'advanced_mining',researchProgressDays:7,completedTechnologies:['advanced_sawmills','missing','advanced_sawmills'],completedFocuses:['focus_professional_cavalry','missing','focus_professional_cavalry']};
     localStorage.setItem('imperium_save_focus-v1',JSON.stringify({
       id:'focus-v1',name:'Legacy',timestamp:1,date:{day:1,month:1,year:1},provinces:[],countries:[],armies:[],wars:[],relations:[],recruitments:[],constructions:[],activeBattles:[],
       playerTech:player,botTechs:{ARG:bot},
     }));
     const loaded = loadGame('focus-v1')!;
     expect(loaded.technology.player).toEqual(player);
-    expect(loaded.technology.bots.get('ARG')?.completedFocuses).toEqual(['focus_professional_cavalry']);
+    expect(loaded.technology.bots.get('ARG')).toEqual(normalizeTechState(bot));
   });
 
   it('preserva os dados populacionais completos', () => {

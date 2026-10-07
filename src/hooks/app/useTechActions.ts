@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { cancelNationalFocus, startNationalFocus, startTechnologyResearch } from '../../engine/technology';
+import { cancelNationalFocus, cancelTechnologyResearch, getTechnologyBlockReason, startNationalFocus, startTechnologyResearch } from '../../engine/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
 import { LAWS } from '../../constants/laws';
 import { changeGovernmentPolicy } from '../../engine/politics';
@@ -59,31 +59,18 @@ export function useTechActions(params: {
     const tech = TECHNOLOGIES.find(t => t.id === techId);
     if (!tech) return;
 
-    if (playerCountry.resources.gold < tech.costGold) {
-      addLog(`❌ Ouro insuficiente para pesquisar ${tech.title}`);
-      return;
-    }
-
-    const { techState: updated, cost } = startTechnologyResearch(
-      playerTechState,
-      techId,
-      playerCountry
-    );
+    const currentCountry = countriesRef.current.find(country => country.tag === playerCountryTag) ?? playerCountry;
+    const currentState = playerTechStateRef.current;
+    const reason = getTechnologyBlockReason(currentState, techId, currentCountry);
+    if (reason) { addLog(`❌ ${reason}: ${tech.title}`); return; }
+    const { techState: updated, cost } = startTechnologyResearch(currentState, techId, currentCountry);
 
     if (updated) {
-      setAllCountries(prev =>
-        prev.map(c =>
-          c.tag === playerCountryTag
-            ? {
-              ...c,
-              resources: {
-                ...c.resources,
-                gold: c.resources.gold - cost,
-              },
-            }
-            : c
-        )
-      );
+      const updatedCountries = countriesRef.current.map(country => country.tag === playerCountryTag
+        ? { ...country, resources: { ...country.resources, gold: country.resources.gold - cost } }
+        : country);
+      countriesRef.current = updatedCountries;
+      setAllCountries(updatedCountries);
 
       setPlayerTechState(updated);
       playerTechStateRef.current = updated;
@@ -91,7 +78,7 @@ export function useTechActions(params: {
       addLog(`🔬 Pesquisa iniciada: ${tech.title} (💰 ${cost})`);
     }
   }, [
-    playerTechState,
+    countriesRef,
     playerCountry,
     playerCountryTag,
     addLog,
@@ -99,6 +86,14 @@ export function useTechActions(params: {
     setPlayerTechState,
     playerTechStateRef,
   ]);
+
+  const handleCancelResearch = useCallback(() => {
+    const updated = cancelTechnologyResearch(playerTechStateRef.current);
+    playerTechStateRef.current = updated;
+    setPlayerTechState(updated);
+    addToast('🔬 Pesquisa cancelada', 'info');
+    addLog('Pesquisa cancelada pelo jogador');
+  }, [playerTechStateRef, setPlayerTechState, addToast, addLog]);
 
   const handleEndGameContinue = useCallback(() => { setEndGameType(null); setIsPaused(false); }, [setEndGameType, setIsPaused]);
   const handleEndGameRestart = useCallback(() => window.location.reload(), []);
@@ -118,5 +113,5 @@ export function useTechActions(params: {
   }, [playerCountryTag, countriesRef, dateRef, warsRef, addLog, addToast, setAllCountries]);
   const handleSpeedChange = useCallback((speed: number) => setGameSpeed(speed), [setGameSpeed]);
 
-  return { handleCancelFocus, handleStartFocus, handleStartResearch, handleEndGameContinue, handleEndGameRestart, handleDifficultyChange, handleEnactLaw, handleSpeedChange };
+  return { handleCancelResearch, handleCancelFocus, handleStartFocus, handleStartResearch, handleEndGameContinue, handleEndGameRestart, handleDifficultyChange, handleEnactLaw, handleSpeedChange };
 }

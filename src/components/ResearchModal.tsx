@@ -2,7 +2,7 @@ import React from 'react';
 import { Country } from '../types';
 import { CountryTechState } from '../types/technology';
 import { TECHNOLOGIES } from '../data/technology';
-import { formatTechnologyEffect, getActiveTechnologyModifierEntries, getResearchProgress } from '../engine/technology';
+import { formatTechnologyEffect, getActiveTechnologyModifierEntries, getResearchProgress, getTechnologyBlockReason } from '../engine/technology';
 import '../styles/tech-modal.css';
 
 interface Props {
@@ -17,17 +17,12 @@ export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onSta
     const activeModifiers = getActiveTechnologyModifierEntries(techState);
     const activeProgress = getResearchProgress(techState);
 
-    const canStart = (id: string) => {
-        const t = TECHNOLOGIES.find(x => x.id === id);
-        if (!t || techState.completedTechnologies.includes(id)) return false;
-        if (techState.activeResearchId) return false;
-        if (t.prerequisites.some(p => !techState.completedTechnologies.includes(p))) return false;
-        return playerCountry.resources.gold >= t.costGold;
-    };
+    const canStart = (id: string) => getTechnologyBlockReason(techState, id, playerCountry) === null;
 
     // CORES IGUAIS DO FOCO - PADRÃO HOI4
     const categories = [
         { id: 'MILITARY', name: 'MILITAR', icon: '⚔️', color: '#ef4444' },
+        { id: 'INDUSTRY', name: 'INDÚSTRIA', icon: '🏭', color: '#f59e0b' },
         { id: 'ECONOMY', name: 'ECONOMIA', icon: '💰', color: '#22c55e' },
         { id: 'SOCIETY', name: 'SOCIEDADE', icon: '🏛️', color: '#3b82f6' },
     ] as const;
@@ -97,6 +92,7 @@ export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onSta
 
                                                 <button
                                                     className={`tree-btn ${isActive ? 'cancel-btn' : ''}`}
+                                                    title={getTechnologyBlockReason(techState, tech.id, playerCountry) ?? undefined}
                                                     disabled={!isActive && !canStart(tech.id)}
                                                     onClick={() => isActive ? onCancelResearch() : onStartResearch(tech.id)}
                                                 >

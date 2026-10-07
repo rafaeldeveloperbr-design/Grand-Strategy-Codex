@@ -89,13 +89,24 @@ export function cancelNationalFocus(state: CountryTechState): CountryTechState {
   return { ...state, activeFocusId: null, focusProgressDays: 0 };
 }
 
-export function startTechnologyResearch(state: CountryTechState, id: string, country: Country): { techState: CountryTechState | null; cost: number } {
+export function getTechnologyBlockReason(state: CountryTechState, id: string, country: Country): string | null {
   const technology = TECHNOLOGIES.find(item => item.id === id);
-  if (!technology) return { techState: null, cost: 0 };
-  if (state.activeResearchId || state.completedTechnologies.includes(id)
-    || !technology.prerequisites.every(prerequisite => state.completedTechnologies.includes(prerequisite))
-    || country.resources.gold < technology.costGold) return { techState: null, cost: technology.costGold };
+  if (!technology) return 'Tecnologia inexistente';
+  if (state.completedTechnologies.includes(id)) return 'Tecnologia já concluída';
+  if (state.activeResearchId) return 'Outra pesquisa já ativa';
+  if (!technology.prerequisites.every(prerequisite => state.completedTechnologies.includes(prerequisite))) return 'Pré-requisitos incompletos';
+  if (country.resources.gold < technology.costGold) return 'Ouro insuficiente';
+  return null;
+}
+
+export function startTechnologyResearch(state: CountryTechState, id: string, country: Country): { techState: CountryTechState | null; cost: number } {
+  if (getTechnologyBlockReason(state, id, country)) return { techState: null, cost: 0 };
+  const technology = TECHNOLOGIES.find(item => item.id === id)!;
   return { techState: { ...state, activeResearchId: id, researchProgressDays: 0 }, cost: technology.costGold };
+}
+
+export function cancelTechnologyResearch(state: CountryTechState): CountryTechState {
+  return { ...state, activeResearchId: null, researchProgressDays: 0 };
 }
 
 export function getResearchProgress(state: CountryTechState): ResearchProgress | null {
@@ -130,7 +141,14 @@ export function processDailyFocusProgress(state: CountryTechState, country: Coun
 
 export function processDailyTechProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false) {
   const { techState: focusState, notifications } = processDailyFocusProgress(state, country, difficulty, isPlayer);
-  const next = { ...focusState, completedTechnologies: [...focusState.completedTechnologies] };
+  const research = processDailyResearchProgress(focusState, country, difficulty, isPlayer);
+  return { techState: research.techState, notifications: [...notifications, ...research.notifications] };
+}
+
+export function processDailyResearchProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false) {
+  const normalized = normalizeTechState(state, country.tag);
+  const notifications: string[] = [];
+  const next = { ...normalized, completedTechnologies: [...normalized.completedTechnologies] };
   const difficultySpeed = isPlayer ? 1 : DIFFICULTY_SPEED_MULTIPLIERS[difficulty];
   const lawModifiers = calculateLawModifiers(country.activeLaws);
   if (next.activeResearchId) {
@@ -138,7 +156,8 @@ export function processDailyTechProgress(state: CountryTechState, country: Count
     if (technology) {
       next.researchProgressDays += difficultySpeed * calculateTechBonuses(next).researchSpeedMultiplier * lawModifiers.researchSpeedMultiplier;
       if (next.researchProgressDays >= technology.durationDays) {
-        next.completedTechnologies.push(technology.id); next.activeResearchId = null; next.researchProgressDays = 0;
+        if (!next.completedTechnologies.includes(technology.id)) next.completedTechnologies.push(technology.id);
+        next.activeResearchId = null; next.researchProgressDays = 0;
         notifications.push(`🔬 Pesquisa concluída: ${technology.title}`);
       }
     }

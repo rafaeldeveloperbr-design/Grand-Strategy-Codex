@@ -210,7 +210,7 @@ export function useGameLoop(props: Props) {
     countries = ai.countries; provinces = ai.provinces; armies = ai.armies; wars = ai.wars; relations = ai.relations; buildingConstructions = ai.buildingConstructions; recruitments = ai.recruitments; currentBotTechStates = ai.currentBotTechStates;
 
     // 8. MOVEMENT - IA já decidiu pra onde ir
-    const mov = processMovementTick({ armies, provinces, relations, countries, wars, addLog });
+    const mov = processMovementTick({ armies, provinces, relations, countries, wars, addLog, addToast, playerCountryTag });
     armies = mov.armies; provinces = mov.provinces; countries = mov.countries; const arrivedArmies = mov.arrivedArmies;
 
     // 9. COMBAT - só depois de mover

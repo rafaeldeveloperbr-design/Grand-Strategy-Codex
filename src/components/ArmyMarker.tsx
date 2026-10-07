@@ -13,7 +13,7 @@ interface ArmyMarkerProps {
   offsetX: number;
   /** Offset Y aplicado ao marcador (para disposição em grupo) */
   offsetY: number;
-  onClick: (armyId: string) => void;
+  onClick: (armyId: string, additive?: boolean) => void;
   onHover: (armyId: string | null) => void;
   markerPosition?: { x: number; y: number };
   resolvedCountry?: Country;
@@ -78,11 +78,11 @@ export const ArmyMarker: React.FC<ArmyMarkerProps> = ({
       aria-label={`${country?.name ?? army.owner}: ${army.name}, ${size.toLocaleString('pt-BR')} tropas`}
       aria-pressed={isSelected}
       onKeyDown={event => {
-        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClick(army.id); }
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (event.ctrlKey) onClick(army.id, true); else onClick(army.id); }
       }}
       onClick={(e) => {
         e.stopPropagation();
-        onClick(army.id);
+        if (e.ctrlKey) onClick(army.id, true); else onClick(army.id);
       }}
       onMouseEnter={() => onHover(army.id)}
       onMouseLeave={() => onHover(null)}

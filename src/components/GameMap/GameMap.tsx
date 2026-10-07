@@ -32,11 +32,12 @@ export interface MapProps {
   playerCountryTag?: string;
   onToggleArmy?: (id: string) => void;
   onToggleStack?: (ids: string[]) => void;
+  onToggleStackAdditive?: (ids: string[]) => void;
   onClearSelection?: () => void;
   onProvinceHover: (provinceId: string | null) => void;
   onProvinceClick: (provinceId: string) => void;
-  onArmyClick: (armyId: string) => void;
-  onProvinceRightClick: (provinceId: string) => void;
+  onArmyClick: (armyId: string, additive?: boolean) => void;
+  onProvinceRightClick: (provinceId: string, append?: boolean) => void;
 }
 
 export const GameMap: React.FC<MapProps> = ({
@@ -56,6 +57,7 @@ export const GameMap: React.FC<MapProps> = ({
   playerCountryTag,
   onToggleArmy,
   onToggleStack,
+  onToggleStackAdditive,
   onClearSelection,
   onProvinceHover,
   onProvinceClick,
@@ -82,7 +84,7 @@ export const GameMap: React.FC<MapProps> = ({
     setTooltip(null);
     setOpenStack({ key: group.key, anchor: { x: rect ? x - rect.left + 12 : 12, y: rect ? y - rect.top + 12 : 70 } });
   };
-  const selectArmy = (id: string) => { closeStack(); onArmyClick(id); };
+  const selectArmy = (id: string, additive = false) => { closeStack(); if (additive && onToggleArmy) onToggleArmy(id); else onArmyClick(id); };
 
   const {
     viewBox,
@@ -146,7 +148,7 @@ export const GameMap: React.FC<MapProps> = ({
 
       {/* === Instruções === */}
       <div className="map__instructions">
-        <span>🖱️ Clique: selecionar | 🖱️ Direito: mover exército | Shift+Arrastar: mover mapa</span>
+        <span>Clique: selecionar · Ctrl+clique: multi-seleção · Direito: mover/substituir · Shift+direito: waypoint · Escape: limpar seleção · Shift+arrastar: mapa</span>
       </div>
 
       {/* === SVG do Mapa === */}
@@ -165,7 +167,7 @@ export const GameMap: React.FC<MapProps> = ({
 
           const target = e.target as SVGElement;
           const provinceId = target.closest?.('[data-province-id]')?.getAttribute('data-province-id');
-          if (provinceId) onProvinceRightClick(provinceId);
+          if (provinceId) { if (e.shiftKey) onProvinceRightClick(provinceId, true); else onProvinceRightClick(provinceId); }
         }}
       >
         {/* Fundo do mar */}
@@ -236,7 +238,11 @@ export const GameMap: React.FC<MapProps> = ({
           selectedArmyIds={selectedArmyIds}
           hoveredArmyId={hoveredArmyId}
           openStackKey={openGroup?.key ?? null}
-          onStackOpen={openStackAt}
+          onStackOpen={(group, x, y) => {
+            onToggleStack?.(group.armies.map(army => army.id));
+            openStackAt(group, x, y);
+          }}
+          onStackToggleAdditive={onToggleStackAdditive}
           onArmyClick={selectArmy}
           onArmyHover={setHoveredArmyId}
         />

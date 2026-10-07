@@ -41,7 +41,7 @@ describe('Military UI V2 selection', () => {
     act(() => result.current.toggleArmySelection('one'));
     expect(result.current.selectedArmyIds).toEqual(['two']);
     act(() => result.current.toggleStackSelection(['one', 'two', 'enemy']));
-    expect(result.current.selectedArmyIds).toEqual(['two', 'one']);
+    expect(result.current.selectedArmyIds).toEqual(['one', 'two']);
     act(() => result.current.toggleStackSelection(['one', 'two']));
     expect(result.current.selectedArmyIds).toEqual([]);
     act(() => result.current.toggleStackSelection(['one', 'two']));
@@ -76,7 +76,7 @@ describe('Military UI V2 selection', () => {
     expect(toggle).toHaveBeenCalledWith(['one', 'two']);
     expect(view.container.querySelector('[data-army-choice="one"]')?.getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(view.container.querySelector('[data-army-choice="two"]')!);
-    expect(select).toHaveBeenCalledWith('two'); expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(select).toHaveBeenCalledWith('two', false); expect(screen.getByRole('dialog')).toBeTruthy();
   });
   it('highlights all selected markers and retains the national marker color', () => {
     const units = [army('one', 'a'), army('two', 'b')];
@@ -103,7 +103,7 @@ describe('Military UI V2 selection', () => {
     const units = [one, two], before = structuredClone(units);
     render(<ArmySelectionSummary armies={units} allArmies={units} provinces={map()} onClear={vi.fn()} />);
     expect(screen.getByText('2 exércitos selecionados')).toBeTruthy();
-    expect(screen.getByText('1.500')).toBeTruthy(); expect(screen.getByText('Blindados')).toBeTruthy();
+    expect(screen.getByText('1.500 homens')).toBeTruthy(); expect(screen.getByText('Blindados')).toBeTruthy();
     expect(screen.getAllByText('83%')).toHaveLength(2);
     expect(units).toEqual(before);
   });

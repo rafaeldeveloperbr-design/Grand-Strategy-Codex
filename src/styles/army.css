@@ -82,6 +82,10 @@
 .military-queue-entry progress { width: 100%; accent-color: var(--gold); }
 .military-stack-controls button:focus-visible, .military-queue-entry button:focus-visible, .battle-history-item:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
+.army-movement-plan { padding: 10px 0; border-top: 1px solid var(--border-subtle); margin-top: 8px; font-size: 12px; }
+.army-movement-plan ol { padding-left: 22px; max-height: 140px; overflow-y: auto; }
+.army-movement-plan small { display: block; color: var(--text-secondary); margin-top: 8px; line-height: 1.6; }
+
 .unit-row{
   display: flex;
   align-items: center;

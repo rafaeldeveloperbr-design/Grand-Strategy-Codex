@@ -50,7 +50,7 @@ export function ArmyStackPopover({ group, province, countries, presentation, sel
       })}
     </div>
     <footer>
-      Clique para selecionar · Ctrl + clique para seleção múltipla · Clique direito para mover · Escape para limpar
+      Clique: selecionar · Ctrl+clique: multi-seleção · Direito: mover/substituir · Shift+direito: waypoint · Escape: limpar seleção
     </footer>
   </div>;
 }

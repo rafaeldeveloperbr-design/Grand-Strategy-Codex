@@ -2,16 +2,28 @@ import type { Country } from '../types';
 import type { ArmyVisualGroup } from './GameMap/mapPresentation';
 import { formatArmySize } from '../utils/formatters';
 
-export function ArmyStackMarker({ group, country, selected, expanded, onOpen }: {
+export function ArmyStackMarker({ group, country, selected, expanded, onOpen, onToggleSelection, }: {
   group: ArmyVisualGroup; country?: Country; selected: boolean; expanded: boolean;
   onOpen: (group: ArmyVisualGroup, x: number, y: number) => void;
+  onToggleSelection?: (ids: string[]) => void;
 }) {
   const x = group.x + group.offsetX, y = group.y + group.offsetY;
   return <g className={`army-stack-marker ${selected ? 'army-stack-marker--selected' : ''}`} data-stack-key={group.key} role="button" tabIndex={0}
     aria-label={`${country?.name ?? group.owner}: ${group.armies.length} exércitos, ${group.troops.toLocaleString('pt-BR')} tropas`}
     aria-expanded={expanded} aria-haspopup="dialog"
     onMouseDown={event => { if (!event.shiftKey) event.stopPropagation(); }}
-    onClick={event => { event.stopPropagation(); if (!event.shiftKey) onOpen(group, event.clientX, event.clientY); }}
+    onClick={event => {
+      event.stopPropagation();
+
+      if (event.ctrlKey || event.metaKey) {
+        onToggleSelection?.(group.armies.map(army => army.id));
+        return;
+      }
+
+      if (!event.shiftKey) {
+        onOpen(group, event.clientX, event.clientY);
+      }
+    }}
     onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.currentTarget.focus(); const rect = event.currentTarget.getBoundingClientRect(); onOpen(group, rect.right, rect.bottom); } }}>
     <title>{country?.name ?? group.owner} · {group.armies.length} exércitos · {group.troops.toLocaleString('pt-BR')} tropas</title>
     <rect x={x - 24} y={y - 12} width="52" height="31" rx="5" fill="var(--bg-app)" stroke="var(--border-light)" />

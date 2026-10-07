@@ -14,12 +14,14 @@ export function ArmySelectionSummary({
   provinces,
   logistics,
   onClear,
+  onClearRoutes,
 }: {
   armies: Army[];
   allArmies: Army[];
   provinces: Province[];
   logistics?: LogisticsSnapshot;
   onClear: () => void;
+  onClearRoutes?: () => void;
 }) {
   const total = armies.reduce((sum, army) => sum + calculateArmySize(army), 0);
 
@@ -96,7 +98,9 @@ export function ArmySelectionSummary({
 
       <div className="army-info-panel__group-command">
         <strong>Comando em grupo</strong>
-        <span>Clique direito no mapa para mover todos.</span>
+        <span>{armies.filter(a => a.destination && !a.inCombat).length} com rota ativa · {armies.filter(a => !a.destination || a.inCombat).length} sem movimento ativo</span>
+        <span>Direito: mover/substituir · Shift+direito: adicionar waypoint para todos.</span>
+        {onClearRoutes && <button type="button" className="army-info-panel__action-btn" onClick={onClearRoutes}>Limpar rotas</button>}
         <small>Cada exército mantém sua própria rota.</small>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { BUILDING_DEFINITIONS } from '../data/buildings';
 /**
  * ============================================================
  * DICIONÁRIOS DE TRADUÇÃO
@@ -5,18 +6,7 @@
  * Mapeia IDs técnicos para nomes legíveis em português
  */
 
-export const BUILDING_NAMES: Record<string, string> = {
-  farm: 'Fazenda',
-  market: 'Mercado',
-  lumber_mill: 'Serraria',
-  iron_mine: 'Mina de Ferro',
-  warehouse: 'Armazém',
-  housing: 'Habitação',
-  barracks: 'Quartel',
-  fortress: 'Fortaleza',
-  workshop: 'Oficina',
-  infrastructure: 'Infraestrutura',
-};
+export const BUILDING_NAMES: Record<string, string> = Object.fromEntries(Object.values(BUILDING_DEFINITIONS).map(def => [def.type, def.name]));
 
 export const UNIT_NAMES: Record<string, string> = {
   infantry: 'Infantaria',

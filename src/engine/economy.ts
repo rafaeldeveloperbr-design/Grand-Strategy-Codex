@@ -12,7 +12,7 @@
  */
 
 import { Province, Country } from '../types';
-import { BUILDING_DEFINITIONS } from '../data/buildings';
+import { BUILDING_DEFINITIONS, getBuildingBonus } from '../data/buildings';
 import { getStabilityModifiers, processDailyStabilityRecovery } from './stability';
 import { calculateUnrestEconomicImpact } from './unrest';
 import { calculatePopulationGrowthBreakdown, calculateProvincePopulationGrowth, getWorkerAvailability, normalizePopulation, processInternalMigration, processProvincePopulation, recalculateEmployment } from './population';
@@ -86,8 +86,7 @@ export function calculateProvinceManpowerGain(province: Province): number {
 }
 
 export function calculateProvinceDefense(province: Province): number {
-  const fortressLevel = province.buildings.find(building => building.type === 'fortress' && building.daysRemaining <= 0)?.level ?? 0;
-  return province.defense + fortressLevel * 2;
+  return province.defense + getBuildingBonus(province, 'defense');
 }
 
 /**

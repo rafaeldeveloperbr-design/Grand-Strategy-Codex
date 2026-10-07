@@ -12,11 +12,15 @@ import type { GameDate } from './date'
  */
 export type UnitType = 'infantry' | 'cavalry' | 'artillery' | 'archers' | 'heavy_cavalry' | 'elite_guard' | 'siege_engine';
 
+/** Planned catalog only: these IDs are not enabled in armies or recruitment. */
+export type ModernUnitType = 'infantry' | 'motorized_infantry' | 'armor' | 'artillery' | 'reconnaissance' | 'engineers' | 'garrison';
+export type PlannedUnitType = UnitType | ModernUnitType;
+
 /**
  * Definição de um tipo de unidade militar
  */
-export interface UnitDefinition {
-  type: UnitType;
+export interface UnitDefinition<TType extends PlannedUnitType = UnitType> {
+  type: TType;
   name: string;
   icon: string;
   /** Custo em ouro por regimento (1000 homens) */

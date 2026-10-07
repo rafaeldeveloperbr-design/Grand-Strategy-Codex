@@ -1,7 +1,7 @@
 import { getTerrainDefinition } from '../terrain';
 import { Army } from '../../types/army';
 import { Province } from '../../types/province';
-import { getBuildingLevel } from '../../data/buildings';
+import { getBuildingBonus } from '../../data/buildings';
 
 
 /**
@@ -110,7 +110,7 @@ export function calculateDefenderTotalPower(
   }
 
   // Bônus por fortificação
-  const effectiveDefense = province.defense + getBuildingLevel(province, 'fortress') * 2;
+  const effectiveDefense = province.defense + getBuildingBonus(province, 'defense');
   if (effectiveDefense > 0) {
     const fortificationBonus = 1 + (effectiveDefense * COMBAT_BALANCE.FORTIFICATION_BONUS_PER_LEVEL * (techBonuses?.fortificationMultiplier ?? 1));
     bonusMultiplier *= fortificationBonus;

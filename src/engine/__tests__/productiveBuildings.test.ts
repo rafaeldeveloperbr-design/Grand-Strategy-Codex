@@ -97,7 +97,7 @@ describe('economia produtiva e construções v2', () => {
     ).toBe('Nível máximo');
   });
 
-  it('permite enfileirar múltiplas obras na mesma província', () => {
+  it('bloqueia novas obras enquanto existe uma obra pendente', () => {
     const p = makeProvince();
 
     const first = startBuilding(
@@ -125,10 +125,8 @@ describe('economia produtiva e construções v2', () => {
       first.constructions
     );
 
-    expect(second.success).toBe(true);
-    if (!second.success) return;
-
-    expect(second.constructions).toHaveLength(2);
+    expect(second.success).toBe(false);
+    expect(second.constructions).toHaveLength(1);
   });
 
   it('somente a primeira obra da fila avança por dia', () => {
@@ -145,19 +143,8 @@ describe('economia produtiva e construções v2', () => {
 
     if (!first.success) throw new Error();
 
-    const p1 = first.provinces.find(province => province.id === p.id)!;
-
-    const second = startBuilding(
-      p1,
-      first.provinces,
-      'A',
-      'warehouse',
-      first.gold,
-      first.constructions
-    );
-
-    if (!second.success) throw new Error();
-
+    // Existing saves may still contain a serial queue.
+    const second = { constructions: [...first.constructions, { ...first.constructions[0], id: 'legacy-second', buildingType: 'warehouse' as const }], provinces: first.provinces };
     const firstBefore = second.constructions[0].daysRemaining;
     const secondBefore = second.constructions[1].daysRemaining;
 

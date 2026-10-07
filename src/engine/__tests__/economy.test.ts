@@ -83,7 +83,7 @@ describe('ECONOMIA', () => {
   });
 
   it('construção - finaliza obra', () => {
-    const constructions = [{ id: 'c1', daysRemaining: 0, provinceId: 'p1', buildingType: 'farm' } as BuildingConstruction];
+    const constructions: BuildingConstruction[] = [{ id: 'c1', owner: 'BRA', daysRemaining: 0, totalDays: 30, cost: 220, provinceId: 'p1', buildingType: 'farm' }];
     const result = processConstructions(constructions, [baseProvince]);
     expect(result.completedConstructions.length).toBe(1);
   });

@@ -1,7 +1,7 @@
 import type { Army, Country, GameDate, Province, War } from '../../types';
 import type { PoliticsState, PoliticalGroupId, GovernmentType } from '../../types/politics';
 import { DEFAULT_LAWS, LAWS, LAW_CATEGORIES } from '../../constants/laws';
-import { getBuildingLevel } from '../../data/buildings';
+import { getBuildingPoliticalInfluence } from '../../data/buildings';
 import { normalizePopulation, calculateWorkforce } from '../population';
 import { calculateArmySize, calculateArmyMaintenance } from '../military/armyStats';
 import { chooseAILaw } from '../government';
@@ -34,16 +34,16 @@ export function politicalIndicators(country: Country,ctx: Pick<PoliticsContext,'
 }
 export function calculatePoliticalGroups(country: Country,ctx: Pick<PoliticsContext,'provinces'|'armies'|'wars'>) {
   const politics=normalizePolitics(country.politics,country.tag),definition=GOVERNMENT_DEFINITIONS[politics.governmentType],indicators=politicalIndicators(country,ctx),I=B.influence;
-  const level=(type: Parameters<typeof getBuildingLevel>[1]) => indicators.owned.reduce((s,p) => s+getBuildingLevel(p,type),0);
+  const buildingInfluence=(group: PoliticalGroupId) => indicators.owned.reduce((sum,p) => sum+getBuildingPoliticalInfluence(p,group),0);
   const development=indicators.owned.reduce((s,p) => s+finite(p.development),0);
   const military=ctx.armies.filter(a => a.owner===country.tag);
   const trade=Object.values(country.trade?.goods ?? {}).reduce((s,g) => s+finite(g.importValue)+finite(g.exportValue),0);
   const weights:Record<PoliticalGroupId,number>={
-    landowners:I.base+level('farm')*I.farm+development*I.ruralDevelopment,
-    merchants:I.base+level('market')*I.market+trade*I.tradeValue+Math.max(0,finite(country.resources.gold))*I.wealth,
-    workers:I.base+level('workshop')*I.workshop+indicators.owned.reduce((s,p) => s+normalizePopulation(p.population).employed,0)*I.employed,
-    military:I.base+level('barracks')*I.barracks+military.reduce((s,a) => s+calculateArmySize(a)*I.armySize+calculateArmyMaintenance(a)*I.militaryExpense,0),
-    reformists:I.base+development*I.development+(['republic','constitutional_monarchy'].includes(politics.governmentType) ? I.openGovernment : 0),
+    landowners:I.base+buildingInfluence('landowners')+development*I.ruralDevelopment,
+    merchants:I.base+buildingInfluence('merchants')+trade*I.tradeValue+Math.max(0,finite(country.resources.gold))*I.wealth,
+    workers:I.base+buildingInfluence('workers')+indicators.owned.reduce((s,p) => s+normalizePopulation(p.population).employed,0)*I.employed,
+    military:I.base+buildingInfluence('military')+military.reduce((s,a) => s+calculateArmySize(a)*I.armySize+calculateArmyMaintenance(a)*I.militaryExpense,0),
+    reformists:I.base+buildingInfluence('reformists')+development*I.development+(['republic','constitutional_monarchy'].includes(politics.governmentType) ? I.openGovernment : 0),
   };
   const safe=GROUP_IDS.map(id => Math.max(I.base,finite(weights[id],I.base))),sum=safe.reduce((s,n) => s+n,0);
   return GROUP_IDS.map((id,i) => {

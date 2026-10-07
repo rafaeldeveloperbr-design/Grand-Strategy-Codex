@@ -33,7 +33,7 @@ export const POLITICS_BALANCE = {
   concessionsLegitimacy:1,repressionLegitimacy:-2,forcedLegitimacy:45,forcedStability:30,
   victoryApproval:25,
   relevantBattleCasualties:500,battleLossLegitimacy:2,battleWinLegitimacy:1,battleMilitaryApproval:3,
-  influence:{base:10,farm:4,market:5,workshop:4,barracks:4,ruralDevelopment:.6,development:.3,employed:1/20000,armySize:1/2000,militaryExpense:2,tradeValue:.01,wealth:.0001,openGovernment:8},
+  influence:{base:10,ruralDevelopment:.6,development:.3,employed:1/20000,armySize:1/2000,militaryExpense:2,tradeValue:.01,wealth:.0001,openGovernment:8},
   approval:{satisfaction:.5,stability:.15,unemployment:60,economicBalance:4,warMilitary:5,defeatMilitary:12},
   policyApproval:{
     trade_integrated:{landowners:0,merchants:8,workers:3,military:0,reformists:3},

@@ -1,12 +1,12 @@
-import React from 'react';
-import type {
-  CountryTechState,
-  NationalFocus,
-  FocusCategory,
-} from '../types/technology';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import type { CountryTechState } from '../types/technology';
 import { NATIONAL_FOCUSES } from '../data/technology';
-import { formatFocusEffect, getFocusBlockReason } from '../engine/technology';
-import '../styles/tech-modal.css'; 
+import { getFocusBlockReason } from '../engine/technology';
+import { FocusTree } from './focus/FocusTree';
+import { FocusTooltip } from './focus/FocusTooltip';
+import { FOCUS_CATEGORIES, getFocusPercent } from './focus/presentation';
+import '../styles/tech-modal.css';
+import '../styles/focus-tree.css';
 
 interface Props {
   techState: CountryTechState;
@@ -14,81 +14,76 @@ interface Props {
   onCancelFocus: () => void;
   onClose: () => void;
 }
-
 export const FocusModal: React.FC<Props> = ({ techState, onStartFocus, onCancelFocus, onClose }) => {
-
-    const categories: { id: FocusCategory; title: string; color: string }[] = [
-        { id: 'MILITARY', title: '⚔️ MILITAR', color: '#ef4444' },
-        { id: 'ECONOMY', title: '💰 ECONOMIA', color: '#22c55e' },
-        { id: 'POLITICS', title: '👑 POLÍTICA', color: '#3b82f6' },
-        { id: 'INDUSTRY', title: '🏭 INDÚSTRIA', color: '#f59e0b' },
-        { id: 'DIPLOMACY', title: '🌐 DIPLOMACIA', color: '#06b6d4' },
-        { id: 'RESEARCH', title: '🔬 PESQUISA', color: '#a855f7' },
-    ];
-
-    const renderCard = (focus: NationalFocus) => {
-        const isActive = techState.activeFocusId === focus.id;
-        const isDone = techState.completedFocuses.includes(focus.id);
-        const progressDays = isActive ? techState.focusProgressDays : 0;
-        const remaining = focus.durationDays - progressDays;
-        const progress = (progressDays / focus.durationDays) * 100;
-        const blockReason = getFocusBlockReason(techState, focus.id);
-        const locked = blockReason !== null && !isDone && !isActive;
-
-        return (
-            <div key={focus.id} className={`tree-node research-node ${isDone ? 'completed' : ''} ${isActive ? 'active' : ''} ${locked ? 'locked' : ''}`}>
-                <span className="tree-node-icon">{focus.icon}</span>
-                <h4>{focus.title}</h4>
-                <p className="tree-desc">{focus.description}</p>
-
-                <div className="tree-reward">
-                    {focus.rewardEffects.map(effect => <span key={`${effect.type}-${formatFocusEffect(effect)}`}>{formatFocusEffect(effect)}</span>)}
-                </div>
-                <div className="tree-prerequisites">
-                    Pré-requisito: {(focus.prerequisites ?? []).length
-                        ? focus.prerequisites!.map(id => NATIONAL_FOCUSES.find(item => item.id === id)?.title ?? id).join(', ')
-                        : 'Nenhum'}
-                </div>
-
-                {!isDone && (
-                    <div className="tree-progress-wrap">
-                        <div className="tree-progress"><div style={{ width: `${progress}%` }} /></div>
-                        <span className="tree-time">
-                            {isActive ? `⏳ ${remaining}d restantes (${progressDays}/${focus.durationDays})` : `${focus.durationDays} dias`}
-                        </span>
-                    </div>
-                )}
-
-                <button
-                    className={`tree-btn ${isActive ? 'cancel-btn' : ''}`}
-                    disabled={locked || isDone}
-                    title={locked ? blockReason ?? undefined : undefined}
-                    onClick={() => isActive ? onCancelFocus() : onStartFocus(focus.id)}
-                >
-                    {isDone ? '✓ Concluído' : isActive ? '✕ Cancelar' : 'Iniciar Foco'}
-                </button>
-            </div>
-        );
-    };
-
-    return (
-        <div className="tech-modal">
-            <div className="tech-modal__overlay" onClick={onClose} />
-            <div className="tech-modal__container tree-modal">
-                <div className="tech-modal__header">
-                    <h2>🎯 Focos Nacionais</h2>
-                    <button className="tech-modal__close" onClick={onClose}>×</button>
-                </div>
-
-                <div className="research-columns focus-columns">
-                    {categories.map(category => (
-                        <div key={category.id} className="research-col" style={{ borderTopColor: category.color }}>
-                            <h3>{category.title}</h3>
-                            <div className="tree-column">{NATIONAL_FOCUSES.filter(focus => focus.category === category.id).map(renderCard)}</div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
+  const [inspection,setInspection] = useState<{id:string;pinned:boolean;left:number;top:number} | null>(null);
+  const detailId = useId(), headingId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const originRef = useRef<HTMLButtonElement | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const clearLeave = () => { clearTimeout(leaveTimer.current); };
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => { clearTimeout(leaveTimer.current); previous?.focus(); };
+  },[]);
+  useEffect(() => {
+    const dismiss = () => setInspection(null);
+    window.addEventListener('resize',dismiss);
+    return () => window.removeEventListener('resize',dismiss);
+  },[]);
+  const inspect = (id:string,element:HTMLButtonElement,pinned:boolean) => {
+    clearLeave();
+    if (inspection?.pinned && !pinned) return;
+    originRef.current = element;
+    const rect = element.getBoundingClientRect();
+    const width = Math.min(340,window.innerWidth-24);
+    const left = Math.max(12,Math.min(rect.right+12,window.innerWidth-width-12));
+    const top = Math.max(12,Math.min(rect.top,window.innerHeight-480));
+    setInspection({id,pinned,left,top});
+  };
+  const leave = () => {
+    clearLeave();
+    if (!inspection?.pinned) leaveTimer.current = setTimeout(() => {
+      if (document.activeElement !== originRef.current && !document.getElementById(detailId)?.contains(document.activeElement)) setInspection(null);
+    },160);
+  };
+  const dismiss = () => { clearLeave(); originRef.current?.focus({preventScroll:true}); setInspection(null); };
+  const dismissOnScroll = () => {
+    clearLeave();
+    // Keyboard focus can scroll a distant node into view; keep its details anchored.
+    if (inspection && !inspection.pinned && document.activeElement === originRef.current && originRef.current) {
+      inspect(inspection.id,originRef.current,false);
+      return;
+    }
+    if (document.getElementById(detailId)?.contains(document.activeElement)) originRef.current?.focus({preventScroll:true});
+    setInspection(null);
+  };
+  const active = NATIONAL_FOCUSES.find(focus => focus.id === techState.activeFocusId);
+  const inspected = NATIONAL_FOCUSES.find(focus => focus.id === inspection?.id);
+  const handleKeyDown = (event:React.KeyboardEvent) => {
+    if (event.key === 'Escape') { event.stopPropagation(); event.preventDefault(); if (inspection) dismiss(); else onClose(); }
+    if (event.key === 'Tab') {
+      const controls = Array.from(containerRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled)') ?? []);
+      const first = controls[0], last = controls[controls.length-1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+  };
+  return (
+    <div className="tech-modal focus-modal">
+      <div className="tech-modal__overlay" onClick={onClose} />
+      <div ref={containerRef} className="focus-modal__container" role="dialog" aria-modal="true" aria-labelledby={headingId} onKeyDown={handleKeyDown}>
+        <header className="focus-modal__header"><div><h2 id={headingId}>Focos Nacionais</h2><p>Escolha uma direção estratégica para o país.</p></div><button ref={closeRef} type="button" aria-label="Fechar focos nacionais" onClick={onClose}>×</button></header>
+        <div className="focus-modal__summary" role="status">{active ? `Foco ativo: ${active.title} — ${getFocusPercent(active,techState.focusProgressDays)}%` : 'Nenhum foco ativo'}</div>
+        <div className="focus-category-legend" aria-label="Categorias de focos">{Object.entries(FOCUS_CATEGORIES).map(([id,category]) => <h3 key={id} style={{'--focus-color':category.color} as React.CSSProperties}><span aria-hidden="true">{category.icon}</span> {category.label}</h3>)}</div>
+        <FocusTree state={techState} inspectedId={inspection?.id ?? null} detailId={detailId} onInspect={inspect} onLeave={leave} onScroll={dismissOnScroll} />
+        <p className="focus-modal__hint">Explore os ramos com a rolagem. Selecione um foco para confirmar a ação.</p>
+        {inspection && inspected && <FocusTooltip focus={inspected} state={techState} id={detailId} pinned={inspection.pinned} position={inspection}
+          onEnter={clearLeave} onLeave={leave} onDismiss={dismiss}
+          onStart={() => { if (getFocusBlockReason(techState,inspected.id) === null) { onStartFocus(inspected.id); dismiss(); } }}
+          onCancel={() => { onCancelFocus(); dismiss(); }} />}
+      </div>
+    </div>
+  );
 };

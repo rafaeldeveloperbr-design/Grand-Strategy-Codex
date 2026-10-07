@@ -5,7 +5,6 @@
 import { useCallback } from 'react';
 
 import {
-  moveArmy,
   mergeArmies,
   splitArmy,
   splitArmyHalf,
@@ -17,9 +16,12 @@ import { calculateArmySize, retreatArmyManually } from '../../engine/combat';
 import type { ActiveBattle, Army, Province } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
 import type { ToastType } from '../../types/toast';
+import { orderArmyGroup } from './armyGroupCommands';
+import { groupMovementFeedback } from '../../components/militaryPresentation';
 
 type Params = {
   selectedArmy: string | null;
+  selectedArmyIds?: string[];
 
   setSelectedArmy: React.Dispatch<
     React.SetStateAction<string | null>
@@ -73,80 +75,30 @@ export function useArmyActions(params: Params) {
   const { activeBattlesRef, setActiveBattles, selectedArmy, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection, setSplitSelection, setShowSplitModal } = params;
 
   const handleProvinceRightClick = useCallback((provinceId: string) => {
-    if (!selectedArmy) return;
-    const army = armiesRef.current?.find(
-      a => a.id === selectedArmy
-    );
-    if (!army || army.owner !== playerCountryTag) return;
-
-    // Se clica na mesma província onde já está indo, para
-    if (army.destination && army.location === provinceId) {
-      const updatedArmy = stopArmyMovement(army);
-      if (updatedArmy !== army) {
-        setArmies(prev =>
-          prev.map(a =>
-            a.id === army.id ? updatedArmy : a
-          )
-        );
-        const currentProvince = provincesRef.current?.find(
-          p => p.id === provinceId
-        );
-        addLog(`🛑 ${army.name} parou em ${currentProvince?.name ?? provinceId}`);
-        addToast(`Exército parou em ${currentProvince?.name ?? provinceId}`, 'info', 'Movimento Cancelado');
+    const ids = params.selectedArmyIds ?? (selectedArmy ? [selectedArmy] : []);
+    if (!ids.length) return;
+    const provinces = provincesRef.current ?? [];
+    const current = armiesRef.current ?? [];
+    const single = ids.length === 1 ? current.find(a => a.id === ids[0] && a.owner === playerCountryTag) : undefined;
+    if (single?.destination && single.location === provinceId) {
+      const stopped = stopArmyMovement(single);
+      if (stopped !== single) {
+        armiesRef.current = current.map(a => a.id === single.id ? stopped : a);
+        setArmies(armiesRef.current);
+        const message = `${single.name} parou em ${provinces.find(p => p.id === provinceId)?.name ?? provinceId}.`;
+        addLog(message); addToast(message, 'info', 'Movimento cancelado');
       }
       return;
     }
-
-    // CORREÇÃO TRAVAMENTO: Se já tem destino, permite trocar destino (para e move)
-    let armyToMove = army;
-    if (army.destination) {
-      armyToMove = stopArmyMovement(army);
+    const result = orderArmyGroup(ids, current, playerCountryTag, provinceId, provinces, diplomaticRelationsRef.current ?? []);
+    if (!result.updates.size && !result.failures.length) return;
+    if (result.updates.size) {
+      armiesRef.current = result.armies;
+      setArmies(prev => prev.map(a => result.updates.get(a.id) ?? a));
     }
-    const provinces = provincesRef.current;
-    const relations = diplomaticRelationsRef.current;
-
-    if (!provinces || !relations) return;
-
-    const moved = moveArmy(
-      armyToMove,
-      provinceId,
-      provinces,
-      relations
-    );
-    const destinationProvince = provinces.find(
-      p => p.id === provinceId
-    );
-    if (moved) {
-      setArmies(prev =>
-        prev.map(a => a.id === army.id ? moved : a)
-      );
-
-      addLog(
-        `🚶 ${army.name} marchando para ${destinationProvince?.name ?? provinceId}`
-      );
-    } else {
-      // Tenta forçar movimento mesmo sem guerra (para teste) - log mais detalhado
-      console.warn(
-        `❌ Movimento bloqueado: ${army.name} de ${army.location} para ${provinceId}`,
-        {
-          owner: army.owner,
-          destinationOwner: destinationProvince?.owner,
-
-          relations: relations.filter(r =>
-            (
-              r.countryA === army.owner &&
-              r.countryB === destinationProvince?.owner
-            ) ||
-            (
-              r.countryB === army.owner &&
-              r.countryA === destinationProvince?.owner
-            )
-          ),
-        }
-      );
-      addLog(`❌ Movimento não permitido: sem relação de guerra com o destino`);
-    }
-  }, [selectedArmy, playerCountryTag, addLog, addToast, armiesRef, diplomaticRelationsRef, provincesRef, setArmies]);
+    const message = groupMovementFeedback(result.updates.size, provinces.find(p => p.id === provinceId)?.name ?? provinceId, result.failures);
+    addLog(message); addToast(message, result.failures.length ? 'warning' : 'info', 'Movimento');
+  }, [params.selectedArmyIds, selectedArmy, playerCountryTag, addLog, addToast, armiesRef, diplomaticRelationsRef, provincesRef, setArmies]);
 
   const handleMergeArmies = useCallback((targetArmyId: string) => {
     if (!selectedArmy) return;

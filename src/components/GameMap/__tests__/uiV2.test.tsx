@@ -137,7 +137,7 @@ describe('UI V2 visual army grouping', () => {
     const rebel = view.container.querySelectorAll('.army-stack-marker')[1];
     expect(rebel.textContent).toContain('⚔'); expect(rebel.textContent).toContain('→');
     fireEvent.click(rebel);
-    expect(view.getByRole('dialog').textContent).toContain('Combate');
+    expect(view.getByRole('dialog').textContent).toContain('Em batalha');
   });
   it('restores keyboard focus to the stack after Escape', () => {
     const view = render(<GameMap {...props([army('a'), army('b')])} />);
@@ -168,7 +168,7 @@ describe('UI V2 routes, map modes and operational information', () => {
     fireEvent.click(view.container.querySelector('.army-stack-marker')!);
     expect(view.container.querySelectorAll('[data-route-army]')).toHaveLength(2);
     expect(view.container.querySelector('[data-route-army="a"] polyline')!.getAttribute('points')).not.toBe(view.container.querySelector('[data-route-army="b"] polyline')!.getAttribute('points'));
-    expect(view.getByRole('dialog').textContent).toContain('Movendo');
+    expect(view.getByRole('dialog').textContent).toContain('Em movimento');
   });
   it('defaults to political ownership colors and restores them after numeric modes', () => {
     const data = props(); const view = render(<GameMap {...data} />);

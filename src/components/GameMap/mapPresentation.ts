@@ -1,6 +1,7 @@
 import type { Army, Country, Province, SupplyStatus, War, DiplomaticRelation, ActiveBattle } from '../../types';
 import { calculateArmySize, calculateArmyOrganization, calculateArmyMorale, calculateLocalSupplyCapacity, getArmySupply } from '../../engine/military';
 import { getProvinceLogistics, type LogisticsInfo, type LogisticsSnapshot } from '../../engine/logistics';
+import { armyStatus } from '../militaryPresentation';
 
 export type MapMode = 'political' | 'development' | 'population' | 'unrest' | 'supply' | 'terrain' | 'logistics';
 export const MAP_MODES: { id: MapMode; label: string; description: string }[] = [
@@ -54,7 +55,7 @@ export function buildArmyPresentation(armies: Army[], provinces: Province[], log
   for (const army of armies) {
     const supply = supplyByArmy.get(army.id) ?? getArmySupply(army);
     const troops = calculateArmySize(army);
-    readouts.set(army.id, { troops, organization: calculateArmyOrganization(army), morale: calculateArmyMorale(army), supply: supply.status, supplyRatio: supply.ratio, status: army.inCombat ? 'Combate' : army.destination ? 'Movendo' : 'Parado',
+    readouts.set(army.id, { troops, organization: calculateArmyOrganization(army), morale: calculateArmyMorale(army), supply: supply.status, supplyRatio: supply.ratio, status: armyStatus(army, supply.status),
       logistics: army.location ? getProvinceLogistics(logistics,army.owner,army.location) : undefined });
     const province = army.location ? provinceById.get(army.location) : undefined;
     const inTransit = !!(army.destination && army.position && army.movementProgress > 0);

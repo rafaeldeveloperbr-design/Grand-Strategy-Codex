@@ -1,5 +1,6 @@
 import React from 'react';
 import { CombatResult, Country } from '../types';
+import { useMilitaryDialog } from './useMilitaryDialog';
 
 interface BattleHistoryModalProps {
   playerCountryTag: string;
@@ -16,6 +17,7 @@ export const BattleHistoryModal: React.FC<BattleHistoryModalProps> = ({
   onClose,
   onViewBattle,
 }) => {
+  const dialogRef = useMilitaryDialog(onClose);
   const getCountryByTag = (tag: string): Country | undefined => {
     return allCountries.find(c => c.tag === tag);
   };
@@ -32,10 +34,10 @@ export const BattleHistoryModal: React.FC<BattleHistoryModalProps> = ({
 
   return (
     <div className="battle-history-overlay">
-      <div className="battle-history-modal">
+      <div ref={dialogRef} className="battle-history-modal" role="dialog" aria-modal="true" aria-label="Histórico de Batalhas">
         <div className="battle-history-header">
           <h2>📜 Histórico de Batalhas</h2>
-          <button className="battle-history-close" onClick={onClose}>✕</button>
+          <button className="battle-history-close" aria-label="Fechar histórico de batalhas" onClick={onClose}>✕</button>
         </div>
 
         <div className="battle-history-content">
@@ -61,6 +63,10 @@ export const BattleHistoryModal: React.FC<BattleHistoryModalProps> = ({
                   <div
                     key={index}
                     className={`battle-history-item ${playerWon ? 'victory' : 'defeat'}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Abrir relatório de ${battle.provinceName}`}
+                    onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onViewBattle(battle); } }}
                     onClick={() => onViewBattle(battle)}
                   >
                     <div className="battle-history-item-header">

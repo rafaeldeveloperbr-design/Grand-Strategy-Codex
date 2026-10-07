@@ -2,20 +2,53 @@
  * useGameSelection.ts - 85 linhas - PASSO 5.1
  * Seleção de província, exército, hover e painel
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
 import type { Province, Army } from '../../types';
+
+const controllable = (army: Army, tag: string) => army.owner === tag && army.regiments.some(r => r.strength > 0);
 
 export function useGameSelection(
   playerCountryTag: string,
   provincesRef: RefObject<Province[]>,
   armiesRef: RefObject<Army[]>,
-  handleOpenDiplomacy: (tag: string) => void
+  handleOpenDiplomacy: (tag: string) => void,
+  armies: Army[] = armiesRef.current ?? []
 ) {
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
   const [hoveredProvince, setHoveredProvince] = useState<string | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [selectedArmy, setSelectedArmy] = useState<string | null>(null);
+  const [selectedArmyIds, setSelectedArmyIds] = useState<string[]>([]);
+  const selectedArmy = selectedArmyIds[0] ?? null;
+  const setSelectedArmy = useCallback((value: React.SetStateAction<string | null>) => {
+    setSelectedArmyIds(prev => {
+      const id = typeof value === 'function' ? value(prev[0] ?? null) : value;
+      return id && armiesRef.current?.some(a => a.id === id && controllable(a, playerCountryTag)) ? [id] : [];
+    });
+  }, [armiesRef, playerCountryTag]);
+  const clearArmySelection = useCallback(() => setSelectedArmyIds([]), []);
+  useEffect(() => {
+    setSelectedArmyIds(prev => {
+      const next = prev.filter(id => armies.some(a => a.id === id && controllable(a, playerCountryTag)));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [armies, playerCountryTag]);
+  useEffect(() => {
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') clearArmySelection(); };
+    document.addEventListener('keydown', escape);
+    return () => document.removeEventListener('keydown', escape);
+  }, [clearArmySelection]);
+  const toggleArmySelection = useCallback((id: string) => {
+    if (!armiesRef.current?.some(a => a.id === id && controllable(a, playerCountryTag))) return;
+    setSelectedArmyIds(prev => prev.includes(id) ? prev.filter(value => value !== id) : [...prev, id]);
+    setSelectedProvince(null); setIsPanelOpen(false);
+  }, [armiesRef, playerCountryTag]);
+  const toggleStackSelection = useCallback((ids: string[]) => {
+    const valid = [...new Set(ids)].filter(id => armiesRef.current?.some(a => a.id === id && controllable(a, playerCountryTag)));
+    if (!valid.length) return;
+    setSelectedArmyIds(prev => valid.every(id => prev.includes(id)) ? prev.filter(id => !valid.includes(id)) : [...new Set([...prev, ...valid])]);
+    setSelectedProvince(null); setIsPanelOpen(false);
+  }, [armiesRef, playerCountryTag]);
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [splitSelection, setSplitSelection] = useState<Set<number>>(new Set());
 
@@ -30,7 +63,7 @@ export function useGameSelection(
       setIsPanelOpen(true);
       setSelectedArmy(null);
     }
-  }, [playerCountryTag, provincesRef, handleOpenDiplomacy]);
+  }, [playerCountryTag, provincesRef, handleOpenDiplomacy, setSelectedArmy]);
 
   const handleProvinceHover = useCallback((provinceId: string | null) => setHoveredProvince(provinceId), []);
   const handleClosePanel = useCallback(() => { setIsPanelOpen(false); setSelectedProvince(null); }, []);
@@ -44,7 +77,7 @@ export function useGameSelection(
       setSelectedProvince(null);
       setIsPanelOpen(false);
     }
-  }, [playerCountryTag, armiesRef]);
+  }, [playerCountryTag, armiesRef, setSelectedArmy]);
 
   const toggleSplitRegiment = useCallback((index: number) => {
     setSplitSelection(prev => {
@@ -59,6 +92,7 @@ export function useGameSelection(
     hoveredProvince, setHoveredProvince,
     isPanelOpen, setIsPanelOpen,
     selectedArmy, setSelectedArmy,
+    selectedArmyIds, toggleArmySelection, toggleStackSelection, clearArmySelection,
     showSplitModal, setShowSplitModal,
     splitSelection, setSplitSelection,
     handleProvinceClick, handleProvinceHover, handleClosePanel, handleArmyClick, toggleSplitRegiment

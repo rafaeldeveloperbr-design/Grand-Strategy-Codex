@@ -65,6 +65,23 @@
   letter-spacing: 1px;
 }
 
+.military-stack-controls { display: flex; gap: 8px; padding: 8px 0; flex-wrap: wrap; }
+.military-stack-controls button, .military-queue-entry button, .province-panel__army-card button { padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: 5px; background: var(--bg-app); color: var(--text-primary); cursor: pointer; }
+.military-composition { color: var(--text-secondary); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.army-stack-popover__army:disabled { cursor: default; opacity: .8; }
+.military-army--selected { outline: 2px solid var(--gold); }
+.military-overview, .military-requirements { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.military-stat-grid, .military-cost-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 10px 0; }
+.military-cost-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--border-subtle); padding-top: 10px; }
+.military-stat-grid dt, .military-cost-grid dt { font-size: 11px; color: var(--text-muted); }
+.military-stat-grid dd, .military-cost-grid dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.military-recruitment-card h4, .military-recruitment-card p { margin: 0 0 7px; }
+.military-recruitment-card.province-panel__build-option--disabled { opacity: 1; }
+.military-block-reason { padding: 7px; border-left: 3px solid var(--gold); background: var(--bg-app); color: var(--text-primary); font-size: 12px; }
+.military-queue-entry { display: grid; gap: 7px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--border-subtle); border-radius: 6px; font-size: 12px; }
+.military-queue-entry progress { width: 100%; accent-color: var(--gold); }
+.military-stack-controls button:focus-visible, .military-queue-entry button:focus-visible, .battle-history-item:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
 .unit-row{
   display: flex;
   align-items: center;

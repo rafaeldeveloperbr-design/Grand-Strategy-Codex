@@ -1,6 +1,6 @@
 import { Army, Province, Country, Recruitment, Regiment } from '../../types';
 import { UNIT_DEFINITIONS } from '../../data/units';
-import { BUILDING_DEFINITIONS } from '../../data/buildings';
+import { getBuildingBonus, getMilitaryEquipmentCostMultiplier } from '../../data/buildings';
 import { createArmy, createRegiment, generateRecruitmentId } from './militaryUtils';
 import { normalizeMarket } from '../market';
 import type { UnitType } from '../../types';
@@ -15,11 +15,11 @@ export function getEffectiveRecruitmentCost(unitType: UnitType, context: Recruit
   const definition = UNIT_DEFINITIONS[unitType];
   const laws = calculateLawModifiers(context.country.activeLaws);
   const technology = context.technology ? calculateTechBonuses(context.technology) : undefined;
-  const barracks = context.province.buildings.filter(building => building.type === 'barracks' && building.daysRemaining <= 0).reduce((sum, building) => sum + building.level, 0);
+  const equipmentMultiplier = getMilitaryEquipmentCostMultiplier(context.province);
   return {
     gold: Math.ceil(definition.cost * laws.recruitmentCostMultiplier), manpower: definition.manpowerCost,
-    iron: definition.ironCost, tools: definition.toolsCost,
-    days: Math.max(5, Math.ceil(definition.trainingTime * laws.recruitmentTimeMultiplier * (technology?.recruitmentTimeMultiplier ?? 1) / (1 + barracks * .1))),
+    iron: definition.ironCost * equipmentMultiplier, tools: definition.toolsCost * equipmentMultiplier,
+    days: Math.max(5, Math.ceil(definition.trainingTime * laws.recruitmentTimeMultiplier * (technology?.recruitmentTimeMultiplier ?? 1))),
   };
 }
 
@@ -53,11 +53,13 @@ export function queueRecruitment(unitType: UnitType, context: RecruitmentContext
 
 export function payRecruitmentCost(province: Province, country: Country, unitType: UnitType, goldCost = UNIT_DEFINITIONS[unitType].cost) {
   const def = UNIT_DEFINITIONS[unitType]; const market = normalizeMarket(province.market);
+  const equipment = getMilitaryEquipmentCostMultiplier(province);
+  const iron = def.ironCost * equipment, tools = def.toolsCost * equipment;
   if (country.resources.gold < goldCost) return { success: false as const, reason: 'Dinheiro insuficiente', province, country };
   if (country.resources.manpower < def.manpowerCost) return { success: false as const, reason: 'Manpower insuficiente', province, country };
-  if (market.goods.iron.stock < def.ironCost) return { success: false as const, reason: 'IRON insuficiente', province, country };
-  if (market.goods.tools.stock < def.toolsCost) return { success: false as const, reason: 'TOOLS insuficiente', province, country };
-  market.goods.iron.stock -= def.ironCost; market.goods.tools.stock -= def.toolsCost;
+  if (market.goods.iron.stock < iron) return { success: false as const, reason: 'IRON insuficiente', province, country };
+  if (market.goods.tools.stock < tools) return { success: false as const, reason: 'TOOLS insuficiente', province, country };
+  market.goods.iron.stock -= iron; market.goods.tools.stock -= tools;
   return { success: true as const, reason: null, province: { ...province, market }, country: { ...country, resources: { ...country.resources, gold: country.resources.gold - goldCost, manpower: country.resources.manpower - def.manpowerCost } } };
 }
 
@@ -80,17 +82,7 @@ export function processRecruitments(
       continue;
     }
 
-    let recruitmentSpeedBonus = 0;
-    if (province) {
-      for (const building of province.buildings) {
-        if (building.daysRemaining <= 0 && building.type === 'barracks') {
-          const def = BUILDING_DEFINITIONS[building.type];
-          if (def.bonusPerLevel.recruitmentSpeedBonus) {
-            recruitmentSpeedBonus += def.bonusPerLevel.recruitmentSpeedBonus * building.level;
-          }
-        }
-      }
-    }
+    const recruitmentSpeedBonus = getBuildingBonus(province, 'recruitmentSpeedBonus');
 
     const timeMultiplier = recruitmentTimeMultipliers.get(rec.owner) ?? 1;
     const newDays = rec.daysRemaining - (1 + recruitmentSpeedBonus / 100) / timeMultiplier;

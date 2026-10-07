@@ -12,7 +12,7 @@ import type {
 } from '../../types';
 import { applyTroopLoss, calculateArmySize } from './combatCalculations';
 import { findRetreatProvince } from './combatRetreats';
-import { getBuildingLevel } from '../../data/buildings';
+import { getBuildingBonus } from '../../data/buildings';
 import {
   calculateArmyCombatStats,
   calculateArmyOrganization,
@@ -257,7 +257,7 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
   const defenderOwner = participants(synced, armies, 'defender')[0]?.owner ?? '';
   const attackerPower = combatMultipliers.get(attackerOwner) ?? 1;
   const defenderPower = combatMultipliers.get(defenderOwner) ?? 1;
-  const effectiveDefense = province.defense + getBuildingLevel(province, 'fortress') * 2;
+  const effectiveDefense = province.defense + getBuildingBonus(province, 'defense');
   const fortificationMultiplier = fortificationMultipliers.get(defenderOwner) ?? 1;
   const attackerArmies = participants(synced, armies, 'attacker');
   const defenderArmies = participants(synced, armies, 'defender');

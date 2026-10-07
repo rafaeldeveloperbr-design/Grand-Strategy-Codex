@@ -2,7 +2,7 @@ import { getTerrainDefinition } from '../terrain';
 import type { Army, Country, GameDate, Province } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
 import { calculateArmySiege, findPath, getArmySupply, moveArmy, recoverArmy } from '../military';
-import { getBuildingLevel } from '../../data/buildings';
+import { getBuildingBonus } from '../../data/buildings';
 import { MILITARY_BALANCE } from '../military/balance';
 import { calculateArmyCombatStats } from '../military/armyStats';
 const getArmyCombatPower = (army: Army): number => { const stats = calculateArmyCombatStats(army); return stats.attack + stats.defense + stats.shock; };
@@ -59,7 +59,7 @@ export function planRebelMovement(armies: Army[], provinces: Province[], countri
 
         const fort = Math.min(
           MILITARY_BALANCE.maximumFortDefense,
-          (p.defense + getBuildingLevel(p, 'fortress') * 2)
+          (p.defense + getBuildingBonus(p, 'defense'))
           * MILITARY_BALANCE.fortDefensePerLevel
           / (1 + calculateArmySiege(army) / 20)
         );

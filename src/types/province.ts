@@ -1,7 +1,8 @@
 /**
  * Tipos de edifícios disponíveis para construção
  */
-export type BuildingType = 'farm' | 'lumber_mill' | 'iron_mine' | 'workshop' | 'market' | 'warehouse' | 'housing' | 'barracks' | 'fortress' | 'infrastructure';
+export type BuildingType = 'farm' | 'lumber_mill' | 'iron_mine' | 'workshop' | 'market' | 'warehouse' | 'housing' | 'barracks' | 'military_arsenal' | 'fortress' | 'infrastructure';
+export type BuildingCategory = 'production' | 'trade' | 'population' | 'military' | 'defense' | 'infrastructure';
 
 /**
  * Representa um edifício em construção ou já construído
@@ -87,6 +88,9 @@ export interface Province {
  * Definição de um tipo de edifício (template)
  */
 export interface BuildingDefinition {
+  category: BuildingCategory;
+  /** Any one completed requirement is sufficient. */
+  prerequisites?: Array<{ type: BuildingType; level: number }>;
   /** Tipo do edifício */
   type: BuildingType;
   /** Nome exibido */
@@ -112,6 +116,12 @@ export interface BuildingDefinition {
  * Bônus concedidos por um edifício
  */
 export interface BuildingBonus {
+  output?: number;
+  equipmentDiscount?: number;
+  logisticsBonus?: number;
+  supplyCapacity?: number;
+  jobShare?: number;
+  politicalInfluence?: Partial<Record<import('./politics').PoliticalGroupId, number>>;
   /** Bônus de renda de ouro */
   goldIncome?: number;
   /** Bônus de manpower */

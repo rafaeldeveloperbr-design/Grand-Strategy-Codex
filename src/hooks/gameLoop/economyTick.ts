@@ -100,7 +100,7 @@ export function processEconomyTick(p: Params) {
           if (existingBuilding) {
             return {
               ...pr,
-              buildings: pr.buildings.map(b => b.type === completed.buildingType ? { ...b, level: b.level + 1, daysRemaining: 0 } : b)
+              buildings: pr.buildings.map(b => b.type === completed.buildingType ? { ...b, level: Math.min(5, b.level + 1), daysRemaining: 0 } : b)
             };
           } else {
             return {

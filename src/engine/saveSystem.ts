@@ -1,3 +1,4 @@
+import { resolveBuildingType, normalizeBuildingLevel } from '../data/buildings';
 import { migrateDiplomacy } from './diplomacy';
 import { initializePolitics } from './politics';
 // src/engine/saveSystem.ts - V2 Tipado e Versionado com fronteira unknown
@@ -109,6 +110,7 @@ function serializeV2(save: SaveGameV2): SerializedSaveGameV2 {
 function deserializeV2(raw: SerializedSaveGameV2): SaveGameV2 {
   return {
     ...raw,
+    economy: { constructions: migrateBuildingConstructions(raw.economy.constructions) },
     world: { ...raw.world, provinces: raw.world.provinces.map(normalizeSavedProvince), countries: raw.world.countries.map(normalizeSavedCountry) },
     technology: { player: normalizeTechState(raw.technology.player), bots: new Map(raw.technology.bots.map(([tag, state]) => [tag, normalizeTechState(state, tag)])) },
   };
@@ -121,16 +123,22 @@ function normalizeSavedCountry(country: Country): Country {
   return initializePolitics({ ...country, capitalId, trade: normalizeNationalTrade(country.trade), rebellions: normalizeSavedFactions(country.rebellions), activeLaws: normalizeActiveLaws(country.activeLaws) });
 }
 export function migrateLegacyBuildings(buildings: Province['buildings']): Province['buildings'] {
-  const aliases: Record<string, Province['buildings'][number]['type']> = {
-    fortification: 'fortress', temple: 'housing', port: 'market', university: 'infrastructure',
-  };
-  const merged = new Map<Province['buildings'][number]['type'], Province['buildings'][number]>();
+  const merged = new Map<string, Province['buildings'][number]>();
   for (const raw of buildings ?? []) {
-    const type = aliases[raw.type as string] ?? raw.type;
-    const prior = merged.get(type);
-    merged.set(type, { ...raw, type, level: Math.min(5, Math.max(prior?.level ?? 0, raw.level)) });
+    const type = resolveBuildingType(raw.type);
+    if (!type) continue;
+    const key = `${type}_${raw.daysRemaining > 0 ? 'pending' : 'completed'}`;
+    const prior = merged.get(key);
+    if (!prior || normalizeBuildingLevel(raw.level) > prior.level) merged.set(key, { ...raw, type, level: normalizeBuildingLevel(raw.level) });
   }
   return [...merged.values()];
+}
+/** Renames only the type: paid costs, progress, ids and order stay intact. */
+export function migrateBuildingConstructions(constructions: BuildingConstruction[]): BuildingConstruction[] {
+  return (constructions ?? []).flatMap(item => {
+    const buildingType = resolveBuildingType(item.buildingType);
+    return buildingType ? [{ ...item, buildingType }] : [];
+  });
 }
 function normalizeSavedProvince(province: Province): Province {
   return {
@@ -150,7 +158,7 @@ function migrateV1ToV2(v1: SaveGameV1): SaveGameV2 {
     world: { provinces: v1.provinces.map(normalizeSavedProvince), countries: v1.countries.map(normalizeSavedCountry) },
     military: { armies: v1.armies, wars: v1.wars, activeBattles: v1.activeBattles, recruitments: v1.recruitments },
     diplomacy: { relations: migrateDiplomacy(v1.relations,v1.wars,v1.date) },
-    economy: { constructions: v1.constructions },
+    economy: { constructions: migrateBuildingConstructions(v1.constructions) },
     technology: { player: normalizeTechState(v1.playerTech), bots: new Map([...botTechsMap].map(([tag,state]) => [tag, normalizeTechState(state, tag)])) },
   };
 }

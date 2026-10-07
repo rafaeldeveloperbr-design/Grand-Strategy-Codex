@@ -39,7 +39,7 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
                 0,
                 Math.min(
                   100,
-                  ((item.totalDays - item.daysRemaining) / item.totalDays) * 100
+                  item.totalDays > 0 ? ((item.totalDays - item.daysRemaining) / item.totalDays) * 100 : 0
                 )
               );
               const isActive = idx === 0;

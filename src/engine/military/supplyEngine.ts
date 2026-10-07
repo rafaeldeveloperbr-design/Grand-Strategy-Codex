@@ -1,6 +1,6 @@
 import { getTerrainDefinition } from '../terrain';
 import type { Army, Province, SupplyStatus } from '../../types';
-import { getBuildingLevel } from '../../data/buildings';
+import { getBuildingBonus } from '../../data/buildings';
 import { calculateArmySupplyUse } from './armyStats';
 import { MILITARY_BALANCE } from './balance';
 import { getProvinceLogistics, type LogisticsInfo, type LogisticsSnapshot } from '../logistics';
@@ -8,7 +8,7 @@ import { getProvinceLogistics, type LogisticsInfo, type LogisticsSnapshot } from
 export interface SupplyState { ratio: number; status: SupplyStatus; combatMultiplier: number; movementMultiplier: number }
 
 export function calculateLocalSupplyBaseCapacity(province: Province): number {
-  const base = 3 + province.development * .55 + getBuildingLevel(province, 'infrastructure') * 2 + getBuildingLevel(province, 'barracks');
+  const base = 3 + province.development * .55 + getBuildingBonus(province, 'supplyCapacity');
   return Math.max(0, Number.isFinite(base) ? base : 0);
 }
 export function calculateLocalSupplyCapacity(province: Province): number {

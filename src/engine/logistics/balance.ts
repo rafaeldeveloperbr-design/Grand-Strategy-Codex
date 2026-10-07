@@ -1,8 +1,9 @@
+import { BUILDING_DEFINITIONS } from '../../data/buildings';
 import type { TerrainType } from '../terrain';
 
 export const LOGISTICS_BALANCE = {
   disconnectedSupplyModifier: 0.25,
-  infrastructureBonusPerLevel: 0.08,
+  infrastructureBonusPerLevel: BUILDING_DEFINITIONS.infrastructure.bonusPerLevel.logisticsBonus! / 100,
   maximumInfrastructureModifier: 1.4,
   distanceBands: [
     {maxDistance: 2,modifier: 1},

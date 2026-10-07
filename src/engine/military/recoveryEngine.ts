@@ -1,3 +1,4 @@
+import { getMilitaryEquipmentCostMultiplier } from '../../data/buildings';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import type { Army, Country, Province } from '../../types';
 import { normalizeMarket } from '../market';
@@ -13,6 +14,9 @@ export function recoverArmy(army: Army, country: Country, province: Province, co
   const supply = getArmySupply(army, province, colocatedArmies, logistics);
   const recoveryModifier = politicsModifiers(country).recovery;
   const market = normalizeMarket(province.market);
+  const equipmentMultiplier = province.owner === army.owner ? getMilitaryEquipmentCostMultiplier(province) : 1;
+  const ironPerMan = MILITARY_BALANCE.reinforcementIronPerMan * equipmentMultiplier;
+  const toolsPerMan = MILITARY_BALANCE.reinforcementToolsPerMan * equipmentMultiplier;
   let manpower = country.resources.manpower;
   let gold = country.resources.gold;
   let reinforced = 0;
@@ -20,11 +24,11 @@ export function recoverArmy(army: Army, country: Country, province: Province, co
     const definition = UNIT_DEFINITIONS[regiment.type];
     const missing = Math.max(0, getRegimentMaximum(regiment) - regiment.strength);
     const desired = Math.min(missing, MILITARY_BALANCE.dailyReinforcementRate * supply.ratio * recoveryModifier);
-    const affordable = Math.min(desired, manpower, gold / MILITARY_BALANCE.reinforcementGoldPerMan, market.goods.iron.stock / MILITARY_BALANCE.reinforcementIronPerMan, market.goods.tools.stock / MILITARY_BALANCE.reinforcementToolsPerMan);
+    const affordable = Math.min(desired, manpower, gold / MILITARY_BALANCE.reinforcementGoldPerMan, market.goods.iron.stock / ironPerMan, market.goods.tools.stock / toolsPerMan);
     const amount = Math.max(0, Math.floor(affordable));
     manpower -= amount; gold -= amount * MILITARY_BALANCE.reinforcementGoldPerMan;
-    market.goods.iron.stock -= amount * MILITARY_BALANCE.reinforcementIronPerMan;
-    market.goods.tools.stock -= amount * MILITARY_BALANCE.reinforcementToolsPerMan;
+    market.goods.iron.stock -= amount * ironPerMan;
+    market.goods.tools.stock -= amount * toolsPerMan;
     reinforced += amount;
     const organizationDelta =
       MILITARY_BALANCE.dailyOrganizationRecovery *

@@ -1,18 +1,19 @@
-import { Country, Province, BuildingType, UnitType, Recruitment, BuildingConstruction } from '../../types';
+import { Country, Province, UnitType, Recruitment, BuildingConstruction } from '../../types';
 import { CountryTechState } from '../../types/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
 import { LAWS } from '../../constants/laws';
 
 import { startBuilding } from '../buildings';
-import { calculateWorkforce, getFoodShortageStatus, getPopulationCapacity, normalizePopulation } from '../population';
-import { getStorageCapacity, normalizeMarket } from '../market';
+import { calculateWorkforce, getFoodShortageStatus, normalizePopulation } from '../population';
+import { normalizeMarket } from '../market';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
 import { calculateTechBonuses, startTechnologyResearch } from '../technology';
 import { chooseAILaw, enactLaw } from '../government';
 import { getRecruitmentBlockReason, queueRecruitment } from '../military/recruitmentEngine';
 
-const ALL_FINITE = (market: ReturnType<typeof normalizeMarket>) => Object.values(market.goods).every(g => Number.isFinite(g.stock));
+import { rankBuildingProjects } from '../buildings/constructionAI';
+import type { LogisticsSnapshot } from '../logistics';
 
 export function processAIEconomicDecisions(
   country: Country,
@@ -23,6 +24,7 @@ export function processAIEconomicDecisions(
   dateString: string,
   canRecruitMilitary: boolean = true,
   atWar: boolean = false,
+  logistics?: LogisticsSnapshot,
 ): {
   techState: CountryTechState;
   buildingConstructions: BuildingConstruction[];
@@ -143,69 +145,21 @@ export function processAIEconomicDecisions(
   }
 
   // 3. CONSTRUÇÃO EM PROVÍNCIAS: shortages and real capacity drive the choice.
-  const aiProvinces = provinces.filter(p => p.owner === country.tag);
-  const targetProvince = aiProvinces.find(p => !updatedConstructions.some(c => c.provinceId === p.id));
-  if (targetProvince) {
-    const market = normalizeMarket(targetProvince.market);
-    const populationTotal = typeof targetProvince.population === 'number' ? targetProvince.population : targetProvince.population.total;
-    const priorities: BuildingType[] = [];
-    const populationState = normalizePopulation(targetProvince.population);
-    const foodStatus = getFoodShortageStatus(
-      market.goods.food,
-      populationState.foodShortageDays,
-      populationState.severeFoodShortageDays,
-    );
-    // Severe hunger always outranks infrastructure and other productive projects.
-    if (foodStatus.severity === 'severe') priorities.push('farm');
-    if (market.goods.wood.stock < market.goods.wood.demand * 2) priorities.push('lumber_mill');
-    if (market.goods.iron.stock < market.goods.iron.demand * 2) priorities.push('iron_mine');
-    if (market.goods.tools.stock < market.goods.tools.demand * 2) priorities.push('workshop');
-    // Moderate and emerging shortages still trigger a farm, after immediate
-    // input shortages but before generic development projects.
-    if (foodStatus.severity !== 'severe' && foodStatus.ratio > 0) priorities.push('farm');
-    if (ALL_FINITE(market) && Object.values(market.goods).some(g => g.stock >= getStorageCapacity(targetProvince) * .9)) priorities.push('warehouse');
-    const capacityMultiplier = calculateTechBonuses(updatedTechState).populationCapacityMultiplier;
-    if (populationTotal >= getPopulationCapacity(targetProvince, capacityMultiplier) * .9) priorities.push('housing');
-    const population = normalizePopulation(targetProvince.population);
-    const workforce = calculateWorkforce(population);
-    if (workforce > 0 && population.unemployed / workforce >= 0.3) priorities.push('workshop', 'market');
-    priorities.push('infrastructure', 'market', 'barracks', 'fortress');
-    for (const chosenBuilding of priorities) {
-      const result = startBuilding(
-        targetProvince,
-        updatedProvinces,
-        country.tag,
-        chosenBuilding,
-        updatedCountry.resources.gold,
-        updatedConstructions
-      );
-
-      if (!result.success) continue;
-
+  const project = rankBuildingProjects(updatedCountry, updatedProvinces, updatedConstructions, updatedRecruitments, atWar, calculateTechBonuses(updatedTechState).populationCapacityMultiplier, logistics)[0];
+  if (project) {
+    const result = startBuilding(project.province, updatedProvinces, country.tag, project.type, updatedCountry.resources.gold, updatedConstructions);
+    if (result.success) {
       updatedProvinces = result.provinces;
       updatedConstructions = result.constructions;
-
-      updatedCountry = {
-        ...updatedCountry,
-        resources: {
-          ...updatedCountry.resources,
-          gold: result.gold,
-        },
-      };
-
-      logs.push({
-        actionType: 'building',
-        message: `Iniciou obra de ${getBuildingName(chosenBuilding)} em ${targetProvince.name}`,
-      });
-
-      break;
+      updatedCountry = { ...updatedCountry, resources: { ...updatedCountry.resources, gold: result.gold } };
+      logs.push({ actionType: 'building', message: getBuildingName(project.type) + ' - ' + project.province.name });
     }
   }
 
   // 4. RECRUTAMENTO DE TROPAS MILITARES
   if (updatedCountry.resources.gold >= 250 && updatedCountry.resources.manpower >= 1000) {
     if (canRecruitMilitary) {
-      const aiProvinces = provinces.filter(p => p.owner === country.tag);
+      const aiProvinces = updatedProvinces.filter(p => p.owner === country.tag);
 
       if (aiProvinces.length > 0) {
         const targetProvince = [...aiProvinces].sort((a, b) => b.development - a.development || a.id.localeCompare(b.id))[0];

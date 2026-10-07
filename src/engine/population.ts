@@ -1,5 +1,5 @@
 import type { Army, GoodMarketState, Province, ProvincePopulation } from '../types';
-import { BUILDING_DEFINITIONS } from '../data/buildings';
+import { BUILDING_DEFINITIONS, getBuildingBonus } from '../data/buildings';
 
 export const POPULATION_BALANCE = {
   DEFAULT_GROWTH_RATE: 0.002,
@@ -164,11 +164,6 @@ export function normalizePopulation(value: ProvincePopulation | number): Provinc
   };
 }
 
-const JOB_SHARE_BY_BUILDING = {
-  market: 0.035, workshop: 0.035, infrastructure: 0.035,
-  farm: 0.025, lumber_mill: 0.025, iron_mine: 0.025,
-  housing: 0.01, warehouse: 0.01, barracks: 0.01, fortress: 0.01,
-} as const;
 
 export function calculateWorkforce(population: ProvincePopulation | number): number {
   return Math.floor(normalizePopulation(population).total * POPULATION_BALANCE.WORKFORCE_SHARE);
@@ -178,10 +173,7 @@ export function calculateEmploymentCapacity(province: Province): number {
   const population = normalizePopulation(province.population);
   let capacityRatio = POPULATION_BALANCE.BASE_JOB_SHARE
     + clamp(province.development, 0, 10) * POPULATION_BALANCE.DEVELOPMENT_JOB_SHARE;
-  for (const building of province.buildings) {
-    if (building.daysRemaining > 0) continue;
-    capacityRatio += JOB_SHARE_BY_BUILDING[building.type] * building.level;
-  }
+  capacityRatio += getBuildingBonus(province, 'jobShare');
   return Math.floor(population.total * clamp(capacityRatio, 0, POPULATION_BALANCE.WORKFORCE_SHARE));
 }
 
@@ -238,8 +230,7 @@ export function calculateSatisfaction(province: Province, taxationId: string, op
 }
 
 export function getPopulationCapacity(province: Province, multiplier = 1): number {
-  const housing = province.buildings.find(building => building.type === 'housing' && building.daysRemaining <= 0)?.level ?? 0;
-  return Math.max(0, (province.maxPopulation + housing * 5000) * multiplier);
+  return Math.max(0, (province.maxPopulation + getBuildingBonus(province, 'populationCapacity')) * multiplier);
 }
 
 export interface PopulationGrowthOptions {

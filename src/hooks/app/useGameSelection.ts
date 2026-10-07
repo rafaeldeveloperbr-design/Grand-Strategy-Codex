@@ -61,6 +61,30 @@ export function useGameSelection(
     setSelectedProvince(null);
     setIsPanelOpen(false);
   }, [armiesRef, playerCountryTag]);
+
+  const toggleStackAdditive = useCallback((ids: string[]) => {
+    const valid = [...new Set(ids)].filter(id =>
+      armiesRef.current?.some(
+        army => army.id === id && controllable(army, playerCountryTag)
+      )
+    );
+
+    if (!valid.length) return;
+
+    setSelectedArmyIds(prev => {
+      const allSelected = valid.every(id => prev.includes(id));
+
+      if (allSelected) {
+        return prev.filter(id => !valid.includes(id));
+      }
+
+      return [...new Set([...prev, ...valid])];
+    });
+
+    setSelectedProvince(null);
+    setIsPanelOpen(false);
+  }, [armiesRef, playerCountryTag]);
+
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [splitSelection, setSplitSelection] = useState<Set<number>>(new Set());
 
@@ -104,7 +128,11 @@ export function useGameSelection(
     hoveredProvince, setHoveredProvince,
     isPanelOpen, setIsPanelOpen,
     selectedArmy, setSelectedArmy,
-    selectedArmyIds, toggleArmySelection, toggleStackSelection, clearArmySelection,
+    selectedArmyIds,
+    toggleArmySelection,
+    toggleStackSelection,
+    toggleStackAdditive,
+    clearArmySelection,
     showSplitModal, setShowSplitModal,
     splitSelection, setSplitSelection,
     handleProvinceClick, handleProvinceHover, handleClosePanel, handleArmyClick, toggleSplitRegiment

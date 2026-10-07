@@ -32,6 +32,7 @@ export interface MapProps {
   playerCountryTag?: string;
   onToggleArmy?: (id: string) => void;
   onToggleStack?: (ids: string[]) => void;
+  onToggleStackAdditive?: (ids: string[]) => void;
   onClearSelection?: () => void;
   onProvinceHover: (provinceId: string | null) => void;
   onProvinceClick: (provinceId: string) => void;
@@ -56,6 +57,7 @@ export const GameMap: React.FC<MapProps> = ({
   playerCountryTag,
   onToggleArmy,
   onToggleStack,
+  onToggleStackAdditive,
   onClearSelection,
   onProvinceHover,
   onProvinceClick,
@@ -236,7 +238,11 @@ export const GameMap: React.FC<MapProps> = ({
           selectedArmyIds={selectedArmyIds}
           hoveredArmyId={hoveredArmyId}
           openStackKey={openGroup?.key ?? null}
-          onStackOpen={openStackAt}
+          onStackOpen={(group, x, y) => {
+            onToggleStack?.(group.armies.map(army => army.id));
+            openStackAt(group, x, y);
+          }}
+          onStackToggleAdditive={onToggleStackAdditive}
           onArmyClick={selectArmy}
           onArmyHover={setHoveredArmyId}
         />

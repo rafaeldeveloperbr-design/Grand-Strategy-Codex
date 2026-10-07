@@ -14,9 +14,10 @@ interface ArmyMovementLayerProps {
   onArmyClick: (armyId: string, additive?: boolean) => void;
   onArmyHover: (armyId: string | null) => void;
   onStackOpen: (group: ArmyVisualGroup, x: number, y: number) => void;
+  onStackToggleAdditive?: (ids: string[]) => void;
 }
 
-export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = ({ presentation, countries, selectedArmy, selectedArmyIds, hoveredArmyId, openStackKey, onArmyClick, onArmyHover, onStackOpen }) => {
+export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = ({ presentation, countries, selectedArmy, selectedArmyIds, hoveredArmyId, openStackKey, onArmyClick, onArmyHover, onStackOpen, onStackToggleAdditive }) => {
   const selectedIds = useMemo(() => new Set(selectedArmyIds ?? (selectedArmy ? [selectedArmy] : [])), [selectedArmyIds, selectedArmy]);
   const arrowId = useId().replace(/:/g, '');
   const groups = useMemo(() => [...presentation.groups].sort((a, b) => Number(a.armies.some(army => selectedIds.has(army.id))) - Number(b.armies.some(army => selectedIds.has(army.id))) || Number(a.armies.some(army => army.id === hoveredArmyId)) - Number(b.armies.some(army => army.id === hoveredArmyId))), [presentation.groups, selectedIds, hoveredArmyId]);
@@ -60,7 +61,17 @@ export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = ({ presentati
       const army = group.armies[0];
       const selectedInGroup = group.armies.some(item => selectedIds.has(item.id));
       const effectiveOwner = army.owner.startsWith('rebel_') && army.originalOwner ? army.originalOwner : army.owner;
-      if (group.armies.length > 1) return <ArmyStackMarker key={group.key} group={group} country={countries.get(group.owner)} selected={selectedInGroup} expanded={group.key === openStackKey} onOpen={onStackOpen} />;
+      if (group.armies.length > 1) return (
+        <ArmyStackMarker
+          key={group.key}
+          group={group}
+          country={countries.get(group.owner)}
+          selected={selectedInGroup}
+          expanded={group.key === openStackKey}
+          onOpen={onStackOpen}
+          onToggleSelection={onStackToggleAdditive}
+        />
+      );
       return <ArmyMarker key={army.id} army={army} countries={[]} provinces={[]} resolvedCountry={countries.get(effectiveOwner)} resolvedProvince={army.location ? presentation.provinceById.get(army.location) : undefined} markerPosition={{ x: group.x + group.offsetX, y: group.y + group.offsetY }} isSelected={selectedInGroup} isHovered={army.id === hoveredArmyId} offsetX={0} offsetY={0} onClick={onArmyClick} onHover={onArmyHover} />;
     })}
     {selectedIds.size === 1 && selected && selectedGroup && stats && <g className="army-mini-status" pointerEvents="none" transform={`translate(${selectedGroup.x + selectedGroup.offsetX}, ${selectedGroup.y + selectedGroup.offsetY + 36})`}>

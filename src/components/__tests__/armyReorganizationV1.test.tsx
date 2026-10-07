@@ -36,7 +36,7 @@ describe('Army Reorganization V1 UI', () => {
     fireEvent.click(screen.getAllByRole('checkbox')[0]);
     view.rerender(<ArmyReorganizationPanel selectedIds={['one']} context={{ ...context, armies: [{ ...source, regiments: [...source.regiments].reverse() }] }} onConfirm={onConfirm} />);
     expect(screen.getByText('A composição mudou. Revise a seleção antes de confirmar.')).toBeTruthy();
-    const confirm = screen.getByRole('button', { name: 'Confirmar divisão' });
+    const confirm = screen.getByRole('button', { name: 'Criar destacamento' });
     expect(confirm.hasAttribute('disabled')).toBe(true);
     fireEvent.click(confirm);
     expect(onConfirm).not.toHaveBeenCalled();
@@ -46,10 +46,13 @@ describe('Army Reorganization V1 UI', () => {
     const modal = screen.getByRole('dialog', { name: 'Dividir exército' });
     expect(within(modal).getByText('Nenhum regimento selecionado')).toBeTruthy();
     fireEvent.click(within(modal).getAllByRole('checkbox')[0]);
-    expect(within(modal).getByText('Exército atual: 1.332 → 999')).toBeTruthy();
-    expect(within(modal).getByText('Novo exército: 333')).toBeTruthy();
+    expect(within(modal).getByText('Exército atual')).toBeTruthy();
+    expect(within(modal).getByText('1.332 → 999')).toBeTruthy();
+
+    expect(within(modal).getByText('Novo exército')).toBeTruthy();
+    expect(within(modal).getByText('333 homens')).toBeTruthy();
     expect(within(modal).getByText('1× Infantaria')).toBeTruthy();
-    fireEvent.click(within(modal).getByRole('button', { name: 'Confirmar divisão' }));
+    fireEvent.click(within(modal).getByRole('button', { name: 'Criar destacamento' }));
     expect(screen.queryByRole('dialog')).toBeNull(); expect(state()).toHaveLength(3);
     const selected = state().find(a => a.id === screen.getByTestId('selection').textContent)!;
     expect(selected.regiments).toHaveLength(1); expect(selected.regiments[0].strength).toBe(333); expect(selected.regiments[0].experience).toBe(19);
@@ -59,20 +62,22 @@ describe('Army Reorganization V1 UI', () => {
     render(<Harness />); const before = state(); fireEvent.click(screen.getByRole('button', { name: 'Dividir' }));
     const modal = screen.getByRole('dialog'); for (const checkbox of within(modal).getAllByRole('checkbox')) fireEvent.click(checkbox);
     expect(within(modal).getByText('Todos os regimentos selecionados')).toBeTruthy();
-    expect(within(modal).getByRole('button', { name: 'Confirmar divisão' }).hasAttribute('disabled')).toBe(true);
+    expect(within(modal).getByRole('button', { name: 'Criar destacamento' }).hasAttribute('disabled')).toBe(true);
     fireEvent.click(within(modal).getByRole('button', { name: 'Cancelar' })); expect(state()).toEqual(before); expect(screen.queryByRole('dialog')).toBeNull();
   });
   it('transfers selected regiments and keeps the source selected', () => {
     render(<Harness />); fireEvent.click(screen.getByRole('button', { name: 'Transferir' }));
     const modal = screen.getByRole('dialog'); expect(within(modal).getByRole('combobox').textContent).toContain('two');
-    fireEvent.click(within(modal).getAllByRole('checkbox')[1]); fireEvent.click(within(modal).getByRole('button', { name: 'Confirmar transferência' }));
+    fireEvent.click(within(modal).getAllByRole('checkbox')[1]); fireEvent.click(within(modal).getByRole('button', { name: 'Transferir regimentos' }));
     expect(state().find(a => a.id === 'one')!.regiments).toHaveLength(3); expect(state().find(a => a.id === 'two')!.regiments).toHaveLength(5);
     expect(state().find(a => a.id === 'two')!.regiments[4].type).toBe('artillery'); expect(screen.getByTestId('selection').textContent).toBe('one');
   });
   it.each([false, true])('merges individual/multiple selected armies with a preview: multiple=$value', multiple => {
     render(<Harness multiple={multiple} />); fireEvent.click(screen.getByRole('button', { name: multiple ? 'Fundir selecionados' : 'Fundir' }));
-    const modal = screen.getByRole('dialog'); expect(within(modal).getByText('Tropas resultantes: 2.664')).toBeTruthy();
-    fireEvent.click(within(modal).getByRole('button', { name: 'Confirmar fusão' }));
+    const modal = screen.getByRole('dialog');
+    expect(within(modal).getByText('Exército resultante')).toBeTruthy();
+    expect(within(modal).getByText(/2\.664 homens/)).toBeTruthy();
+    fireEvent.click(within(modal).getByRole('button', { name: 'Fundir exércitos' }));
     expect(state()).toHaveLength(1); expect(state()[0].id).toBe('one'); expect(state()[0].regiments).toHaveLength(8); expect(screen.getByTestId('selection').textContent).toBe('one');
   });
   it('shows a shared movement-plan block without clearing the route', () => {

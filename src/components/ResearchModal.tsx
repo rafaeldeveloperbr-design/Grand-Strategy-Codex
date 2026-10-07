@@ -1,116 +1,99 @@
-import React from 'react';
-import { Country } from '../types';
-import { CountryTechState } from '../types/technology';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import type { CountryTechState } from '../types/technology';
 import { TECHNOLOGIES } from '../data/technology';
-import { formatTechnologyEffect, getActiveTechnologyModifierEntries, getResearchProgress } from '../engine/technology';
+import { getTechnologyBlockReason, getResearchProgress, getActiveTechnologyModifierEntries } from '../engine/technology';
+import { ResearchTree } from './research/ResearchTree';
+import { ResearchTooltip } from './research/ResearchTooltip';
+import { RESEARCH_CATEGORIES } from './research/presentation';
 import '../styles/tech-modal.css';
+import '../styles/research-tree.css';
+
+import type { Country } from '../types';
 
 interface Props {
-    playerCountry: Country;
-    techState: CountryTechState;
-    onStartResearch: (id: string) => void;
-    onCancelResearch: () => void;
-    onClose: () => void;
+  playerCountry: Country;
+  techState: CountryTechState;
+  onStartResearch: (id: string) => void;
+  onCancelResearch: () => void;
+  onClose: () => void;
 }
-
 export const ResearchModal: React.FC<Props> = ({ playerCountry, techState, onStartResearch, onCancelResearch, onClose }) => {
-    const activeModifiers = getActiveTechnologyModifierEntries(techState);
-    const activeProgress = getResearchProgress(techState);
-
-    const canStart = (id: string) => {
-        const t = TECHNOLOGIES.find(x => x.id === id);
-        if (!t || techState.completedTechnologies.includes(id)) return false;
-        if (techState.activeResearchId) return false;
-        if (t.prerequisites.some(p => !techState.completedTechnologies.includes(p))) return false;
-        return playerCountry.resources.gold >= t.costGold;
+  const [inspection,setInspection] = useState<{id:string;pinned:boolean;left:number;top:number} | null>(null);
+  const detailId = useId(), headingId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const originRef = useRef<HTMLButtonElement | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const clearLeave = () => { clearTimeout(leaveTimer.current); };
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => { clearTimeout(leaveTimer.current); previous?.focus(); };
+  },[]);
+  useEffect(() => {
+    const dismiss = () => {
+      if (document.getElementById(detailId)?.contains(document.activeElement)) originRef.current?.focus({preventScroll:true});
+      setInspection(null);
     };
-
-    // CORES IGUAIS DO FOCO - PADRÃO HOI4
-    const categories = [
-        { id: 'MILITARY', name: 'MILITAR', icon: '⚔️', color: '#ef4444' },
-        { id: 'ECONOMY', name: 'ECONOMIA', icon: '💰', color: '#22c55e' },
-        { id: 'SOCIETY', name: 'SOCIEDADE', icon: '🏛️', color: '#3b82f6' },
-    ] as const;
-
-    return (
-        <div className="tech-modal">
-            <div className="tech-modal__overlay" onClick={onClose} />
-            <div className="tech-modal__container tree-modal">
-                <div className="tech-modal__header">
-                    <h2>🔬 Pesquisas Tecnológicas</h2>
-                    <button className="tech-modal__close" onClick={onClose}>×</button>
-                </div>
-
-                {activeModifiers.length > 0 && (
-                    <section className="technology-modifiers" aria-label="Modificadores tecnológicos ativos">
-                        <h3>Modificadores tecnológicos ativos</h3>
-                        <div className="technology-modifiers__grid">
-                            {activeModifiers.map(modifier => (
-                                <span key={modifier.label}>{modifier.label}: <strong>{modifier.percent > 0 ? '+' : ''}{modifier.percent}%</strong></span>
-                            ))}
-                        </div>
-                    </section>
-                )}
-
-                <div className="research-columns">
-                    {categories.map(cat => (
-                        <div
-                            key={cat.id}
-                            className="research-col"
-                            style={{
-                                borderTopColor: cat.color,
-                                boxShadow: `0 -2px 12px ${cat.color}40`
-                            }}
-                        >
-                            <h3 style={{ color: cat.color }}>
-                                <span>{cat.icon}</span> {cat.name}
-                            </h3>
-                            <div className="tree-column">
-                                {TECHNOLOGIES.filter(t => t.category === cat.id).map(tech => {
-                                    const isActive = techState.activeResearchId === tech.id;
-                                    const isDone = techState.completedTechnologies.includes(tech.id);
-                                    const progress = isActive ? activeProgress : null;
-                                    const prerequisites = tech.prerequisites.map(id => ({
-                                        title: TECHNOLOGIES.find(item => item.id === id)?.title ?? id,
-                                        completed: techState.completedTechnologies.includes(id),
-                                    }));
-
-                                    return (
-                                        <div key={tech.id} className="tree-node-wrapper">
-                                            <div className={`tree-node research-node ${isDone ? 'completed' : ''} ${isActive ? 'active' : ''} ${!canStart(tech.id) && !isDone && !isActive ? 'locked' : ''}`}>
-                                                <span className="tree-node-icon">{tech.icon}</span>
-                                                <h4>{tech.title}</h4>
-                                                <div className="tree-category">{cat.name}</div>
-                                                <p className="tree-desc">{tech.description}</p>
-                                                <div className="tree-cost">💰 {tech.costGold} | ⏱ {tech.durationDays}d</div>
-                                                <div className="tree-effects">{tech.effects.map(effect => <div key={`${effect.type}-${'good' in effect ? effect.good : ''}`}>⚙️ {formatTechnologyEffect(effect)}</div>)}</div>
-                                                {prerequisites.length > 0 && <div className="tree-prerequisites"><strong>Requer:</strong>{prerequisites.map(item => <div key={item.title} className={item.completed ? 'completed' : 'missing'}>{item.completed ? '✓' : '✗'} {item.title}</div>)}</div>}
-
-                                                {!isDone && (
-                                                    <div className="tree-progress-wrap">
-                                                        <div className="tree-progress"><div style={{ width: `${progress?.percent ?? 0}%` }} /></div>
-                                                        <span className="tree-time">
-                                                            {progress ? `Pesquisa: ${progress.current.toFixed(1)} / ${progress.required} dias (${Math.floor(progress.percent)}%) • ~${progress.estimatedDaysRemaining} dias restantes` : `${tech.durationDays} dias`}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                <button
-                                                    className={`tree-btn ${isActive ? 'cancel-btn' : ''}`}
-                                                    disabled={!isActive && !canStart(tech.id)}
-                                                    onClick={() => isActive ? onCancelResearch() : onStartResearch(tech.id)}
-                                                >
-                                                    {isDone ? '✅ Concluída' : isActive ? '⏳ Pesquisando' : canStart(tech.id) ? '🔬 Disponível' : '🔒 Bloqueada'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
+    window.addEventListener('resize',dismiss);
+    return () => window.removeEventListener('resize',dismiss);
+  },[detailId]);
+  const inspect = (id:string,element:HTMLButtonElement,pinned:boolean) => {
+    clearLeave();
+    if (inspection?.pinned && !pinned) return;
+    originRef.current = element;
+    const rect = element.getBoundingClientRect();
+    const width = Math.min(340,window.innerWidth-24);
+    const left = Math.max(12,Math.min(rect.right+12,window.innerWidth-width-12));
+    const top = Math.max(12,Math.min(rect.top,window.innerHeight-480));
+    setInspection({id,pinned,left,top});
+  };
+  const leave = () => {
+    clearLeave();
+    if (!inspection?.pinned) leaveTimer.current = setTimeout(() => {
+      if (document.activeElement !== originRef.current && !document.getElementById(detailId)?.contains(document.activeElement)) setInspection(null);
+    },160);
+  };
+  const dismiss = () => { clearLeave(); originRef.current?.focus({preventScroll:true}); setInspection(null); };
+  const dismissOnScroll = () => {
+    clearLeave();
+    // Keyboard focus can scroll a distant node into view; keep its details anchored.
+    if (inspection && !inspection.pinned && document.activeElement === originRef.current && originRef.current) {
+      inspect(inspection.id,originRef.current,false);
+      return;
+    }
+    if (document.getElementById(detailId)?.contains(document.activeElement)) originRef.current?.focus({preventScroll:true});
+    setInspection(null);
+  };
+  const progress = getResearchProgress(techState);
+  const modifiers = getActiveTechnologyModifierEntries(techState);
+  const active = TECHNOLOGIES.find(research => research.id === techState.activeResearchId);
+  const inspected = TECHNOLOGIES.find(research => research.id === inspection?.id);
+  const handleKeyDown = (event:React.KeyboardEvent) => {
+    if (event.key === 'Escape') { event.stopPropagation(); event.preventDefault(); if (inspection) dismiss(); else onClose(); }
+    if (event.key === 'Tab') {
+      const controls = Array.from(containerRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled)') ?? []);
+      const first = controls[0], last = controls[controls.length-1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+  };
+  return (
+    <div className="tech-modal research-modal">
+      <div className="tech-modal__overlay" onClick={onClose} />
+      <div ref={containerRef} className="research-modal__container" role="dialog" aria-modal="true" aria-labelledby={headingId} onKeyDown={handleKeyDown}>
+        <header className="research-modal__header"><div><h2 id={headingId}>Pesquisa Tecnológica</h2><p>Explore as tecnologias e planeje a próxima pesquisa.</p></div><button ref={closeRef} type="button" aria-label="Fechar pesquisa tecnológica" onClick={onClose}>×</button></header>
+        <div className="research-modal__summary" role="status">{active ? `Pesquisa atual: ${active.title} — ${Math.round(progress?.percent ?? 0)}%` : 'Nenhuma pesquisa ativa'}</div>
+        <div className="research-modal__gold">Ouro disponível: 💰 {playerCountry.resources.gold.toLocaleString('pt-BR')}</div>
+        {modifiers.length > 0 && <section className="research-modifiers" aria-label="Modificadores tecnológicos ativos"><h3>Modificadores tecnológicos ativos</h3><div>{modifiers.map(modifier => <span key={modifier.label}>{modifier.label}: <strong>{modifier.percent > 0 ? '+' : ''}{modifier.percent}%</strong></span>)}</div></section>}
+        <div className="research-category-legend" aria-label="Categorias de tecnologias">{Object.entries(RESEARCH_CATEGORIES).map(([id,category]) => <h3 key={id} style={{'--research-color':category.color} as React.CSSProperties}><span aria-hidden="true">{category.icon}</span> {category.label}</h3>)}</div>
+        <ResearchTree country={playerCountry} state={techState} inspectedId={inspection?.id ?? null} detailId={detailId} onInspect={inspect} onLeave={leave} onScroll={dismissOnScroll} />
+        <p className="research-modal__hint">Explore os ramos com a rolagem. Selecione uma tecnologia para ver detalhes e ações.</p>
+        {inspection && inspected && <ResearchTooltip country={playerCountry} research={inspected} state={techState} id={detailId} pinned={inspection.pinned} position={inspection}
+          onEnter={clearLeave} onLeave={leave} onDismiss={dismiss}
+          onStart={() => { if (getTechnologyBlockReason(techState,inspected.id,playerCountry) === null) { onStartResearch(inspected.id); dismiss(); } }}
+          onCancel={() => { onCancelResearch(); dismiss(); }} />}
+      </div>
+    </div>
+  );
 };

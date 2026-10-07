@@ -158,27 +158,6 @@ const App: React.FC = () => {
     addToast('Continuando mesmo assim...', 'info');
   }, [addToast, modals]);
 
-  const handleCancelResearch = useCallback(() => {
-    setPlayerTechState(prev => ({
-      ...prev,
-      activeResearchId: null,
-      researchProgressDays: 0
-    }));
-    addToast('🔬 Pesquisa cancelada', 'info');
-    addLog('Pesquisa cancelada pelo jogador');
-  }, [addToast, addLog]);
-
-  const handleCancelFocus = useCallback(() => {
-    setPlayerTechState(prev => ({
-      ...prev,
-      activeFocusId: null,
-      focusProgressDays: 0,
-    }));
-
-    addToast('🎯 Foco cancelado', 'info');
-    addLog('Foco nacional cancelado');
-  }, [addToast, addLog]);
-
   const cheats = useCheats({
     playerCountryTag, setAllCountries, setRecruitments, setBuildingConstructions,
     setArmies, provincesRef, armiesRef, setProvinces, addLog, addToast, setGameSpeed, setDate,
@@ -254,7 +233,7 @@ const App: React.FC = () => {
           <FocusModal
             techState={playerTechState}
             onStartFocus={tech.handleStartFocus}
-            onCancelFocus={handleCancelFocus}
+            onCancelFocus={tech.handleCancelFocus}
             onClose={() => setShowFocusModal(false)}
           />}
 
@@ -263,7 +242,7 @@ const App: React.FC = () => {
             playerCountry={playerCountry}
             techState={playerTechState}
             onStartResearch={tech.handleStartResearch}
-            onCancelResearch={handleCancelResearch}
+            onCancelResearch={tech.handleCancelResearch}
             onClose={() => setShowResearchModal(false)}
           />}        {endGameType && gameStats && <EndGameModal
             endGameType={endGameType}

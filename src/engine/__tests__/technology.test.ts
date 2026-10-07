@@ -9,16 +9,15 @@ import {
 import type { Country } from '../../types';
 import type { AIDifficulty } from '../../types/difficulty';
 
-// Mock de um foco e tech básico do seu data/technology
-// Se seu TECHNOLOGIES estiver vazio, esses testes de start vão retornar null e tudo bem
+// Minimal catalog for isolated focus and research lifecycle tests.
 vi.mock('../../data/technology', () => ({
   NATIONAL_FOCUSES: [
     { id: 'focus_1', title: 'Foco 1', durationDays: 10, prerequisites: [], rewardEffects: [{ type: 'GOLD_INCOME', value: 0.1 }] },
     { id: 'focus_2', title: 'Foco 2', durationDays: 10, prerequisites: ['focus_1'], rewardEffects: [{ type: 'GOLD_INCOME', value: 0.1 }] },
   ],
   TECHNOLOGIES: [
-    { id: 'tech_1', title: 'Tech 1', durationDays: 30, costGold: 100, prerequisites: [], rewardEffect: { type: 'GOLD_INCOME', value: 0.05 } },
-    { id: 'tech_2', title: 'Tech 2', durationDays: 30, costGold: 200, prerequisites: ['tech_1'], rewardEffect: { type: 'COMBAT_POWER', unitType: 'infantry', value: 5 } },
+    { id: 'tech_1', title: 'Tech 1', durationDays: 30, costGold: 100, prerequisites: [], effects: [{ type: 'GOLD_INCOME', value: 0.05 }] },
+    { id: 'tech_2', title: 'Tech 2', durationDays: 30, costGold: 200, prerequisites: ['tech_1'], effects: [{ type: 'COMBAT_POWER', value: 0.05 }] },
   ]
 }));
 
@@ -64,7 +63,7 @@ describe('TECNOLOGIA', () => {
     } as Country;
     const result = startTechnologyResearch(state, 'tech_1', poor);
     expect(result.techState).toBeNull();
-    expect(result.cost).toBe(100);
+    expect(result.cost).toBe(0);
   });
 
   it('startResearch - inicia com ouro suficiente', () => {

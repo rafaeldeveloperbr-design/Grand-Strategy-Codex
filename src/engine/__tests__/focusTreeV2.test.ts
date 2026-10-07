@@ -57,7 +57,7 @@ describe('Focus Tree V2 engine and data', () => {
     }
   });
   it('cancels without changing research or input, losing progress on restart', () => {
-    const active = {...state(),activeFocusId:'focus_national_unity',focusProgressDays:35,activeResearchId:'education',researchProgressDays:4};
+    const active = {...state(),activeFocusId:'focus_national_unity',focusProgressDays:35,researchSlots: [{id:0,technologyId:'education',progressDays:4}]};
     const canceled = engine.cancelNationalFocus(active);
     expect(canceled).toEqual({...active,activeFocusId:null,focusProgressDays:0});
     expect(active.focusProgressDays).toBe(35);
@@ -80,11 +80,11 @@ describe('Focus Tree V2 engine and data', () => {
     expect(stacked.goldIncomeMultiplier).toBeCloseTo(1.1);
   });
   it('isolates focus progress and preserves same-day research bonus on completion', () => {
-    const active = {...state(),activeFocusId:'focus_scientific_patronage',focusProgressDays:74,activeResearchId:'education',researchProgressDays:0};
+    const active = {...state(),activeFocusId:'focus_scientific_patronage',focusProgressDays:74,researchSlots: [{id:0,technologyId:'education',progressDays:0}]};
     const focusOnly = engine.processDailyFocusProgress(active,country,'medium',true);
-    expect(focusOnly.techState).toMatchObject({activeFocusId:null,focusProgressDays:0,researchProgressDays:0,completedFocuses:['focus_scientific_patronage']});
+    expect(focusOnly.techState).toMatchObject({activeFocusId:null,focusProgressDays:0,researchSlots: [{id:0,technologyId:'education',progressDays:0}],completedFocuses:['focus_scientific_patronage']});
     expect(focusOnly.notifications).toHaveLength(1);
-    expect(engine.processDailyTechProgress(active,country,'medium',true).techState.researchProgressDays).toBeCloseTo(1.1);
+    expect(engine.processDailyTechProgress(active,country,'medium',true).techState.researchSlots[0].progressDays).toBeCloseTo(1.1);
   });
   it('preserves legacy and contradictory completions deterministically', () => {
     const legacy = {...state(),activeFocusId:'focus_professional_cavalry',focusProgressDays:12.5,completedFocuses:[...oldIds,'focus_civil_reforms','missing',oldIds[0]]};

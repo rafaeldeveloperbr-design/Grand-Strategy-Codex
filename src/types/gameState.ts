@@ -96,10 +96,10 @@ export function createInitialGameState(params: {
   };
 }
 
-// O Save V2 é basicamente GameState + metadados
+// O Save V3 é basicamente GameState + metadados
 // Isso vai te salvar muito depois
 export type GameStateSnapshot = GameState & {
-  version: 2;
+  version: 3;
   id: string;
   name: string;
   timestamp: number;

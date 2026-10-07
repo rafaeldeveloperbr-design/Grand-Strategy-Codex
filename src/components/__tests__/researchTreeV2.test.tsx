@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ResearchModal } from '../ResearchModal';
 import { TECHNOLOGIES } from '../../data/technology';
+import { createResearchLayout } from '../research/layout';
 import * as engine from '../../engine/technology';
 import type { Country } from '../../types';
 import type { CountryTechState } from '../../types/technology';
@@ -31,13 +32,84 @@ describe('Research UI V2', () => {
   });
   it('uses catalog column and row and derives canvas dimensions', () => {
     setup();
+    const layout = createResearchLayout(TECHNOLOGIES);
     for (const tech of TECHNOLOGIES) {
-      expect(node(tech.title).style.gridColumn).toBe(String(tech.position.column+1));
+      expect(node(tech.title).style.gridColumn).toBe(String(layout.getPosition(tech).column+1));
       expect(node(tech.title).style.gridRow).toBe(String(tech.position.row+1));
     }
     const canvas = document.querySelector<HTMLElement>('.research-tree-canvas')!;
-    expect(canvas.style.gridTemplateColumns).toContain(`repeat(${Math.max(...TECHNOLOGIES.map(t => t.position.column))+1},`);
+    expect(canvas.style.gridTemplateColumns).toContain(`repeat(${layout.columns},`);
     expect(canvas.style.gridTemplateRows).toContain(`repeat(${Math.max(...TECHNOLOGIES.map(t => t.position.row))+1},`);
+  });
+  it('gives all 32 rendered nodes unique global cells, including across categories', () => {
+    setup();
+    expect(TECHNOLOGIES).toHaveLength(32);
+    const cards = document.querySelectorAll<HTMLButtonElement>('.research-node');
+    expect(cards).toHaveLength(32);
+    const cells = Array.from(cards, card => `${card.style.gridColumn}:${card.style.gridRow}`);
+    expect(new Set(cells).size).toBe(32);
+    const layout = createResearchLayout(TECHNOLOGIES);
+    const positions = TECHNOLOGIES.map(tech => layout.getPosition(tech));
+    expect(new Set(positions.map(p => `${p.column}:${p.row}`)).size).toBe(32);
+    for (const a of TECHNOLOGIES) for (const b of TECHNOLOGIES) {
+      if (a.category !== b.category) expect(layout.getPosition(a)).not.toEqual(layout.getPosition(b));
+    }
+  });
+  it('separates the three local origin technologies without changing catalog positions', () => {
+    const layout = createResearchLayout(TECHNOLOGIES);
+    const origins = ['military_organization','improved_agriculture','sanitation'].map(id => TECHNOLOGIES.find(item => item.id === id)!);
+    for (const tech of origins) expect(tech.position).toEqual({column:0,row:0});
+    expect(new Set(origins.map(tech => layout.getPosition(tech).column)).size).toBe(3);
+  });
+  it('derives consecutive category regions deterministically from local extents', () => {
+    const before = JSON.stringify(TECHNOLOGIES);
+    const layout = createResearchLayout(TECHNOLOGIES);
+    const reversed = createResearchLayout([...TECHNOLOGIES].reverse());
+    expect(layout.lanes.map(lane => lane.category)).toEqual(['MILITARY','INDUSTRY','ECONOMY','SOCIETY']);
+    let offset = 0;
+    for (const lane of layout.lanes) {
+      expect(lane.columnOffset).toBe(offset);
+      expect(lane.columns).toBe(Math.max(...TECHNOLOGIES.filter(t => t.category === lane.category).map(t => t.position.column))+1);
+      offset += lane.columns;
+    }
+    expect(layout.columns).toBe(offset);
+    for (const tech of TECHNOLOGIES) {
+      expect(layout.getPosition(tech)).toEqual(reversed.getPosition(tech));
+      expect(layout.getPosition(tech).row).toBe(tech.position.row);
+    }
+    expect(JSON.stringify(TECHNOLOGIES)).toBe(before);
+  });
+  it('aligns SVG source and target centers with global columns without fixed pixel assertions', () => {
+    const view = setup(); const layout = createResearchLayout(TECHNOLOGIES);
+    const centers: {column:number;x:number}[] = [];
+    for (const tech of TECHNOLOGIES) {
+      const incoming: number[] = [];
+      for (const sourceId of tech.prerequisites) {
+        const path = view.container.querySelector(`path[data-source="${sourceId}"][data-target="${tech.id}"]`)!;
+        const coordinates = path.getAttribute('d')!.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+        centers.push({column:layout.getPosition(TECHNOLOGIES.find(t => t.id === sourceId)!).column,x:coordinates[0]});
+        incoming.push(coordinates[6]);
+      }
+      // Multiple incoming ports are distributed around the node center.
+      if (incoming.length) centers.push({column:layout.getPosition(tech).column,x:incoming.reduce((sum,x) => sum+x,0)/incoming.length});
+    }
+    expect(centers.length).toBeGreaterThan(0);
+    for (const a of centers) for (const b of centers) {
+      if (a.column === b.column) expect(a.x).toBeCloseTo(b.x);
+      else if (a.column < b.column) expect(a.x).toBeLessThan(b.x);
+    }
+  });
+  it('connects the industry-to-economy prerequisite using distinct global regions', () => {
+    const view = setup(); const layout = createResearchLayout(TECHNOLOGIES);
+    const source = TECHNOLOGIES.find(t => t.id === 'improved_agriculture')!;
+    const target = TECHNOLOGIES.find(t => t.id === 'commercial_administration')!;
+    expect(source.category).not.toBe(target.category);
+    expect(target.prerequisites).toContain(source.id);
+    const path = view.container.querySelector(`path[data-source="${source.id}"][data-target="${target.id}"]`)!;
+    const coordinates = path.getAttribute('d')!.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+    expect(layout.getPosition(source).column).toBeLessThan(layout.getPosition(target).column);
+    expect(coordinates[0]).toBeLessThan(coordinates[6]);
+    expect(node(source.title).style.gridColumn).not.toBe(node(target.title).style.gridColumn);
   });
   it('marks completed technologies without start or cancel actions', () => {
     setup({...initial(),completedTechnologies:[root.id]});
@@ -48,11 +120,11 @@ describe('Research UI V2', () => {
     expect(screen.queryByRole('button',{name:'Cancelar pesquisa'})).toBeNull();
   });
   it('shows canonical active progress in the node, summary and details', () => {
-    const state = {...initial(),activeResearchId:root.id,researchProgressDays:root.durationDays/2};
+    const state = {...initial(),researchSlots: [{id:0,technologyId:root.id,progressDays:root.durationDays/2}]};
     setup(state);
     expect(node().classList.contains('research-node--active')).toBe(true);
     expect(within(node()).getByRole('progressbar').getAttribute('aria-valuenow')).toBe('50');
-    expect(screen.getByText(`Pesquisa atual: ${root.title} — 50%`)).toBeTruthy();
+    expect(screen.getByText(`${root.title} — 50%`)).toBeTruthy();
     fireEvent.click(node());
     expect(within(details()).getByText(/Progresso:.*50%/).textContent).toContain(`~${engine.getResearchProgress(state)!.estimatedDaysRemaining} dias restantes`);
   });
@@ -107,11 +179,11 @@ describe('Research UI V2', () => {
   it('starts only through the pinned action with the correct id', () => {
     const view = setup(); fireEvent.click(node());
     fireEvent.click(screen.getByRole('button',{name:'Iniciar pesquisa'}));
-    expect(view.onStartResearch).toHaveBeenCalledExactlyOnceWith(root.id);
+    expect(view.onStartResearch).toHaveBeenCalledExactlyOnceWith(root.id,0);
     expect(screen.queryByRole('dialog',{name:`Detalhes de ${root.title}`})).toBeNull();
   });
   it('cancels the active research through the pinned action', () => {
-    const view = setup({...initial(),activeResearchId:root.id,researchProgressDays:1});
+    const view = setup({...initial(),researchSlots: [{id:0,technologyId:root.id,progressDays:1}]});
     fireEvent.click(node()); fireEvent.click(screen.getByRole('button',{name:'Cancelar pesquisa'}));
     expect(view.onCancelResearch).toHaveBeenCalledOnce();
     expect(view.onStartResearch).not.toHaveBeenCalled();
@@ -124,7 +196,7 @@ describe('Research UI V2', () => {
     }
   });
   it('creates hidden, unfocusable connections for every prerequisite with semantic states', () => {
-    const view = setup({...initial(),activeResearchId:child.id,completedTechnologies:child.prerequisites});
+    const view = setup({...initial(),researchSlots: [{id:0,technologyId:child.id,progressDays:0}],completedTechnologies:child.prerequisites});
     expect(view.container.querySelectorAll('.research-connection')).toHaveLength(TECHNOLOGIES.reduce((sum,t) => sum+t.prerequisites.length,0));
     for (const tech of TECHNOLOGIES) for (const id of tech.prerequisites) expect(view.container.querySelector(`path[data-source="${id}"][data-target="${tech.id}"]`)).toBeTruthy();
     const svg = view.container.querySelector('svg')!;
@@ -169,8 +241,8 @@ describe('Research UI V2', () => {
     view.rerender(<ResearchModal {...view} playerCountry={{...view.playerCountry,resources:{...view.playerCountry.resources,gold:0}}} />);
     expect(screen.queryByRole('button',{name:'Iniciar pesquisa'})).toBeNull();
     expect(screen.getByText('Ouro insuficiente')).toBeTruthy();
-    view.rerender(<ResearchModal {...view} techState={{...initial(),activeResearchId:child.id}} />);
-    expect(screen.getByText('Outra pesquisa já ativa')).toBeTruthy();
+    view.rerender(<ResearchModal {...view} techState={{...initial(),researchSlots: [{id:0,technologyId:child.id,progressDays:0}]}} />);
+    expect(screen.getByText('Nenhum slot de pesquisa livre')).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole('button',{name:'Voltar à árvore'}));
   });
   it('revalidates again at action time', () => {

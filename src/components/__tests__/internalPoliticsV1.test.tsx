@@ -90,7 +90,7 @@ describe('Internal Politics V1 save migration',() => {
     saveGame(refs(changed,provinces),'politics');const loaded=loadGame('politics')!;
     expect(loaded.world.countries[0].politics).toEqual(changed.politics);expect(loaded.world.countries[0].resources.stability).toBe(changed.resources.stability);
     expect(loaded.world.countries[0].activeLaws).toEqual(changed.activeLaws);
-    const raw=JSON.parse(localStorage.getItem('imperium_save_politics')!);expect(raw.version).toBe(2);
+    const raw=JSON.parse(localStorage.getItem('imperium_save_politics')!);expect(raw.version).toBe(3);
     expect(raw.world.countries[0].politics).not.toHaveProperty('influence');expect(raw.world.countries[0].politics).not.toHaveProperty('governmentSupport');
     const before=processPoliticalTick([changed],{provinces,armies:[],wars:[],date:{...date,month:12}}).countries;
     const after=processPoliticalTick(loaded.world.countries,{provinces:loaded.world.provinces,armies:[],wars:[],date:{...date,month:12}}).countries;

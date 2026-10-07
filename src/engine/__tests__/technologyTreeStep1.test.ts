@@ -38,7 +38,7 @@ describe('canonical research lifecycle', () => {
     ['missing', initial(), country],
     ['sanitation', { ...initial(), completedTechnologies: ['sanitation'] }, country],
     ['medicine', initial(), country],
-    ['sanitation', { ...initial(), activeResearchId: 'improved_agriculture' }, country],
+    ['sanitation', { ...initial(), researchSlots: [{id:0,technologyId:'improved_agriculture',progressDays:0}] }, country],
     ['sanitation', initial(), { ...country, resources: { ...country.resources, gold: 0 } }],
   ])('blocks %s with zero charge', (id, state, currentCountry) => {
     expect(engine.getTechnologyBlockReason(state, id, currentCountry)).toBeTruthy();
@@ -46,26 +46,26 @@ describe('canonical research lifecycle', () => {
     expect(currentCountry.resources.gold).toBe(currentCountry === country ? 1000 : 0);
   });
   it('cancels immutably, loses progress and preserves focus', () => {
-    const state = { ...initial(), activeResearchId: 'sanitation', researchProgressDays: 12, activeFocusId: 'focus_national_unity', focusProgressDays: 7 };
-    expect(engine.cancelTechnologyResearch(state)).toEqual({ ...state, activeResearchId: null, researchProgressDays: 0 });
-    expect(state.researchProgressDays).toBe(12);
+    const state = { ...initial(), researchSlots: [{id:0,technologyId:'sanitation',progressDays:12}], activeFocusId: 'focus_national_unity', focusProgressDays: 7 };
+    expect(engine.cancelTechnologyResearch(state)).toEqual({ ...state, researchSlots: [{id:0,technologyId:null,progressDays:0}]});
+    expect(state.researchSlots[0].progressDays).toBe(12);
   });
   it('preserves difficulty, combined research bonuses and law speed', () => {
-    const state = { ...initial(), activeResearchId: 'sanitation', completedTechnologies: ['education', 'scientific_institutions'], completedFocuses: ['focus_scientific_patronage'] };
+    const state = { ...initial(), researchSlots: [{id:0,technologyId:'sanitation',progressDays:0}], completedTechnologies: ['education', 'scientific_institutions'], completedFocuses: ['focus_scientific_patronage'] };
     const result = engine.processDailyResearchProgress(state, country, 'hard');
-    expect(result.techState.researchProgressDays).toBeCloseTo(DIFFICULTY_SPEED_MULTIPLIERS.hard * engine.calculateTechBonuses(state).researchSpeedMultiplier * calculateLawModifiers(country.activeLaws).researchSpeedMultiplier);
+    expect(result.techState.researchSlots[0].progressDays).toBeCloseTo(DIFFICULTY_SPEED_MULTIPLIERS.hard * engine.calculateTechBonuses(state).researchSpeedMultiplier * calculateLawModifiers(country.activeLaws).researchSpeedMultiplier);
     expect(result.techState.focusProgressDays).toBe(0);
   });
   it('completes once, resets progress and emits a notification', () => {
-    const result = engine.processDailyResearchProgress({ ...initial(), activeResearchId: 'sanitation', researchProgressDays: 29 }, country, 'medium', true);
+    const result = engine.processDailyResearchProgress({ ...initial(), researchSlots: [{id:0,technologyId:'sanitation',progressDays:29}]}, country, 'medium', true);
     expect(result.techState).toEqual({ ...initial(), completedTechnologies: ['sanitation'] });
     expect(result.notifications).toHaveLength(1);
     expect(engine.processDailyResearchProgress(result.techState, country).notifications).toEqual([]);
   });
   it('normalizes all legacy IDs, duplicates, invalid references and negative/orphan progress', () => {
-    expect(engine.normalizeTechState({ ...initial(), activeResearchId: 'education', researchProgressDays: 12.5, completedTechnologies: [...legacyIds, 'missing', 'sanitation'] })).toEqual({ ...initial(), activeResearchId: 'education', researchProgressDays: 12.5, completedTechnologies: legacyIds });
-    expect(engine.normalizeTechState({ ...initial(), activeResearchId: 'education', researchProgressDays: -2 }).researchProgressDays).toBe(0);
-    expect(engine.normalizeTechState({ ...initial(), researchProgressDays: 12 }).researchProgressDays).toBe(0);
+    expect(engine.normalizeTechState({ ...initial(), researchSlots: [{id:0,technologyId:'education',progressDays:12.5}], completedTechnologies: [...legacyIds, 'missing', 'sanitation'] })).toEqual({ ...initial(), researchSlots: [{id:0,technologyId:null,progressDays:0}], completedTechnologies: legacyIds });
+    expect(engine.normalizeTechState({ ...initial(), researchSlots: [{id:0,technologyId:'education',progressDays:-2}]}).researchSlots[0].progressDays).toBe(0);
+    expect(engine.normalizeTechState({ ...initial(), researchSlots: [{id:0,technologyId:null,progressDays:12}]}).researchSlots[0].progressDays).toBe(0);
   });
 });
 
@@ -78,7 +78,7 @@ describe('AI canonical research and four priorities', () => {
   ])('prioritizes %s and pays exactly once through canonical start', (category, atWar, provinces, currentCountry) => {
     const start = vi.spyOn(engine, 'startTechnologyResearch');
     const result = processAIEconomicDecisions(currentCountry, provinces, initial(), [], [], '1/1/1', false, atWar);
-    const selected = TECHNOLOGIES.find(technology => technology.id === result.techState.activeResearchId)!;
+    const selected = TECHNOLOGIES.find(technology => technology.id === result.techState.researchSlots[0].technologyId)!;
     expect(selected.category).toBe(category);
     expect(engine.getTechnologyBlockReason(initial(), selected.id, currentCountry)).toBeNull();
     expect(start).toHaveBeenCalledOnce();
@@ -88,7 +88,7 @@ describe('AI canonical research and four priorities', () => {
     vi.spyOn(engine, 'startTechnologyResearch').mockReturnValue({ techState: null, cost: 300 });
     const result = processAIEconomicDecisions(country, [], initial(), [], [], '1/1/1', false);
     expect(result.country.resources.gold).toBe(1000);
-    expect(result.techState.activeResearchId).toBeNull();
+    expect(result.techState.researchSlots[0].technologyId).toBeNull();
     expect(result.logs.filter(log => log.actionType === 'tech')).toEqual([]);
   });
   it('ignores completed and unaffordable candidates without calling start', () => {

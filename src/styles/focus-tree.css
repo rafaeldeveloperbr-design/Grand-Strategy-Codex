@@ -7,7 +7,9 @@
 .focus-category-legend { display: flex; flex-wrap: wrap; gap: 10px 22px; padding: 12px 24px; border-top: 1px solid #293442; border-bottom: 1px solid #293442; }
 .focus-category-legend h3 { margin: 0; color: var(--focus-color); font-size: 12px; font-weight: 500; }
 .focus-tree-viewport { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-color: #4a5869 #131d29; background: #141e2a; }
-.focus-tree-canvas { position: relative; display: grid; box-sizing: border-box; }
+.focus-tree-canvas { position: relative; display: grid; box-sizing: border-box; margin-inline: auto; }
+.focus-tree-lane { position: absolute; top: 12px; bottom: 12px; border-top: 1px solid #354151; pointer-events: none; }
+.focus-tree-lane > span { display: inline-block; padding: 8px 0; color: var(--focus-color); font-size: 11px; font-weight: 600; }
 .focus-tree-connections { position: absolute; inset: 0; pointer-events: none; }
 .focus-connection { fill: none; stroke: #3e4c5c; stroke-width: 1.5; }
 .focus-connection--completed { stroke: #809883; }

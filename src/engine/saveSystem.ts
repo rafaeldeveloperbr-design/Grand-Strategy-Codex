@@ -4,9 +4,9 @@ export const getSaveCompatibilityError = () => lastMilitaryLoadError;
 import { resolveBuildingType, normalizeBuildingLevel } from '../data/buildings';
 import { migrateDiplomacy } from './diplomacy';
 import { initializePolitics } from './politics';
-// src/engine/saveSystem.ts - V2 Tipado e Versionado com fronteira unknown
+// Versioned saves: V1/V2 migrate to V3 research slots at the unknown boundary.
 import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../types';
-import type { CountryTechState } from '../types/technology';
+import type { CountryTechState, LegacyCountryTechState } from '../types/technology';
 import type { DiplomaticRelation, War } from '../types/diplomacy';
 import { normalizeSavedFactions, normalizeSavedRebellion, migrateLegacyRebels } from './rebellion';
 import { isTerrainType } from './terrain';
@@ -31,7 +31,7 @@ export type SaveMeta = {
 };
 export type SaveListItem = SaveMeta;
 
-// ============ TIPOS V1/V2 ============
+// ============ TIPOS V1/V2/V3 ============
 export type SaveGameV1 = {
   version?: 1;
   id: string;
@@ -45,8 +45,8 @@ export type SaveGameV1 = {
   relations: unknown[];
   recruitments: Recruitment[];
   constructions: BuildingConstruction[];
-  playerTech: CountryTechState;
-  botTechs: Map<string, CountryTechState> | Record<string, CountryTechState>;
+  playerTech: LegacyCountryTechState;
+  botTechs: Map<string, LegacyCountryTechState> | Record<string, LegacyCountryTechState>;
   activeBattles: ActiveBattle[];
 };
 
@@ -61,20 +61,24 @@ export type SaveGameV2 = {
   military: { armies: Army[]; wars: War[]; activeBattles: ActiveBattle[]; recruitments: Recruitment[] };
   diplomacy: { version?: 2; relations: DiplomaticRelation[] };
   economy: { constructions: BuildingConstruction[] };
+  technology: { player: LegacyCountryTechState; bots: Map<string, LegacyCountryTechState> };
+};
+
+export type SaveGameV3 = Omit<SaveGameV2, 'version' | 'technology'> & {
+  version: 3;
   technology: { player: CountryTechState; bots: Map<string, CountryTechState> };
 };
-
-type SerializedSaveGameV2 = Omit<SaveGameV2, 'technology'> & {
-  technology: { player: CountryTechState; bots: [string, CountryTechState][] };
+type SerializedSaveGame = Omit<SaveGameV3, 'version' | 'technology'> & {
+  version: 2 | 3;
+  technology: { player: unknown; bots: [string, unknown][] };
 };
-
-export type AnySaveGame = SaveGameV1 | SaveGameV2;
-export type LatestSaveGame = SaveGameV2;
+export type AnySaveGame = SaveGameV1 | SaveGameV2 | SaveGameV3;
+export type LatestSaveGame = SaveGameV3;
 
 const SAVE_PREFIX = 'imperium_save_';
 const AUTO_SAVE_KEY = 'autosave';
 const AUTO_SAVE_ENABLED_KEY = 'imperium_autosave_enabled';
-const CURRENT_VERSION = 2 as const;
+export const CURRENT_VERSION = 3 as const;
 
 // ============ TYPE GUARDS - FRONTEIRA SEGURA ============
 function isGameDate(v: unknown): v is GameDate {
@@ -96,23 +100,24 @@ function isSaveGameV1(value: unknown): value is SaveGameV1 {
   return isGameDate(d.date) && typeof d.id === 'string' && Array.isArray(d.provinces);
 }
 
-function isSerializedV2(value: unknown): value is SerializedSaveGameV2 {
+function isSerializedSave(value: unknown): value is SerializedSaveGame {
   if (typeof value !== 'object' || value === null) return false;
   const d = value as Record<string, unknown>;
-  return d.version === 2 && isGameDate(d.date) && typeof d.world === 'object';
+  return (d.version === 2 || d.version === 3) && isGameDate(d.date) && typeof d.world === 'object';
 }
 
 // ============ SERIALIZAÇÃO ============
-function serializeV2(save: SaveGameV2): SerializedSaveGameV2 {
+function serializeV3(save: SaveGameV3): SerializedSaveGame {
   return { ...save, world: { ...save.world, provinces: save.world.provinces.map(province => {
     const base = provincesData.find(item => item.id === province.id);
     if (base?.terrain !== province.terrain) return province;
     const copy = { ...province }; delete copy.terrain; return copy;
   }) }, technology: { player: save.technology.player, bots: Array.from(save.technology.bots.entries()) } };
 }
-function deserializeV2(raw: SerializedSaveGameV2): SaveGameV2 {
+function migrateStructuredSave(raw: SerializedSaveGame): SaveGameV3 {
   return {
     ...raw,
+    version: CURRENT_VERSION,
     economy: { constructions: migrateBuildingConstructions(raw.economy.constructions) },
     world: { ...raw.world, provinces: raw.world.provinces.map(normalizeSavedProvince), countries: raw.world.countries.map(normalizeSavedCountry) },
     technology: { player: normalizeTechState(raw.technology.player), bots: new Map(raw.technology.bots.map(([tag, state]) => [tag, normalizeTechState(state, tag)])) },
@@ -154,10 +159,10 @@ function normalizeSavedProvince(province: Province): Province {
     market: normalizeMarket(province.market),
   };
 }
-function migrateV1ToV2(v1: SaveGameV1): SaveGameV2 {
-  const botTechsMap = v1.botTechs instanceof Map ? v1.botTechs : new Map(Object.entries(v1.botTechs as Record<string, CountryTechState>));
+function migrateV1ToV3(v1: SaveGameV1): SaveGameV3 {
+  const botTechsMap = v1.botTechs instanceof Map ? v1.botTechs : new Map(Object.entries(v1.botTechs as Record<string, LegacyCountryTechState>));
   return {
-    version: 2, id: v1.id, name: v1.name, timestamp: v1.timestamp, date: v1.date,
+    version: CURRENT_VERSION, id: v1.id, name: v1.name, timestamp: v1.timestamp, date: v1.date,
     world: { provinces: v1.provinces.map(normalizeSavedProvince), countries: v1.countries.map(normalizeSavedCountry) },
     military: { armies: v1.armies, wars: v1.wars, activeBattles: v1.activeBattles, recruitments: v1.recruitments },
     diplomacy: { relations: migrateDiplomacy(v1.relations,v1.wars,v1.date) },
@@ -166,7 +171,7 @@ function migrateV1ToV2(v1: SaveGameV1): SaveGameV2 {
   };
 }
 
-function migrateRebellionSave(save: SaveGameV2): SaveGameV2 {
+function migrateRebellionSave(save: SaveGameV3): SaveGameV3 {
   const migrated = migrateLegacyRebels(save.world.provinces, save.world.countries, save.military.armies, save.date);
   const tags = new Map<string, string>();
   save.military.armies.forEach((army, index) => {
@@ -186,7 +191,7 @@ function migrateRebellionSave(save: SaveGameV2): SaveGameV2 {
 }
 
 // ============ LOAD COM DETECÇÃO DE VERSÃO + UNKNOWN ============
-function parseRawSave(rawString: string): SaveGameV2 | null {
+function parseRawSave(rawString: string): SaveGameV3 | null {
   try {
     const parsed: unknown = JSON.parse(rawString);
     validateMilitarySave(parsed);
@@ -194,12 +199,12 @@ function parseRawSave(rawString: string): SaveGameV2 | null {
     // V1 - legado sem version ou version 1
     if (isSaveGameV1(parsed)) {
       if (!parsed.version || parsed.version === 1) {
-        return migrateRebellionSave(migrateV1ToV2(parsed));
+        return migrateRebellionSave(migrateV1ToV3(parsed));
       }
     }
-    // V2
-    if (isSerializedV2(parsed)) {
-      return migrateRebellionSave(deserializeV2(parsed));
+    // Structured V2/V3: normalize technology state and always return current format.
+    if (isSerializedSave(parsed)) {
+      return migrateRebellionSave(migrateStructuredSave(parsed));
     }
 
     console.warn(`Save com formato desconhecido ou corrompido`);
@@ -225,7 +230,7 @@ export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, cus
   const activeIds = new Set(provincesData.map(province => province.id));
   const isActiveMap = refs.provincesRef.current.length === activeIds.size &&
     refs.provincesRef.current.every(province => activeIds.has(province.id));
-  const save: SaveGameV2 = {
+  const save: SaveGameV3 = {
     mapId: isActiveMap ? mapMetadata.id : undefined,
     version: CURRENT_VERSION, id: slotId, name: customName || (slotId === AUTO_SAVE_KEY ? 'Autosave' : `Save ${new Date(now).toLocaleString('pt-BR')}`),
     timestamp: now, date: refs.dateRef.current,
@@ -233,7 +238,7 @@ export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, cus
     military: { armies: refs.armiesRef.current, wars: refs.warsRef.current, activeBattles: refs.activeBattlesRef.current, recruitments: refs.recruitmentsRef.current },
     diplomacy: { version: 2, relations: refs.diplomaticRelationsRef.current },
     economy: { constructions: refs.buildingConstructionsRef.current },
-    technology: { player: refs.playerTechStateRef.current, bots: refs.botTechStatesRef.current },
+    technology: { player: normalizeTechState(refs.playerTechStateRef.current), bots: new Map([...refs.botTechStatesRef.current].map(([tag,state]) => [tag,normalizeTechState(state,tag)])) },
   };
   validateMilitarySave(save);
   const existing = localStorage.getItem(SAVE_PREFIX + slotId);
@@ -244,11 +249,11 @@ export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, cus
       return false;
     }
   }
-  localStorage.setItem(SAVE_PREFIX + slotId, JSON.stringify(serializeV2(save)));
+  localStorage.setItem(SAVE_PREFIX + slotId, JSON.stringify(serializeV3(save)));
   return true;
 }
 
-export function loadGame(slotId: string): SaveGameV2 | null {
+export function loadGame(slotId: string): SaveGameV3 | null {
   lastMilitaryLoadError = null;
   const rawString = localStorage.getItem(SAVE_PREFIX + slotId);
   if (!rawString) return null;

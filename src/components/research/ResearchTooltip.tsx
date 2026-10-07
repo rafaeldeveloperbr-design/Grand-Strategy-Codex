@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Country } from '../../types';
 import type { CountryTechState, Technology } from '../../types/technology';
 import { TECHNOLOGIES } from '../../data/technology';
@@ -15,15 +15,19 @@ interface Props {
   onEnter: () => void;
   onLeave: () => void;
   onDismiss: () => void;
-  onStart: () => void;
-  onCancel: () => void;
+  onStart: (slotId: number) => void;
+  onCancel: (slotId: number) => void;
 }
 export function ResearchTooltip({research,country,state,id,pinned,position,onEnter,onLeave,onDismiss,onStart,onCancel}: Props) {
   const actionRef = useRef<HTMLButtonElement>(null);
-  const reason = getTechnologyBlockReason(state,research.id,country);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const freeSlots = state.researchSlots.filter(slot => !slot.technologyId);
+  const targetSlot = freeSlots.find(slot => slot.id === selectedSlot)?.id ?? freeSlots[0]?.id;
+  const activeSlot = state.researchSlots.find(slot => slot.technologyId === research.id);
+  const reason = getTechnologyBlockReason(state,research.id,country,targetSlot);
   const status = getResearchNodeStatus(research,state,reason);
   const category = RESEARCH_CATEGORIES[research.category];
-  const progress = status === 'active' ? getResearchProgress(state) : null;
+  const progress = activeSlot ? getResearchProgress(state,activeSlot.id) : null;
   const speed = calculateTechBonuses(state).researchSpeedMultiplier;
   useEffect(() => { if (pinned) actionRef.current?.focus(); },[pinned,research.id,status]);
   return (
@@ -33,6 +37,7 @@ export function ResearchTooltip({research,country,state,id,pinned,position,onEnt
       <p className="research-tooltip__category">{category.label}</p>
       <p>{research.description}</p>
       <dl><div><dt>Custo</dt><dd>💰 {research.costGold}</dd></div><div><dt>Duração base</dt><dd>{research.durationDays} dias</dd></div><div><dt>Status</dt><dd>{STATUS_LABELS[status]}</dd></div></dl>
+      {activeSlot && <p>Pesquisando — Slot {activeSlot.id+1}</p>}
       <h4>Efeitos</h4><ul>{research.effects.map((effect,index) => <li key={index}>{formatTechnologyEffect(effect)}</li>)}</ul>
       <h4>Pré-requisitos</h4><p>{research.prerequisites.map(key => TECHNOLOGIES.find(item => item.id === key)?.title ?? 'Tecnologia indisponível').join(', ') || 'Nenhum'}</p>
       {reason && status === 'blocked' && <p className="research-tooltip__blocked" role="status">{reason}</p>}
@@ -41,8 +46,9 @@ export function ResearchTooltip({research,country,state,id,pinned,position,onEnt
       {progress && <p className="research-tooltip__hint">Estimativa baseada em tecnologias e focos; leis e dificuldade podem alterar o ritmo diário.</p>}
       {status === 'active' && <p className="research-tooltip__hint">Cancelar perde o progresso e não devolve o ouro investido.</p>}
       {pinned ? <div className="research-tooltip__actions">
-        {status === 'available' && <button ref={actionRef} type="button" onClick={onStart}>Iniciar pesquisa</button>}
-        {status === 'active' && <button ref={actionRef} type="button" onClick={onCancel}>Cancelar pesquisa</button>}
+        {status === 'available' && freeSlots.length > 1 && <label>Slot de pesquisa<select value={targetSlot} onChange={event => setSelectedSlot(Number(event.target.value))}>{freeSlots.map(slot => <option key={slot.id} value={slot.id}>Slot {slot.id+1}</option>)}</select></label>}
+        {status === 'available' && targetSlot !== undefined && <button ref={actionRef} type="button" onClick={() => onStart(targetSlot)}>Iniciar pesquisa</button>}
+        {status === 'active' && activeSlot && <button ref={actionRef} type="button" onClick={() => onCancel(activeSlot.id)}>Cancelar pesquisa</button>}
         {status !== 'available' && status !== 'active' && <button ref={actionRef} type="button" onClick={onDismiss}>Voltar à árvore</button>}
       </div> : <p className="research-tooltip__hint">Clique ou pressione Enter para fixar os detalhes.</p>}
     </section>

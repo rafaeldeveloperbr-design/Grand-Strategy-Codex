@@ -4,6 +4,7 @@ import { FOCUS_CATEGORIES, STATUS_LABELS, type FocusNodeStatus } from './present
 
 interface Props {
   focus: NationalFocus;
+  position: {column:number;row:number};
   status: FocusNodeStatus;
   percent: number;
   expanded: boolean;
@@ -12,11 +13,11 @@ interface Props {
   onLeave: () => void;
 }
 
-export function FocusNode({ focus, status, percent, expanded, detailId, onInspect, onLeave }: Props) {
+export function FocusNode({ focus, position, status, percent, expanded, detailId, onInspect, onLeave }: Props) {
   const marker = {available:'○',blocked:'🔒',active:'◉',completed:'✓','exclusive-blocked':'×'}[status];
   return (
     <button type="button" className={`focus-node focus-node--${status}`}
-      style={{ gridColumn: focus.position.column + 1, gridRow: focus.position.row + 1, '--focus-color': FOCUS_CATEGORIES[focus.category].color } as React.CSSProperties}
+      style={{ gridColumn: position.column + 1, gridRow: position.row + 1, '--focus-color': FOCUS_CATEGORIES[focus.category].color } as React.CSSProperties}
       aria-label={`${focus.title} — ${STATUS_LABELS[status]}`}
       aria-disabled={status !== 'available' && status !== 'active'}
       aria-haspopup="dialog" aria-expanded={expanded} aria-controls={expanded ? detailId : undefined}

@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FocusModal } from '../FocusModal';
 import { NATIONAL_FOCUSES } from '../../data/technology';
+import { createFocusLayout } from '../focus/layout';
 import * as engine from '../../engine/technology';
 import type { CountryTechState } from '../../types/technology';
 
@@ -18,13 +19,76 @@ const setup = (state: CountryTechState = initial()) => {
 };
 
 describe('Focus UI V2', () => {
+  it('shows six compact region markers with friendly category names', () => {
+    const view = setup();
+    const markers = view.container.querySelectorAll('.focus-tree-lane');
+    expect(Array.from(markers, marker => marker.textContent)).toEqual(['Política','Economia','Indústria','Militar','Diplomacia','Ciência e Pesquisa']);
+    for (const marker of markers) expect(marker.getAttribute('aria-hidden')).toBe('true');
+    expect(view.container.textContent).not.toMatch(/focus_[a-z_]+/);
+  });
+  it('renders 36 globally distinct cells and separates categories even with reused local coordinates', () => {
+    const view = setup();
+    expect(NATIONAL_FOCUSES).toHaveLength(36);
+    const nodes = view.container.querySelectorAll<HTMLButtonElement>('.focus-node');
+    expect(nodes).toHaveLength(36);
+    expect(new Set(Array.from(nodes, node => `${node.style.gridColumn}:${node.style.gridRow}`)).size).toBe(36);
+    const layout = createFocusLayout(NATIONAL_FOCUSES);
+    for (const a of NATIONAL_FOCUSES) for (const b of NATIONAL_FOCUSES) {
+      if (a.category !== b.category) expect(layout.getPosition(a)).not.toEqual(layout.getPosition(b));
+    }
+    const overlapping = [NATIONAL_FOCUSES[0],{...NATIONAL_FOCUSES[0],category:'RESEARCH' as const}];
+    const reused = createFocusLayout(overlapping);
+    expect(reused.getPosition(overlapping[0])).not.toEqual(reused.getPosition(overlapping[1]));
+  });
+  it('packs occupied category ranges and preserves local spacing and rows without mutating data', () => {
+    const snapshot = JSON.stringify(NATIONAL_FOCUSES);
+    const layout = createFocusLayout(NATIONAL_FOCUSES);
+    const reversed = createFocusLayout([...NATIONAL_FOCUSES].reverse());
+    let offset = 0;
+    for (const lane of layout.lanes) {
+      expect(lane.columnOffset).toBe(offset);
+      const members = NATIONAL_FOCUSES.filter(focus => focus.category === lane.category);
+      expect(lane.columns).toBe(Math.max(...members.map(f => f.position.column))-Math.min(...members.map(f => f.position.column))+1);
+      offset += lane.columns;
+      for (const a of members) for (const b of members) expect(layout.getPosition(a).column-layout.getPosition(b).column).toBe(a.position.column-b.position.column);
+    }
+    expect(layout.columns).toBe(offset);
+    for (const focus of NATIONAL_FOCUSES) {
+      expect(layout.getPosition(focus).row).toBe(focus.position.row);
+      expect(layout.getPosition(focus)).toEqual(reversed.getPosition(focus));
+    }
+    expect(JSON.stringify(NATIONAL_FOCUSES)).toBe(snapshot);
+  });
+  it('anchors SVG endpoints to global columns and preserves cross-category prerequisites', () => {
+    const view = setup(); const layout = createFocusLayout(NATIONAL_FOCUSES);
+    const centers: {column:number;x:number}[] = [];
+    let crossCategoryCount = 0;
+    for (const focus of NATIONAL_FOCUSES) for (const id of focus.prerequisites ?? []) {
+      const source = NATIONAL_FOCUSES.find(f => f.id === id)!;
+      const path = view.container.querySelector(`path[data-source="${id}"][data-target="${focus.id}"]`)!;
+      expect(path).toBeTruthy();
+      const coordinates = path.getAttribute('d')!.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+      centers.push({column:layout.getPosition(source).column,x:coordinates[0]},{column:layout.getPosition(focus).column,x:coordinates[6]});
+      expect(node(source.title).style.gridColumn).toBe(String(layout.getPosition(source).column+1));
+      expect(node(focus.title).style.gridColumn).toBe(String(layout.getPosition(focus).column+1));
+      if (source.category !== focus.category) {
+        crossCategoryCount++;
+        expect(coordinates[0]).not.toBe(coordinates[6]);
+      }
+    }
+    expect(crossCategoryCount).toBeGreaterThan(0);
+    for (const a of centers) for (const b of centers) {
+      if (a.column === b.column) expect(a.x).toBeCloseTo(b.x);
+      else if (a.column < b.column) expect(a.x).toBeLessThan(b.x);
+    }
+  });
   it('exposes all six categories and every focus in the compact tree', () => {
     setup();
     for (const category of ['Política','Economia','Indústria','Militar','Diplomacia','Ciência e Pesquisa']) expect(screen.getByRole('heading',{name:new RegExp(category)})).toBeTruthy();
     expect(document.querySelectorAll('.focus-node')).toHaveLength(36);
     for (const focus of NATIONAL_FOCUSES) {
       const card = node(focus.title);
-      expect(card.style.gridColumn).toBe(String(focus.position.column+1));
+      expect(card.style.gridColumn).toBe(String(createFocusLayout(NATIONAL_FOCUSES).getPosition(focus).column+1));
       expect(card.style.gridRow).toBe(String(focus.position.row+1));
       expect(card.textContent).not.toContain(focus.description);
     }

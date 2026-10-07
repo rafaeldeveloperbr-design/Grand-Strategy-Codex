@@ -4,6 +4,7 @@ import { RESEARCH_CATEGORIES, STATUS_LABELS, type ResearchNodeStatus } from './p
 
 interface Props {
   research: Technology;
+  position: {column:number;row:number};
   status: ResearchNodeStatus;
   percent: number;
   expanded: boolean;
@@ -12,11 +13,11 @@ interface Props {
   onLeave: () => void;
 }
 
-export function ResearchNode({ research, status, percent, expanded, detailId, onInspect, onLeave }: Props) {
+export function ResearchNode({ research, position, status, percent, expanded, detailId, onInspect, onLeave }: Props) {
   const marker = {available:'○',blocked:'🔒',active:'◉',completed:'✓'}[status];
   return (
     <button type="button" className={`research-node research-node--${status}`}
-      style={{ gridColumn: research.position.column + 1, gridRow: research.position.row + 1, '--research-color': RESEARCH_CATEGORIES[research.category].color } as React.CSSProperties}
+      style={{ gridColumn: position.column + 1, gridRow: position.row + 1, '--research-color': RESEARCH_CATEGORIES[research.category].color } as React.CSSProperties}
       aria-label={`${research.title} — ${STATUS_LABELS[status]}`}
       aria-disabled={status !== 'available' && status !== 'active'}
       aria-haspopup="dialog" aria-expanded={expanded} aria-controls={expanded ? detailId : undefined}

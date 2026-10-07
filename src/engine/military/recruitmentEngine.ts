@@ -1,6 +1,6 @@
 import { Army, Province, Country, Recruitment, Regiment } from '../../types';
-import { UNIT_DEFINITIONS } from '../../data/units';
-import { getBuildingBonus, getMilitaryEquipmentCostMultiplier } from '../../data/buildings';
+import { UNIT_DEFINITIONS, isRecruitableUnitType, getUnitTechnologyName } from '../../data/units';
+import { getBuildingBonus, getMilitaryEquipmentCostMultiplier, meetsBuildingRequirement } from '../../data/buildings';
 import { createArmy, createRegiment, generateRecruitmentId } from './militaryUtils';
 import { normalizeMarket } from '../market';
 import type { UnitType } from '../../types';
@@ -24,9 +24,12 @@ export function getEffectiveRecruitmentCost(unitType: UnitType, context: Recruit
 }
 
 export function getRecruitmentBlockReason(unitType: UnitType, context: RecruitmentContext): string | null {
+  if (!isRecruitableUnitType(unitType)) return 'Unidade legada indisponível para novo recrutamento';
   if (context.province.owner !== context.country.tag) return 'A província não é controlada pelo país';
   const definition = UNIT_DEFINITIONS[unitType];
-  if (definition.requiredTechnology && !context.technology?.completedTechnologies.includes(definition.requiredTechnology)) return `Requer tecnologia: ${definition.requiredTechnology}`;
+  if (definition.requiredTechnology && !context.technology?.completedTechnologies.includes(definition.requiredTechnology)) return `Requer tecnologia: ${getUnitTechnologyName(definition.requiredTechnology)}`;
+  const arsenal = definition.requiredArsenalLevel;
+  if (arsenal && !meetsBuildingRequirement(context.province, 'military_arsenal', arsenal)) return `Arsenal Militar nível ${arsenal} necessário`;
   const cost = getEffectiveRecruitmentCost(unitType, context);
   const market = normalizeMarket(context.province.market);
   if (context.country.resources.gold < cost.gold) return 'Ouro insuficiente';
@@ -47,11 +50,14 @@ export function queueRecruitment(unitType: UnitType, context: RecruitmentContext
   return { success: true,
     country: { ...context.country, resources: { ...context.country.resources, gold: context.country.resources.gold - cost.gold, manpower: context.country.resources.manpower - cost.manpower } },
     province: { ...context.province, market },
-    recruitment: { id, provinceId: context.province.id, owner: context.country.tag, unitType, daysRemaining: cost.days, count: 1, paidCost: { gold: cost.gold, manpower: cost.manpower, iron: cost.iron, tools: cost.tools } },
+    recruitment: { id, provinceId: context.province.id, owner: context.country.tag, unitType, daysRemaining: cost.days, totalDays: cost.days, count: 1, paidCost: { gold: cost.gold, manpower: cost.manpower, iron: cost.iron, tools: cost.tools } },
   };
 }
 
-export function payRecruitmentCost(province: Province, country: Country, unitType: UnitType, goldCost = UNIT_DEFINITIONS[unitType].cost) {
+export function payRecruitmentCost(province: Province, country: Country, unitType: UnitType, goldCost = UNIT_DEFINITIONS[unitType].cost, technology?: CountryTechState) {
+  const blockReason = getRecruitmentBlockReason(unitType, { province, country, technology });
+  if (blockReason) return { success: false as const, reason: blockReason, province, country };
+  if (!isRecruitableUnitType(unitType)) return { success: false as const, reason: 'Unidade legada indisponível para novo recrutamento', province, country };
   const def = UNIT_DEFINITIONS[unitType]; const market = normalizeMarket(province.market);
   const equipment = getMilitaryEquipmentCostMultiplier(province);
   const iron = def.ironCost * equipment, tools = def.toolsCost * equipment;
@@ -84,7 +90,7 @@ export function processRecruitments(
 
     const recruitmentSpeedBonus = getBuildingBonus(province, 'recruitmentSpeedBonus');
 
-    const timeMultiplier = recruitmentTimeMultipliers.get(rec.owner) ?? 1;
+    const timeMultiplier = rec.totalDays !== undefined ? 1 : recruitmentTimeMultipliers.get(rec.owner) ?? 1;
     const newDays = rec.daysRemaining - (1 + recruitmentSpeedBonus / 100) / timeMultiplier;
 
     if (newDays <= 0) {
@@ -134,11 +140,11 @@ export function cancelRecruitment(
   }
 
   const unitDef = UNIT_DEFINITIONS[rec.unitType];
-  const totalCost = unitDef.cost;
-  const totalDays = unitDef.trainingTime;
+  const totalCost = Math.max(0, rec.paidCost ? rec.paidCost.gold / Math.max(1, rec.count) : unitDef.cost);
+  const totalDays = rec.totalDays ?? unitDef.trainingTime;
   const daysRemaining = rec.daysRemaining;
 
-  const progressRatio = daysRemaining / totalDays;
+  const progressRatio = totalDays > 0 ? Math.max(0, Math.min(1, daysRemaining / totalDays)) : 0;
   const refundFactor = Math.max(0.1, progressRatio);
   const refundedGold = Math.floor(totalCost * refundFactor);
 
@@ -150,6 +156,12 @@ export function cancelRecruitment(
         return {
           ...r,
           count: r.count - 1,
+          paidCost: r.paidCost ? {
+            gold: r.paidCost.gold * (r.count - 1) / r.count,
+            manpower: r.paidCost.manpower * (r.count - 1) / r.count,
+            iron: r.paidCost.iron * (r.count - 1) / r.count,
+            tools: r.paidCost.tools * (r.count - 1) / r.count,
+          } : undefined,
         };
       }
       return r;

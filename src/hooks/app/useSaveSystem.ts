@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { loadGame, saveGame, isAutoSaveEnabled, setAutoSaveEnabled, listSaves, deleteSave } from '../../engine/saveSystem';
+import { loadGame, saveGame, getSaveCompatibilityError, isAutoSaveEnabled, setAutoSaveEnabled, listSaves, deleteSave } from '../../engine/saveSystem';
 import { isSaveCompatibleWithActiveMap } from '../../data/map/saveCompatibility';
 import { mapMetadata } from '../../data/map';
 import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../../types';
@@ -53,6 +53,7 @@ export function useSaveSystem(
       return;
     }
     const saved = loadGame('autosave');
+    if (!saved && getSaveCompatibilityError()) addToast(getSaveCompatibilityError()!, 'error');
     if (saved) {
       if (!isSaveCompatibleWithActiveMap(saved)) {
         addToast('Autosave de outro mapa. South America V1 iniciou uma nova partida.', 'info');
@@ -79,7 +80,7 @@ export function useSaveSystem(
 
   const handleManualSave = useCallback((customName: string) => {
     const slot = Date.now().toString();
-    saveGame(refs, slot, customName);
+    if (!saveGame(refs, slot, customName)) { addToast(getSaveCompatibilityError() ?? 'Save incompatível', 'error'); return; }
     refreshSaves();
     addToast(`💾 Save "${customName}" criado!`, 'success');
   }, [refs, refreshSaves, addToast]);
@@ -87,7 +88,7 @@ export function useSaveSystem(
   const handleLoad = useCallback((slotId: string) => {
     const saved = loadGame(slotId);
     if (!saved) {
-      addToast('Save não encontrado', 'error');
+      addToast(getSaveCompatibilityError() ?? 'Save não encontrado', 'error');
       return;
     }
     if (!isSaveCompatibleWithActiveMap(saved)) {

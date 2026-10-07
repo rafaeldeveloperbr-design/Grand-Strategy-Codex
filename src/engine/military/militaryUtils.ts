@@ -42,7 +42,7 @@ export function createArmy(owner: string, name: string, location: string): Army 
   };
 }
 
-export function calculateArmySpeed(army: Army): number {
+export function calculateArmySpeed(army: Pick<Army, 'regiments'>): number {
   if (army.regiments.length === 0) return 1.0;
 
   let minSpeed = Infinity;

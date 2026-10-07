@@ -1,6 +1,6 @@
 export type TechnologyCategory = 'MILITARY' | 'ECONOMY' | 'SOCIETY';
 export type FocusCategory = 'MILITARY' | 'ECONOMY' | 'POLITICS';
-export type UnitKind = 'infantry' | 'cavalry' | 'artillery';
+export type UnitKind = import('./army').UnitType;
 
 export type TechnologyEffect =
   | { type: 'GOOD_PRODUCTION'; good: 'food' | 'wood' | 'iron' | 'tools'; value: number }

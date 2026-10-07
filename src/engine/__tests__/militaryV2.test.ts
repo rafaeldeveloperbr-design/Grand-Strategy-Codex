@@ -36,7 +36,7 @@ describe('Military V2 recruitment', () => {
   it('blocks unavailable technology and insufficient resources without mutation', () => {
     const context = setup();
     expect(canRecruit('artillery', context)).toBe(false);
-    expect(getRecruitmentBlockReason('artillery', context)).toContain('improved_weapons');
+    expect(getRecruitmentBlockReason('artillery', context)).toContain('Armas Melhoradas');
     const poor = { ...context, country: { ...context.country, resources: { ...context.country.resources, manpower: 0 } } };
     expect(getRecruitmentBlockReason('infantry', poor)).toBe('Manpower insuficiente');
     expect(queueRecruitment('infantry', poor).success).toBe(false);

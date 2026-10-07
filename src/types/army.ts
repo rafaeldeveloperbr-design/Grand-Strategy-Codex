@@ -10,11 +10,14 @@ import type { GameDate } from './date'
 /**
  * Tipos de unidades militares
  */
-export type UnitType = 'infantry' | 'cavalry' | 'artillery' | 'archers' | 'heavy_cavalry' | 'elite_guard' | 'siege_engine';
+export type LegacyUnitType = 'infantry' | 'cavalry' | 'artillery' | 'archers' | 'heavy_cavalry' | 'elite_guard' | 'siege_engine';
 
-/** Planned catalog only: these IDs are not enabled in armies or recruitment. */
+/** Modern IDs offered for new recruitment; legacy IDs remain recognized. */
 export type ModernUnitType = 'infantry' | 'motorized_infantry' | 'armor' | 'artillery' | 'reconnaissance' | 'engineers' | 'garrison';
-export type PlannedUnitType = UnitType | ModernUnitType;
+export type UnitType = LegacyUnitType | ModernUnitType;
+export type RecognizedUnitType = UnitType;
+export type RecruitableUnitType = ModernUnitType;
+export type PlannedUnitType = UnitType;
 
 /**
  * Definição de um tipo de unidade militar
@@ -46,6 +49,7 @@ export interface UnitDefinition<TType extends PlannedUnitType = UnitType> {
   supplyUse: number;
   maintenance: number;
   requiredTechnology?: string;
+  requiredArsenalLevel?: number;
 }
 
 /**
@@ -122,7 +126,9 @@ export interface Recruitment {
   daysRemaining: number;
   /** Quantidade de unidades sendo recrutadas (agrupamento) */
   count: number;
-  /** Custo efetivamente pago; permite cancelamento sem recalcular regras futuras. */
+  /** Paid training workload; absent in legacy queues. */
+  totalDays?: number;
+  /** Total paid for this queue entry, shared by count when grouped. */
   paidCost?: { gold: number; manpower: number; iron: number; tools: number };
 }
 

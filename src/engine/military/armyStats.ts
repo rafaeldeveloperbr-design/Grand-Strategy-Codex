@@ -1,5 +1,5 @@
 import { UNIT_DEFINITIONS } from '../../data/units';
-import type { Army, Regiment } from '../../types';
+import type { Army, Regiment, UnitType } from '../../types';
 
 
 const weightedAverage = (army: Army, read: (regiment: Regiment) => number): number => {
@@ -67,7 +67,7 @@ export const calculateArmySupplyUse = (army: Army): number => army.regiments.red
 export const calculateArmySiege = (army: Army): number => army.regiments.reduce((sum, regiment) => sum + UNIT_DEFINITIONS[regiment.type].siege * regiment.strength / getRegimentMaximum(regiment), 0);
 export const calculateArmyMaintenance = (army: Army): number => army.regiments.reduce((sum, regiment) => sum + UNIT_DEFINITIONS[regiment.type].maintenance * regiment.strength / getRegimentMaximum(regiment), 0);
 
-export function calculateArmyCombatStats(army: Army) {
+export function calculateArmyCombatStats(army: Army, bonuses: Partial<Record<UnitType, number>> = {}) {
   let attack = 0; let defense = 0; let shock = 0;
   for (const regiment of army.regiments) {
     const definition = UNIT_DEFINITIONS[regiment.type];
@@ -75,7 +75,8 @@ export function calculateArmyCombatStats(army: Army) {
     const organization = getRegimentOrganization(regiment) / definition.maxOrganization;
     const morale = regiment.morale / definition.maxMorale;
     const experience = 1 + getRegimentExperience(regiment) / 250;
-    const effective = readiness * (.35 + .65 * organization) * (.6 + .4 * morale) * experience;
+    const bonus = bonuses[regiment.type] ?? 0;
+    const effective = (1 + (Number.isFinite(bonus) ? bonus : 0)) * readiness * (.35 + .65 * organization) * (.6 + .4 * morale) * experience;
     attack += definition.attack * effective;
     defense += definition.defense * effective;
     shock += definition.shock * effective;

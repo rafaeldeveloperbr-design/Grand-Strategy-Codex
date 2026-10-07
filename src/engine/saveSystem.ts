@@ -1,3 +1,6 @@
+import { validateMilitarySave, MilitarySaveCompatibilityError } from './military/saveCompatibility';
+let lastMilitaryLoadError: string | null = null;
+export const getSaveCompatibilityError = () => lastMilitaryLoadError;
 import { resolveBuildingType, normalizeBuildingLevel } from '../data/buildings';
 import { migrateDiplomacy } from './diplomacy';
 import { initializePolitics } from './politics';
@@ -186,6 +189,7 @@ function migrateRebellionSave(save: SaveGameV2): SaveGameV2 {
 function parseRawSave(rawString: string): SaveGameV2 | null {
   try {
     const parsed: unknown = JSON.parse(rawString);
+    validateMilitarySave(parsed);
 
     // V1 - legado sem version ou version 1
     if (isSaveGameV1(parsed)) {
@@ -201,6 +205,7 @@ function parseRawSave(rawString: string): SaveGameV2 | null {
     console.warn(`Save com formato desconhecido ou corrompido`);
     return null;
   } catch (e) {
+    if (e instanceof MilitarySaveCompatibilityError) lastMilitaryLoadError = e.message;
     console.error('Erro ao parsear save', e);
     return null;
   }
@@ -230,10 +235,21 @@ export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, cus
     economy: { constructions: refs.buildingConstructionsRef.current },
     technology: { player: refs.playerTechStateRef.current, bots: refs.botTechStatesRef.current },
   };
+  validateMilitarySave(save);
+  const existing = localStorage.getItem(SAVE_PREFIX + slotId);
+  if (existing) {
+    try { validateMilitarySave(JSON.parse(existing)); }
+    catch (error) {
+      lastMilitaryLoadError = error instanceof Error ? error.message : 'Save incompatível';
+      return false;
+    }
+  }
   localStorage.setItem(SAVE_PREFIX + slotId, JSON.stringify(serializeV2(save)));
+  return true;
 }
 
 export function loadGame(slotId: string): SaveGameV2 | null {
+  lastMilitaryLoadError = null;
   const rawString = localStorage.getItem(SAVE_PREFIX + slotId);
   if (!rawString) return null;
   return parseRawSave(rawString);

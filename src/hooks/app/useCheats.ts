@@ -1,3 +1,4 @@
+import { calculateArmySpeed } from '../../engine/military/militaryUtils';
 /**
  * useCheats.ts - CHEATS PARA TESTES
  */
@@ -253,15 +254,7 @@ export function useCheats(params: Params) {
     addToast,
   ]);
 
-  /**
-   * Cria um exército compatível com o Military V2.
-   *
-   * Total:
-   * 5.000 infantaria
-   * 5.000 cavalaria
-   * 5.000 artilharia
-   * = 15.000 homens
-   */
+  // Modern composition; the displayed total is derived from actual strengths.
   const spawnArmy = useCallback(
     (provinceId?: string) => {
       const targetProvince =
@@ -300,7 +293,7 @@ export function useCheats(params: Params) {
 
           ...Array.from(
             { length: 4 },
-            () => createCheatRegiment('cavalry')
+            () => createCheatRegiment('motorized_infantry')
           ),
 
           ...Array.from(
@@ -308,7 +301,7 @@ export function useCheats(params: Params) {
             () => createCheatRegiment('artillery')
           ),
 
-          createCheatRegiment('archers'),
+          createCheatRegiment('armor'), createCheatRegiment('reconnaissance'), createCheatRegiment('engineers'),
         ],
 
         location: targetProvince,
@@ -328,6 +321,7 @@ export function useCheats(params: Params) {
         inCombat: false,
       };
 
+      newArmy.movementSpeed = calculateArmySpeed(newArmy);
       setArmies(prev => [
         ...prev,
         newArmy,
@@ -340,7 +334,7 @@ export function useCheats(params: Params) {
         )?.name ?? targetProvince;
 
       addToast(
-        `🪖 Exército CHEAT de 15.000 homens spawnado em ${provinceName}`,
+        `🪖 Exército CHEAT de ${newArmy.regiments.reduce((sum, regiment) => sum + regiment.strength, 0).toLocaleString('pt-BR')} homens spawnado em ${provinceName}`,
         'success',
         'Cheat'
       );
@@ -548,10 +542,10 @@ export function useCheats(params: Params) {
 
                   strength:
                     regiment.maxStrength ??
-                    regiment.strength,
+                    UNIT_DEFINITIONS[regiment.type].maxStrength,
 
-                  organization: 100,
-                  morale: 100,
+                  organization: UNIT_DEFINITIONS[regiment.type].maxOrganization,
+                  morale: UNIT_DEFINITIONS[regiment.type].maxMorale,
                 })
               ),
           }

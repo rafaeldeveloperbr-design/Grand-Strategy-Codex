@@ -1,3 +1,4 @@
+import { UNIT_DEFINITIONS } from '../data/units';
 import { BUILDING_DEFINITIONS } from '../data/buildings';
 /**
  * ============================================================
@@ -8,15 +9,7 @@ import { BUILDING_DEFINITIONS } from '../data/buildings';
 
 export const BUILDING_NAMES: Record<string, string> = Object.fromEntries(Object.values(BUILDING_DEFINITIONS).map(def => [def.type, def.name]));
 
-export const UNIT_NAMES: Record<string, string> = {
-  infantry: 'Infantaria',
-  cavalry: 'Cavalaria',
-  artillery: 'Artilharia',
-  archers: 'Arqueiros',
-  heavy_cavalry: 'Cavalaria Pesada',
-  elite_guard: 'Guarda Real',
-  siege_engine: 'Armas de Cerco',
-};
+export const UNIT_NAMES: Record<string, string> = Object.fromEntries(Object.values(UNIT_DEFINITIONS).map(def => [def.type, def.name]));
 
 
 export const GOOD_NAMES: Record<string, string> = {

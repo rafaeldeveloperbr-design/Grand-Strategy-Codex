@@ -156,16 +156,16 @@ export function processBattleContinuous(p: Params) {
     }
     const repaired = synchronizeBattle(battle, armies) || battle;
     const armiesBeforeCombat = armies;
-    const combatMultipliers = new Map(p.countries.map(country => {
+    const combatMultipliers = new Map<string, number>();
+    const unitBonuses = new Map(p.countries.map(country => {
       const state = country.tag === p.playerCountryTag ? p.playerTechState : p.botTechStates.get(country.tag);
-      const bonuses = state ? calculateTechBonuses(state).combatPowerBonus : { infantry: 0, cavalry: 0, artillery: 0 };
-      return [country.tag, 1 + Math.max(bonuses.infantry, bonuses.cavalry, bonuses.artillery)];
+      return [country.tag, state ? calculateTechBonuses(state).combatPowerBonus : {}] as const;
     }));
     const fortificationMultipliers = new Map(p.countries.map(country => {
       const state = country.tag === p.playerCountryTag ? p.playerTechState : p.botTechStates.get(country.tag);
       return [country.tag, state ? calculateTechBonuses(state).fortificationMultiplier : 1];
     }));
-    const result = processBattleDay(repaired, armies, province, provinces, combatMultipliers, fortificationMultipliers, logistics);
+    const result = processBattleDay(repaired, armies, province, provinces, combatMultipliers, fortificationMultipliers, logistics, unitBonuses);
     armies = result.armies;
     provinces = applyMilitaryCasualties(provinces, armiesBeforeCombat, armies);
 

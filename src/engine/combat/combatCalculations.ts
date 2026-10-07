@@ -1,3 +1,5 @@
+import { calculateArmyCombatStats } from '../military/armyStats';
+import type { UnitType } from '../../types';
 import { getTerrainDefinition } from '../terrain';
 import { Army } from '../../types/army';
 import { Province } from '../../types/province';
@@ -7,15 +9,6 @@ import { getBuildingBonus } from '../../data/buildings';
 /**
  * Multiplicadores de poder por tipo de unidade
  */
-export const UNIT_POWER_MULTIPLIERS: Record<string, number> = {
-  infantry: 1.0,
-  cavalry: 1.5,
-  artillery: 2.0,
-  archers: 1.2,
-  heavy_cavalry: 2.2,
-  elite_guard: 3.0,
-  siege_engine: 2.5,
-};
 
 
 
@@ -58,36 +51,10 @@ export function calculateArmySize(army: Army) {
  */
 export function calculateArmyBasePower(
   army: Army,
-  techBonuses?: {
-    infantry: number;
-    cavalry: number;
-    artillery: number;
-  }
+  techBonuses?: Partial<Record<UnitType, number>>
 ): number {
-  let totalPower = 0;
-
-  for (const regiment of army.regiments) {
-    let multiplier = UNIT_POWER_MULTIPLIERS[regiment.type] || 1.0;
-    
-    // Aplica bônus de tecnologia se disponível (apenas para unidades originais)
-    if (techBonuses) {
-      if (regiment.type === 'infantry') {
-        multiplier *= (1 + techBonuses.infantry);
-      } else if (regiment.type === 'cavalry') {
-        multiplier *= (1 + techBonuses.cavalry);
-      } else if (regiment.type === 'artillery') {
-        multiplier *= (1 + techBonuses.artillery);
-      }
-    }
-    
-    const regimentPower = regiment.strength * multiplier;
-    
-    // Bônus de moral (50-100 = bônus, 0-50 = penalidade)
-    const moraleBonus = 0.5 + (regiment.morale / 100);
-    totalPower += regimentPower * moraleBonus;
-  }
-
-  return totalPower;
+  const stats = calculateArmyCombatStats(army, techBonuses);
+  return (stats.attack + stats.defense * .35 + stats.shock * .45) * 100;
 }
 
 /**
@@ -96,7 +63,7 @@ export function calculateArmyBasePower(
 export function calculateDefenderTotalPower(
   army: Army,
   province: Province,
-  techBonuses?: { infantry: number; cavalry: number; artillery: number; fortificationMultiplier?: number }
+  techBonuses?: Partial<Record<UnitType, number>> & { fortificationMultiplier?: number }
 ): { totalPower: number; hasTerritorialBonus: boolean; bonusMultiplier: number } {
   const basePower = calculateArmyBasePower(army, techBonuses);
   

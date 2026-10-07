@@ -52,3 +52,11 @@
 .research-modifiers h3 { margin: 0 0 6px; font-size: 11px; color: #98a6b7; }
 .research-modifiers > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .research-modifiers span { border: 1px solid #354151; border-radius: 4px; padding: 3px 7px; font-size: 11px; }
+.research-slots { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 24px 12px; }
+.research-slot { position: relative; display: flex; gap: 8px; align-items: center; border: 1px solid #354151; border-radius: 5px; padding: 7px 10px 9px; font-size: 11px; }
+.research-slot--locked { color: #98a6b7; }
+.research-slot__progress { position: absolute; bottom: 2px; left: 10px; right: 10px; height: 2px; background: #171b21; }
+.research-slot__progress > span { display: block; height: 100%; background: #cbb77f; }
+.research-tooltip__actions label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.research-tooltip__actions select { background: #1d2937; color: #dce3ed; border: 1px solid #354151; border-radius: 4px; padding: 5px; font: inherit; }
+.research-modal select:focus-visible { outline: 2px solid #d3bd83; outline-offset: 3px; }

@@ -56,7 +56,7 @@ describe('Logistics V2 save compatibility',() => {
   it('round-trips the existing save format with no network/cache and rebuilds it after load',() => {
     const refs={dateRef:{current:{year:1444,month:11,day:11}},provincesRef:{current:provinces},countriesRef:{current:countries},armiesRef:{current:[]},warsRef:{current:[]},diplomaticRelationsRef:{current:[]},recruitmentsRef:{current:[]},buildingConstructionsRef:{current:[]},playerTechStateRef:{current:createInitialTechState('BRA')},botTechStatesRef:{current:new Map()},activeBattlesRef:{current:[]}};
     const before=network();saveGame(refs,'logistics');const saved=localStorage.getItem('imperium_save_logistics')!;
-    expect(JSON.parse(saved).version).toBe(2);expect(saved).not.toContain('dependentProvinces');expect(saved).not.toContain('networks');
+    expect(JSON.parse(saved).version).toBe(3);expect(saved).not.toContain('dependentProvinces');expect(saved).not.toContain('networks');
     const loaded=loadGame('logistics')!;expect(loaded).not.toBeNull();
     const after=buildLogisticsNetworks({...loaded.world,relations:loaded.diplomacy.relations,wars:loaded.military.wars});
     expect(getProvinceLogistics(after,'BRA',capital.id)).toEqual(getProvinceLogistics(before,'BRA',capital.id));

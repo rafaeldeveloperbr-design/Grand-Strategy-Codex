@@ -169,7 +169,7 @@ describe('Buildings V2 migration and deterministic AI', () => {
     province.market!.goods.food.stock = 0; province.market!.goods.food.demand = 100; province.market!.goods.food.shortage = 100;
     province.population.severeFoodShortageDays = 3;
     const technology = createInitialTechState(country.tag);
-    technology.activeResearchId = 'improved_weapons'; technology.activeFocusId = 'focus_military_modernization';
+    technology.researchSlots[0].technologyId = 'improved_weapons'; technology.activeFocusId = 'focus_military_modernization';
     const result = processAIEconomicDecisions(country, [province], technology, [], [], '1/1/1444', true);
     expect(result.buildingConstructions[0]?.buildingType).toBe('farm'); expect(result.recruitments).toHaveLength(1);
     const paid = result.recruitments[0].paidCost!;

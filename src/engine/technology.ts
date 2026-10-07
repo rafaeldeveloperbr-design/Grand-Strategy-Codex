@@ -1,3 +1,4 @@
+import { INITIAL_RESEARCH_SLOTS, MAX_RESEARCH_SLOTS } from '../constants/research';
 import { UNIT_DEFINITIONS } from '../data/units';
 import type { UnitType } from '../types';
 import type { Country } from '../types';
@@ -21,6 +22,7 @@ export interface TechnologyBonuses {
   populationGrowthMultiplier: number;
   populationCapacityMultiplier: number;
   researchSpeedMultiplier: number;
+  researchSlotBonus: number;
   satisfactionModifier: number;
   migrationAttractionMultiplier: number;
   internalTradeMultiplier: number;
@@ -43,26 +45,47 @@ const createNeutralBonuses = (): TechnologyBonuses => ({
   populationGrowthMultiplier: 1,
   populationCapacityMultiplier: 1,
   researchSpeedMultiplier: 1,
+  researchSlotBonus: 0,
   satisfactionModifier: 0,
   migrationAttractionMultiplier: 1,
   internalTradeMultiplier: 1,
   stabilityModifier: 0,
 });
 
-export function normalizeTechState(value: Partial<CountryTechState> | undefined, countryTag = 'UNKNOWN'): CountryTechState {
-  const activeResearchId = TECHNOLOGIES.some(technology => technology.id === value?.activeResearchId)
-    ? value?.activeResearchId ?? null
-    : null;
-  const activeFocusId = NATIONAL_FOCUSES.some(focus => focus.id === value?.activeFocusId) ? value?.activeFocusId ?? null : null;
-  return {
-    countryTag: value?.countryTag ?? countryTag,
-    activeFocusId,
-    activeResearchId,
-    completedFocuses: [...new Set((value?.completedFocuses ?? []).filter(id => NATIONAL_FOCUSES.some(focus => focus.id === id)))],
-    completedTechnologies: [...new Set((value?.completedTechnologies ?? []).filter(id => TECHNOLOGIES.some(technology => technology.id === id)))],
-    focusProgressDays: activeFocusId && Number.isFinite(value?.focusProgressDays) ? Math.max(0, value?.focusProgressDays ?? 0) : 0,
-    researchProgressDays: activeResearchId && Number.isFinite(value?.researchProgressDays) ? Math.max(0, value?.researchProgressDays ?? 0) : 0,
+/** Capacity is derived from accumulated bonuses; slots are the only research state. */
+export function getResearchSlotCount(state: CountryTechState): number {
+  return Math.min(MAX_RESEARCH_SLOTS, Math.max(INITIAL_RESEARCH_SLOTS,
+    INITIAL_RESEARCH_SLOTS + Math.floor(calculateTechBonuses(state).researchSlotBonus)));
+}
+
+/** Accept unknown save content at the boundary; canonical slot data wins over legacy fields. */
+export function normalizeTechState(value: unknown, countryTag = 'UNKNOWN'): CountryTechState {
+  const raw = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const validIds = (input: unknown, ids: Set<string>) => Array.isArray(input)
+    ? [...new Set(input.filter((id): id is string => typeof id === 'string' && ids.has(id)))] : [];
+  const completedFocuses = validIds(raw.completedFocuses, new Set(NATIONAL_FOCUSES.map(item => item.id)));
+  const completedTechnologies = validIds(raw.completedTechnologies, new Set(TECHNOLOGIES.map(item => item.id)));
+  const activeFocusId = NATIONAL_FOCUSES.some(item => item.id === raw.activeFocusId) ? raw.activeFocusId as string : null;
+  const progress = (v: unknown) => typeof v === 'number' && Number.isFinite(v) ? Math.max(0,v) : 0;
+  const next: CountryTechState = {
+    countryTag: typeof raw.countryTag === 'string' ? raw.countryTag : countryTag,
+    activeFocusId, completedFocuses, completedTechnologies,
+    focusProgressDays: activeFocusId ? progress(raw.focusProgressDays) : 0,
+    researchSlots: [],
   };
+  const count = getResearchSlotCount(next);
+  const candidates: unknown[] = Array.isArray(raw.researchSlots) ? raw.researchSlots
+    : [{id:0,technologyId:raw.activeResearchId,progressDays:raw.researchProgressDays}];
+  const seen = new Set<string>();
+  for (let id = 0; id < count; id++) {
+    // First entry with a valid matching ID wins; malformed/locked IDs are discarded.
+    const slot = candidates.find(item => item && typeof item === 'object' && (item as Record<string,unknown>).id === id) as Record<string,unknown> | undefined;
+    const technologyId = typeof slot?.technologyId === 'string' && TECHNOLOGIES.some(item => item.id === slot.technologyId)
+      && !completedTechnologies.includes(slot.technologyId) && !seen.has(slot.technologyId) ? slot.technologyId : null;
+    if (technologyId) seen.add(technologyId);
+    next.researchSlots.push({id,technologyId,progressDays:technologyId ? progress(slot?.progressDays) : 0});
+  }
+  return next;
 }
 
 export const createInitialTechState = (countryTag: string): CountryTechState => normalizeTechState(undefined, countryTag);
@@ -89,30 +112,39 @@ export function cancelNationalFocus(state: CountryTechState): CountryTechState {
   return { ...state, activeFocusId: null, focusProgressDays: 0 };
 }
 
-export function getTechnologyBlockReason(state: CountryTechState, id: string, country: Country): string | null {
+/** Without a target, inspect availability in the first empty unlocked slot. */
+export function getTechnologyBlockReason(state: CountryTechState, id: string, country: Country, slotId?: number): string | null {
   const technology = TECHNOLOGIES.find(item => item.id === id);
   if (!technology) return 'Tecnologia inexistente';
   if (state.completedTechnologies.includes(id)) return 'Tecnologia já concluída';
-  if (state.activeResearchId) return 'Outra pesquisa já ativa';
+  if (state.researchSlots.some(slot => slot.technologyId === id)) return 'Tecnologia já sendo pesquisada';
+  const target = slotId ?? state.researchSlots.find(slot => !slot.technologyId && slot.id < getResearchSlotCount(state))?.id;
+  if (target === undefined) return 'Nenhum slot de pesquisa livre';
+  if (!Number.isInteger(target) || target < 0 || target >= MAX_RESEARCH_SLOTS) return 'Slot de pesquisa inexistente';
+  if (target >= getResearchSlotCount(state)) return 'Slot de pesquisa bloqueado';
+  const slot = state.researchSlots.find(item => item.id === target);
+  if (!slot) return 'Slot de pesquisa inexistente';
+  if (slot.technologyId) return 'Slot de pesquisa ocupado';
   if (!technology.prerequisites.every(prerequisite => state.completedTechnologies.includes(prerequisite))) return 'Pré-requisitos incompletos';
   if (country.resources.gold < technology.costGold) return 'Ouro insuficiente';
   return null;
 }
 
-export function startTechnologyResearch(state: CountryTechState, id: string, country: Country): { techState: CountryTechState | null; cost: number } {
-  if (getTechnologyBlockReason(state, id, country)) return { techState: null, cost: 0 };
+export function startTechnologyResearch(state: CountryTechState, id: string, country: Country, slotId = 0): { techState: CountryTechState | null; cost: number } {
+  if (getTechnologyBlockReason(state, id, country, slotId)) return { techState: null, cost: 0 };
   const technology = TECHNOLOGIES.find(item => item.id === id)!;
-  return { techState: { ...state, activeResearchId: id, researchProgressDays: 0 }, cost: technology.costGold };
+  return { techState: { ...state, researchSlots: state.researchSlots.map(slot => slot.id === slotId ? {...slot, technologyId:id, progressDays:0} : slot) }, cost: technology.costGold };
 }
 
-export function cancelTechnologyResearch(state: CountryTechState): CountryTechState {
-  return { ...state, activeResearchId: null, researchProgressDays: 0 };
+export function cancelTechnologyResearch(state: CountryTechState, slotId = 0): CountryTechState {
+  return { ...state, researchSlots: state.researchSlots.map(slot => slot.id === slotId ? {...slot,technologyId:null,progressDays:0} : slot) };
 }
 
-export function getResearchProgress(state: CountryTechState): ResearchProgress | null {
-  const technology = TECHNOLOGIES.find(item => item.id === state.activeResearchId);
-  if (!technology) return null;
-  const current = Math.min(technology.durationDays, Math.max(0, state.researchProgressDays));
+export function getResearchProgress(state: CountryTechState, slotId = 0): ResearchProgress | null {
+  const slot = state.researchSlots.find(item => item.id === slotId);
+  const technology = TECHNOLOGIES.find(item => item.id === slot?.technologyId);
+  if (!technology || !slot) return null;
+  const current = Math.min(technology.durationDays, Math.max(0, slot.progressDays));
   const speed = calculateTechBonuses(state).researchSpeedMultiplier;
   const remainingProgress = Math.max(0, technology.durationDays - current);
   return { current, required: technology.durationDays, remainingProgress, percent: technology.durationDays ? current / technology.durationDays * 100 : 100, estimatedDaysRemaining: Math.ceil(remainingProgress / speed) };
@@ -136,7 +168,7 @@ export function processDailyFocusProgress(state: CountryTechState, country: Coun
       }
     }
   }
-  return { techState: next, notifications };
+  return { techState: normalizeTechState(next, country.tag), notifications };
 }
 
 export function processDailyTechProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false) {
@@ -151,15 +183,15 @@ export function processDailyResearchProgress(state: CountryTechState, country: C
   const next = { ...normalized, completedTechnologies: [...normalized.completedTechnologies] };
   const difficultySpeed = isPlayer ? 1 : DIFFICULTY_SPEED_MULTIPLIERS[difficulty];
   const lawModifiers = calculateLawModifiers(country.activeLaws);
-  if (next.activeResearchId) {
-    const technology = TECHNOLOGIES.find(item => item.id === next.activeResearchId);
-    if (technology) {
-      next.researchProgressDays += difficultySpeed * calculateTechBonuses(next).researchSpeedMultiplier * lawModifiers.researchSpeedMultiplier;
-      if (next.researchProgressDays >= technology.durationDays) {
-        if (!next.completedTechnologies.includes(technology.id)) next.completedTechnologies.push(technology.id);
-        next.activeResearchId = null; next.researchProgressDays = 0;
-        notifications.push(`🔬 Pesquisa concluída: ${technology.title}`);
-      }
+  // Normalization sorts IDs and clones slots. Recalculate bonuses after each completion.
+  for (const slot of next.researchSlots) {
+    const technology = TECHNOLOGIES.find(item => item.id === slot.technologyId);
+    if (!technology) continue;
+    slot.progressDays += difficultySpeed * calculateTechBonuses(next).researchSpeedMultiplier * lawModifiers.researchSpeedMultiplier;
+    if (slot.progressDays >= technology.durationDays) {
+      if (!next.completedTechnologies.includes(technology.id)) next.completedTechnologies.push(technology.id);
+      slot.technologyId = null; slot.progressDays = 0;
+      notifications.push(`🔬 Pesquisa concluída: ${technology.title}`);
     }
   }
   return { techState: next, notifications };
@@ -188,6 +220,7 @@ function applyFocusEffect(effect: RewardEffect, bonuses: TechnologyBonuses) {
     case 'BUILD_COST': bonuses.buildCostMultiplier += effect.value; break;
     case 'BUILD_TIME': bonuses.buildTimeMultiplier += effect.value; break;
     case 'MANPOWER': bonuses.manpowerMultiplier += effect.value; break;
+    case 'RESEARCH_SLOTS': bonuses.researchSlotBonus += effect.value; break;
     case 'RESEARCH_SPEED': bonuses.researchSpeedMultiplier += effect.value; break;
     case 'DEFENSE_BONUS': bonuses.fortificationMultiplier += effect.value; break;
     case 'RECRUITMENT_TIME': bonuses.recruitmentTimeMultiplier += effect.value; break;
@@ -248,6 +281,7 @@ export function formatFocusEffect(effect: RewardEffect): string {
     case 'BUILD_TIME': return `Velocidade de construção: ${percent}`;
     case 'MANPOWER': return `Manpower: ${percent}`;
     case 'STABILITY': return `Estabilidade administrativa: ${percent}`;
+    case 'RESEARCH_SLOTS': return `Slots de pesquisa: +${effect.value}`;
     case 'RESEARCH_SPEED': return `Velocidade de pesquisa: ${percent}`;
     case 'DEFENSE_BONUS': return `Defesa por fortificações: ${percent}`;
     case 'RECRUITMENT_TIME': return `Tempo de recrutamento: ${percent}`;

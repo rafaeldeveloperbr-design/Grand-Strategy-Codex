@@ -53,7 +53,7 @@ export function useTechActions(params: {
     addLog('Foco nacional cancelado');
   }, [playerTechStateRef, setPlayerTechState, addToast, addLog]);
 
-  const handleStartResearch = useCallback((techId: string) => {
+  const handleStartResearch = useCallback((techId: string, slotId = 0) => {
     if (!techId) return;
 
     const tech = TECHNOLOGIES.find(t => t.id === techId);
@@ -61,9 +61,9 @@ export function useTechActions(params: {
 
     const currentCountry = countriesRef.current.find(country => country.tag === playerCountryTag) ?? playerCountry;
     const currentState = playerTechStateRef.current;
-    const reason = getTechnologyBlockReason(currentState, techId, currentCountry);
+    const reason = getTechnologyBlockReason(currentState, techId, currentCountry, slotId);
     if (reason) { addLog(`❌ ${reason}: ${tech.title}`); return; }
-    const { techState: updated, cost } = startTechnologyResearch(currentState, techId, currentCountry);
+    const { techState: updated, cost } = startTechnologyResearch(currentState, techId, currentCountry, slotId);
 
     if (updated) {
       const updatedCountries = countriesRef.current.map(country => country.tag === playerCountryTag
@@ -87,8 +87,8 @@ export function useTechActions(params: {
     playerTechStateRef,
   ]);
 
-  const handleCancelResearch = useCallback(() => {
-    const updated = cancelTechnologyResearch(playerTechStateRef.current);
+  const handleCancelResearch = useCallback((slotId = 0) => {
+    const updated = cancelTechnologyResearch(playerTechStateRef.current, slotId);
     playerTechStateRef.current = updated;
     setPlayerTechState(updated);
     addToast('🔬 Pesquisa cancelada', 'info');

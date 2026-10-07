@@ -103,7 +103,7 @@ describe('Army Reorganization V1 persistence', () => {
     const country = structuredClone(countries.find(c => c.tag === 'BRA')!);
     const refs: Parameters<typeof saveGame>[0] = { provincesRef: { current: ctx.provinces }, countriesRef: { current: [country] }, armiesRef: { current: result.armies }, warsRef: { current: [] }, diplomaticRelationsRef: { current: [] }, recruitmentsRef: { current: [] }, buildingConstructionsRef: { current: [] }, playerTechStateRef: { current: createInitialTechState('BRA') }, botTechStatesRef: { current: new Map() }, activeBattlesRef: { current: [] }, dateRef: { current: { year: 1836, month: 1, day: 1 } } };
     expect(saveGame(refs, 'reorganized')).toBe(true);
-    const loaded = loadGame('reorganized')!; expect(loaded.version).toBe(2); expect(loaded.military.armies).toEqual(result.armies); expect(loaded.world.countries[0].resources).toEqual(country.resources);
+    const loaded = loadGame('reorganized')!; expect(loaded.version).toBe(3); expect(loaded.military.armies).toEqual(result.armies); expect(loaded.world.countries[0].resources).toEqual(country.resources);
     expect(loaded.military.armies.flatMap(a => a.regiments).some(r => r.type === 'cavalry' && r.strength === 333 && r.experience === 19)).toBe(true);
   });
 });

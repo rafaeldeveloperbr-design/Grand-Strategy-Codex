@@ -24,22 +24,22 @@ describe('player research actions', () => {
     });
     expect(params.countriesRef.current[0].resources.gold).toBe(700);
     expect(params.setAllCountries).toHaveBeenCalledOnce();
-    expect(params.playerTechStateRef.current.activeResearchId).toBe('sanitation');
+    expect(params.playerTechStateRef.current.researchSlots[0].technologyId).toBe('sanitation');
   });
   it('does not debit blocked research', () => {
     const { result, params } = setup(0);
     act(() => result.current.handleStartResearch('sanitation'));
     expect(params.countriesRef.current[0].resources.gold).toBe(0);
     expect(params.setAllCountries).not.toHaveBeenCalled();
-    expect(params.playerTechStateRef.current.activeResearchId).toBeNull();
+    expect(params.playerTechStateRef.current.researchSlots[0].technologyId).toBeNull();
   });
   it('cancels through the engine and updates the live ref without refund', () => {
     const { result, params } = setup();
     act(() => result.current.handleStartResearch('sanitation'));
-    params.playerTechStateRef.current.researchProgressDays = 15;
+    params.playerTechStateRef.current.researchSlots[0].progressDays = 15;
     act(() => result.current.handleCancelResearch());
-    expect(params.playerTechStateRef.current.activeResearchId).toBeNull();
-    expect(params.playerTechStateRef.current.researchProgressDays).toBe(0);
+    expect(params.playerTechStateRef.current.researchSlots[0].technologyId).toBeNull();
+    expect(params.playerTechStateRef.current.researchSlots[0].progressDays).toBe(0);
     expect(params.countriesRef.current[0].resources.gold).toBe(700);
     expect(params.setPlayerTechState).toHaveBeenLastCalledWith(params.playerTechStateRef.current);
   });

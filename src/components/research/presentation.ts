@@ -13,6 +13,6 @@ export const STATUS_LABELS: Record<ResearchNodeStatus, string> = {
 // Only presentation: the canonical validator supplies availability.
 export function getResearchNodeStatus(technology: Technology, state: CountryTechState, reason: string | null): ResearchNodeStatus {
   if (state.completedTechnologies.includes(technology.id)) return 'completed';
-  if (state.activeResearchId === technology.id) return 'active';
+  if (state.researchSlots.some(slot => slot.technologyId === technology.id)) return 'active';
   return reason ? 'blocked' : 'available';
 }

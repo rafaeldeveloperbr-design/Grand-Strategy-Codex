@@ -70,7 +70,7 @@ describe('TECNOLOGIA', () => {
     const state = createInitialTechState('BRA');
     const result = startTechnologyResearch(state, 'tech_1', baseCountry);
     expect(result.techState).not.toBeNull();
-    expect(result.techState!.activeResearchId).toBe('tech_1');
+    expect(result.techState!.researchSlots[0].technologyId).toBe('tech_1');
   });
 
   it('daily progress - foco avança 1 dia por tick', () => {

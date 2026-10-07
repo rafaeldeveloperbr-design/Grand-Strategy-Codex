@@ -18,7 +18,6 @@ interface Props {
   onScroll: () => void;
 }
 export function ResearchTree({ state, country, inspectedId, detailId, onInspect, onLeave, onScroll }: Props) {
-  const progress = getResearchProgress(state);
   const columns = Math.max(...TECHNOLOGIES.map(f => f.position.column)) + 1;
   const rows = Math.max(...TECHNOLOGIES.map(f => f.position.row)) + 1;
   const width = PADDING * 2 + columns * NODE_WIDTH + (columns - 1) * COLUMN_GAP;
@@ -37,13 +36,13 @@ export function ResearchTree({ state, country, inspectedId, detailId, onInspect,
             const x2 = PADDING + research.position.column * (NODE_WIDTH + COLUMN_GAP) + NODE_WIDTH / 2 + portOffset;
             const y2 = PADDING + research.position.row * (NODE_HEIGHT + ROW_GAP);
             const middle = (y1 + y2) / 2;
-            const status = state.activeResearchId === research.id ? 'active' : state.completedTechnologies.includes(id) ? 'completed' : 'blocked';
+            const status = state.researchSlots.some(slot => slot.technologyId === research.id) ? 'active' : state.completedTechnologies.includes(id) ? 'completed' : 'blocked';
             return <path key={`${id}-${research.id}`} className={`research-connection research-connection--${status}`} data-source={id} data-target={research.id} d={`M ${x1} ${y1} C ${x1} ${middle}, ${x2} ${middle}, ${x2} ${y2}`} />;
           }))}
         </svg>
         {TECHNOLOGIES.map(research => <ResearchNode key={research.id} research={research}
           status={getResearchNodeStatus(research,state,getTechnologyBlockReason(state,research.id,country))}
-          percent={state.activeResearchId === research.id ? Math.round(progress?.percent ?? 0) : 0} expanded={inspectedId === research.id} detailId={detailId}
+          percent={state.researchSlots.some(slot => slot.technologyId === research.id) ? Math.round(getResearchProgress(state, state.researchSlots.find(slot => slot.technologyId === research.id)!.id)?.percent ?? 0) : 0} expanded={inspectedId === research.id} detailId={detailId}
           onInspect={(element,pin) => onInspect(research.id,element,pin)} onLeave={onLeave} />)}
       </div>
     </div>

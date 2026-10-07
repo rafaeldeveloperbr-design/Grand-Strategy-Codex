@@ -58,11 +58,10 @@ describe('SAVE/LOAD', () => {
         current: {
           countryTag: 'BRA',
           activeFocusId: null,
-          activeResearchId: null,
           completedFocuses: [],
           completedTechnologies: [],
           focusProgressDays: 0,
-          researchProgressDays: 0,
+          researchSlots: [{id:0,technologyId:null,progressDays:0}],
         },
       },
       botTechStatesRef: { current: new Map() },
@@ -80,11 +79,10 @@ describe('SAVE/LOAD', () => {
     const botTechState: CountryTechState = {
       countryTag: 'ARG',
       activeFocusId: null,
-      activeResearchId: null,
       completedFocuses: [],
       completedTechnologies: [],
       focusProgressDays: 0,
-      researchProgressDays: 0,
+          researchSlots: [{id:0,technologyId:null,progressDays:0}],
     };
 
     const botMap = new Map<string, CountryTechState>([
@@ -103,11 +101,10 @@ describe('SAVE/LOAD', () => {
         current: {
           countryTag: 'BRA',
           activeFocusId: null,
-          activeResearchId: null,
           completedFocuses: [],
           completedTechnologies: [],
           focusProgressDays: 0,
-          researchProgressDays: 0,
+          researchSlots: [{id:0,technologyId:null,progressDays:0}],
         },
       },
       botTechStatesRef: { current: botMap },
@@ -121,9 +118,9 @@ describe('SAVE/LOAD', () => {
     expect(loaded?.technology.bots.get('ARG')).toBeDefined();
   });
 
-  it('round-trips legacy focuses, normalizes bots and keeps V2 state serialization', () => {
-    const player = {...createInitialTechState('BRA'),activeResearchId:'standardized_tools',researchProgressDays:12.5,completedTechnologies:['improved_agriculture','advanced_sawmills','advanced_mining'],activeFocusId:'focus_professional_cavalry',focusProgressDays:17,completedFocuses:['focus_cavalry_traditions','focus_kingdom_centralization','focus_civil_reforms']};
-    const bot = {...createInitialTechState('ARG'),activeResearchId:'removed',researchProgressDays:-8,completedTechnologies:['medicine','missing','medicine'],activeFocusId:'removed',focusProgressDays:8,completedFocuses:['focus_national_unity','missing','focus_national_unity']};
+  it('round-trips legacy focuses, normalizes bots and keeps V3 state serialization', () => {
+    const player = {...createInitialTechState('BRA'),researchSlots: [{id:0,technologyId:'standardized_tools',progressDays:12.5}],completedTechnologies:['improved_agriculture','advanced_sawmills','advanced_mining'],activeFocusId:'focus_professional_cavalry',focusProgressDays:17,completedFocuses:['focus_cavalry_traditions','focus_kingdom_centralization','focus_civil_reforms']};
+    const bot = {...createInitialTechState('ARG'),researchSlots: [{id:0,technologyId:'removed',progressDays:-8}],completedTechnologies:['medicine','missing','medicine'],activeFocusId:'removed',focusProgressDays:8,completedFocuses:['focus_national_unity','missing','focus_national_unity']};
     const refs: SaveGameRefs = {
       dateRef:{current:{day:1,month:1,year:1836}},provincesRef:{current:[]},countriesRef:{current:[]},armiesRef:{current:[]},
       warsRef:{current:[]},diplomaticRelationsRef:{current:[]},recruitmentsRef:{current:[]},buildingConstructionsRef:{current:[]},activeBattlesRef:{current:[]},
@@ -131,8 +128,8 @@ describe('SAVE/LOAD', () => {
     };
     expect(saveGame(refs,'focus-v2')).toBe(true);
     const raw = JSON.parse(localStorage.getItem('imperium_save_focus-v2')!);
-    expect(raw.version).toBe(2);
-    expect(raw.technology.player).toEqual(player);
+    expect(raw.version).toBe(3);
+    expect(raw.technology.player).toEqual(normalizeTechState(player));
     expect(Object.keys(raw.technology.player).sort()).toEqual(Object.keys(createInitialTechState('BRA')).sort());
     const loaded = loadGame('focus-v2')!;
     expect(loaded.technology.player).toEqual(player);
@@ -143,14 +140,14 @@ describe('SAVE/LOAD', () => {
   });
 
   it('loads V1 legacy active focuses and bot completions without renaming IDs', () => {
-    const player = {...createInitialTechState('BRA'),activeResearchId:'education',researchProgressDays:23.5,completedTechnologies:['sanitation','medicine','public_administration'],activeFocusId:'focus_scientific_patronage',focusProgressDays:23,completedFocuses:['focus_kingdom_centralization']};
-    const bot = {...createInitialTechState('ARG'),activeResearchId:'advanced_mining',researchProgressDays:7,completedTechnologies:['advanced_sawmills','missing','advanced_sawmills'],completedFocuses:['focus_professional_cavalry','missing','focus_professional_cavalry']};
+    const player = {countryTag:'BRA',activeResearchId:'education',researchProgressDays:23.5,completedTechnologies:['sanitation','medicine','public_administration'],activeFocusId:'focus_scientific_patronage',focusProgressDays:23,completedFocuses:['focus_kingdom_centralization']};
+    const bot = {countryTag:'ARG',activeFocusId:null,focusProgressDays:0,activeResearchId:'advanced_mining',researchProgressDays:7,completedTechnologies:['advanced_sawmills','missing','advanced_sawmills'],completedFocuses:['focus_professional_cavalry','missing','focus_professional_cavalry']};
     localStorage.setItem('imperium_save_focus-v1',JSON.stringify({
       id:'focus-v1',name:'Legacy',timestamp:1,date:{day:1,month:1,year:1},provinces:[],countries:[],armies:[],wars:[],relations:[],recruitments:[],constructions:[],activeBattles:[],
       playerTech:player,botTechs:{ARG:bot},
     }));
     const loaded = loadGame('focus-v1')!;
-    expect(loaded.technology.player).toEqual(player);
+    expect(loaded.technology.player).toEqual(normalizeTechState(player));
     expect(loaded.technology.bots.get('ARG')).toEqual(normalizeTechState(bot));
   });
 
@@ -160,7 +157,7 @@ describe('SAVE/LOAD', () => {
       dateRef: { current: { day: 1, month: 1, year: 1836 } },
       provincesRef: { current: [{ id: 'p1', population } as Province] }, countriesRef: { current: [] }, armiesRef: { current: [] },
       warsRef: { current: [] }, diplomaticRelationsRef: { current: [] }, recruitmentsRef: { current: [] }, buildingConstructionsRef: { current: [] },
-      playerTechStateRef: { current: { countryTag: 'BRA', activeFocusId: null, activeResearchId: null, completedFocuses: [], completedTechnologies: [], focusProgressDays: 0, researchProgressDays: 0 } },
+      playerTechStateRef: { current: { countryTag: 'BRA', activeFocusId: null, researchSlots: [{id:0,technologyId:null,progressDays:0}], completedFocuses: [], completedTechnologies: [], focusProgressDays: 0} },
       botTechStatesRef: { current: new Map() }, activeBattlesRef: { current: [] },
     } as SaveGameRefs;
     saveGame(refs, 'population');
@@ -177,7 +174,7 @@ describe('SAVE/LOAD', () => {
       provincesRef: { current: [{ id: 'p1', population: { total: 1000, growthRate: 0.002, employed: 500, unemployed: 100, satisfaction: 60 }, market } as Province] },
       countriesRef: { current: [] }, armiesRef: { current: [] }, warsRef: { current: [] }, diplomaticRelationsRef: { current: [] },
       recruitmentsRef: { current: [] }, buildingConstructionsRef: { current: [] },
-      playerTechStateRef: { current: { countryTag: 'BRA', activeFocusId: null, activeResearchId: null, completedFocuses: [], completedTechnologies: [], focusProgressDays: 0, researchProgressDays: 0 } },
+      playerTechStateRef: { current: { countryTag: 'BRA', activeFocusId: null, researchSlots: [{id:0,technologyId:null,progressDays:0}], completedFocuses: [], completedTechnologies: [], focusProgressDays: 0} },
       botTechStatesRef: { current: new Map() }, activeBattlesRef: { current: [] },
     } as SaveGameRefs;
     saveGame(refs, 'market');
@@ -188,7 +185,7 @@ describe('SAVE/LOAD', () => {
     localStorage.setItem('imperium_save_legacy', JSON.stringify({
       id: 'legacy', name: 'Legacy', timestamp: 1, date: { day: 1, month: 1, year: 1 },
       provinces: [{ id: 'p1', population: 5000 }], countries: [], armies: [], wars: [], relations: [], recruitments: [], constructions: [],
-      playerTech: { countryTag: 'BRA', activeFocusId: null, activeResearchId: null, completedFocuses: [], completedTechnologies: [], focusProgressDays: 0, researchProgressDays: 0 },
+      playerTech: { countryTag: 'BRA', activeFocusId: null, researchSlots: [{id:0,technologyId:null,progressDays:0}], completedFocuses: [], completedTechnologies: [], focusProgressDays: 0},
       botTechs: {}, activeBattles: [],
     }));
     expect(loadGame('legacy')?.world.provinces[0].population).toEqual({

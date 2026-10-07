@@ -9,7 +9,7 @@ import { calculateWorkforce, getFoodShortageStatus, normalizePopulation } from '
 import { normalizeMarket } from '../market';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
-import { calculateTechBonuses, getTechnologyBlockReason, getFocusBlockReason, startNationalFocus, startTechnologyResearch } from '../technology';
+import { normalizeTechState, calculateTechBonuses, getTechnologyBlockReason, getFocusBlockReason, startNationalFocus, startTechnologyResearch } from '../technology';
 import { chooseAILaw, enactLaw } from '../government';
 import { queueRecruitment } from '../military/recruitmentEngine';
 
@@ -36,7 +36,7 @@ export function processAIEconomicDecisions(
   logs: Array<{ actionType: 'building' | 'military' | 'tech' | 'focus' | 'government'; message: string }>;
 } {
   const logs: Array<{ actionType: 'building' | 'military' | 'tech' | 'focus' | 'government'; message: string }> = [];
-  let updatedTechState = { ...techState };
+  let updatedTechState = normalizeTechState(techState, country.tag);
   let updatedConstructions = [...buildingConstructions];
   let updatedRecruitments = [...recruitments];
   let updatedCountry = { ...country };
@@ -75,17 +75,23 @@ export function processAIEconomicDecisions(
   }
 
   // 2. PESQUISA TECNOLÓGICA
-  if (!updatedTechState.activeResearchId) {
-    const availableTechs = TECHNOLOGIES.filter(tech => getTechnologyBlockReason(updatedTechState, tech.id, updatedCountry) === null);
+  for (const slot of updatedTechState.researchSlots) {
+    if (slot.technologyId) continue;
+    const availableTechs = TECHNOLOGIES.filter(tech => getTechnologyBlockReason(updatedTechState, tech.id, updatedCountry, slot.id) === null);
     const owned = provinces.filter(province => province.owner === country.tag);
     const shortage = owned.some(province => Object.values(normalizeMarket(province.market).goods).some(good => good.shortage > 0));
     const lowCapacity = owned.some(province => (province.buildings ?? []).filter(building => ['farm', 'workshop', 'iron_mine', 'lumber_mill'].includes(building.type)).length < 2);
     const weakEconomy = country.economy && (country.economy.goldIncome < country.economy.goldExpense || country.economy.goldIncome < 5);
     const priority = atWar ? 'MILITARY' : shortage || lowCapacity ? 'INDUSTRY' : weakEconomy ? 'ECONOMY' : 'SOCIETY';
-    // Definition order is a deterministic tie breaker, with other categories as fallback.
-    const selected = [...availableTechs].sort((a, b) => Number(b.category === priority) - Number(a.category === priority))[0];
+    const activeCategories = new Set(updatedTechState.researchSlots.map(slot =>
+      TECHNOLOGIES.find(tech => tech.id === slot.technologyId)?.category));
+    // Prefer a different category for additional slots, then the existing priority.
+    // Definition order breaks ties deterministically.
+    const selected = [...availableTechs].sort((a, b) =>
+      Number(activeCategories.has(a.category)) - Number(activeCategories.has(b.category))
+      || Number(b.category === priority) - Number(a.category === priority))[0];
     if (selected) {
-      const research = startTechnologyResearch(updatedTechState, selected.id, updatedCountry);
+      const research = startTechnologyResearch(updatedTechState, selected.id, updatedCountry, slot.id);
       if (research.techState) {
         updatedTechState = research.techState;
         updatedCountry = { ...updatedCountry, resources: { ...updatedCountry.resources, gold: updatedCountry.resources.gold - research.cost } };

@@ -64,10 +64,10 @@ describe('Movement Commands V2 UI', () => {
 });
 
 describe('Movement Commands V2 persistence', () => {
-  it('round-trips a queued plan at version 2 and continues it after load', () => {
+  it('round-trips a queued plan at version 3 and continues it after load', () => {
     const refs = saveFixture(); expect(saveGame(refs, 'route')).toBe(true);
     const loaded = loadGame('route')!;
-    expect(loaded.version).toBe(2); expect(loaded.military.armies[0]).toEqual(refs.armiesRef.current[0]);
+    expect(loaded.version).toBe(3); expect(loaded.military.armies[0]).toEqual(refs.armiesRef.current[0]);
     const first = processMovementTick({ ...loaded.world, armies: loaded.military.armies, relations: [], addLog: vi.fn() });
     const units = [...first.armies, ...first.arrivedArmies];
     const next = advanceMovementPlans(units, loaded.world.provinces, []).armies[0];

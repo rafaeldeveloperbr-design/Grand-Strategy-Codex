@@ -60,8 +60,8 @@ describe('Governo e Leis integrados',()=>{
     const informed=country({...DEFAULT_LAWS,intelligence:'intel_agency'});
     const focusState={...createInitialTechState('TST'),activeFocusId:'focus_national_unity'};
     expect(processDailyTechProgress(focusState,informed,'medium',true).techState.focusProgressDays).toBeCloseTo(1.05);
-    const researchState={...createInitialTechState('TST'),activeResearchId:'improved_agriculture'};
-    expect(processDailyTechProgress(researchState,informed,'medium',true).techState.researchProgressDays).toBeCloseTo(1.05);
+    const researchState={...createInitialTechState('TST'),researchSlots: [{id:0,technologyId:'improved_agriculture',progressDays:0}]};
+    expect(processDailyTechProgress(researchState,informed,'medium',true).techState.researchSlots[0].progressDays).toBeCloseTo(1.05);
   });
   it('IA reage a guerra, fome e paz sem ignorar requisitos',()=>{
     expect(chooseAILaw(country(DEFAULT_LAWS),[province()],{atWar:false})).toBe('intel_agency');

@@ -7,6 +7,7 @@ export type TechnologyEffect =
   | { type: 'PRODUCTION_EFFICIENCY' | 'RECRUITMENT_TIME' | 'COMBAT_POWER' | 'MILITARY_MAINTENANCE' | 'FORTIFICATION_BONUS' | 'POPULATION_GROWTH' | 'POPULATION_CAPACITY' | 'GOLD_INCOME' | 'RESEARCH_SPEED'; value: number };
 
 export type RewardEffect =
+  | { type: 'RESEARCH_SLOTS'; value: number }
   | { type: 'COMBAT_POWER'; value: number; unitType: UnitKind }
   | { type: 'GOOD_PRODUCTION'; value: number; good: 'food' | 'wood' | 'iron' | 'tools' }
   | { type: 'GOLD_INCOME' | 'BUILD_COST' | 'BUILD_TIME' | 'MANPOWER' | 'STABILITY' | 'RESEARCH_SPEED' | 'DEFENSE_BONUS' | 'RECRUITMENT_TIME' | 'MILITARY_MAINTENANCE' | 'POPULATION_GROWTH' | 'POPULATION_CAPACITY' | 'SATISFACTION' | 'MIGRATION_ATTRACTION' | 'INTERNAL_TRADE'; value: number };
@@ -24,4 +25,18 @@ export interface NationalFocus {
   position: { column: number; row: number };
 }
 export interface Technology { position: { column: number; row: number }; id: string; title: string; description: string; category: TechnologyCategory; icon: string; costGold: number; durationDays: number; prerequisites: string[]; effects: TechnologyEffect[] }
-export interface CountryTechState { countryTag: string; activeFocusId: string | null; activeResearchId: string | null; completedFocuses: string[]; completedTechnologies: string[]; focusProgressDays: number; researchProgressDays: number }
+export interface ResearchSlot {
+  id: number;
+  technologyId: string | null;
+  progressDays: number;
+}
+export interface CountryTechState {
+  countryTag: string;
+  activeFocusId: string | null;
+  researchSlots: ResearchSlot[];
+  completedFocuses: string[];
+  completedTechnologies: string[];
+  focusProgressDays: number;
+}
+/** Read-only boundary for pre-slot saves, never used as live state. */
+export type LegacyCountryTechState = Omit<CountryTechState, 'researchSlots'> & { activeResearchId: string | null; researchProgressDays: number };

@@ -63,7 +63,7 @@ describe('Buildings V2 actual save/load', () => {
     const refs = { provincesRef: { current: [province] }, countriesRef: { current: [country] }, armiesRef: { current: [] }, warsRef: { current: [] }, diplomaticRelationsRef: { current: [] }, recruitmentsRef: { current: [] }, buildingConstructionsRef: { current: [order] }, playerTechStateRef: { current: createInitialTechState(country.tag) }, botTechStatesRef: { current: new Map() }, activeBattlesRef: { current: [] }, dateRef: { current: { day: 1, month: 1, year: 1444 } } };
     saveGame(refs, 'buildings-v2');
     const loaded = loadGame('buildings-v2')!;
-    expect(loaded.version).toBe(2); expect(loaded.economy.constructions).toEqual([order]);
+    expect(loaded.version).toBe(3); expect(loaded.economy.constructions).toEqual([order]);
     expect(getBuildingLevel(loaded.world.provinces[0], 'military_arsenal')).toBe(3);
     const raw = JSON.parse(localStorage.getItem('imperium_save_buildings-v2')!);
     raw.world.provinces[0].buildings = [{ type: 'lumber', level: 4, daysRemaining: 0 }];

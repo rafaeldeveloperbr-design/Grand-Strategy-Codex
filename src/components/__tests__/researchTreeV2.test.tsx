@@ -48,11 +48,11 @@ describe('Research UI V2', () => {
     expect(screen.queryByRole('button',{name:'Cancelar pesquisa'})).toBeNull();
   });
   it('shows canonical active progress in the node, summary and details', () => {
-    const state = {...initial(),activeResearchId:root.id,researchProgressDays:root.durationDays/2};
+    const state = {...initial(),researchSlots: [{id:0,technologyId:root.id,progressDays:root.durationDays/2}]};
     setup(state);
     expect(node().classList.contains('research-node--active')).toBe(true);
     expect(within(node()).getByRole('progressbar').getAttribute('aria-valuenow')).toBe('50');
-    expect(screen.getByText(`Pesquisa atual: ${root.title} — 50%`)).toBeTruthy();
+    expect(screen.getByText(`${root.title} — 50%`)).toBeTruthy();
     fireEvent.click(node());
     expect(within(details()).getByText(/Progresso:.*50%/).textContent).toContain(`~${engine.getResearchProgress(state)!.estimatedDaysRemaining} dias restantes`);
   });
@@ -107,11 +107,11 @@ describe('Research UI V2', () => {
   it('starts only through the pinned action with the correct id', () => {
     const view = setup(); fireEvent.click(node());
     fireEvent.click(screen.getByRole('button',{name:'Iniciar pesquisa'}));
-    expect(view.onStartResearch).toHaveBeenCalledExactlyOnceWith(root.id);
+    expect(view.onStartResearch).toHaveBeenCalledExactlyOnceWith(root.id,0);
     expect(screen.queryByRole('dialog',{name:`Detalhes de ${root.title}`})).toBeNull();
   });
   it('cancels the active research through the pinned action', () => {
-    const view = setup({...initial(),activeResearchId:root.id,researchProgressDays:1});
+    const view = setup({...initial(),researchSlots: [{id:0,technologyId:root.id,progressDays:1}]});
     fireEvent.click(node()); fireEvent.click(screen.getByRole('button',{name:'Cancelar pesquisa'}));
     expect(view.onCancelResearch).toHaveBeenCalledOnce();
     expect(view.onStartResearch).not.toHaveBeenCalled();
@@ -124,7 +124,7 @@ describe('Research UI V2', () => {
     }
   });
   it('creates hidden, unfocusable connections for every prerequisite with semantic states', () => {
-    const view = setup({...initial(),activeResearchId:child.id,completedTechnologies:child.prerequisites});
+    const view = setup({...initial(),researchSlots: [{id:0,technologyId:child.id,progressDays:0}],completedTechnologies:child.prerequisites});
     expect(view.container.querySelectorAll('.research-connection')).toHaveLength(TECHNOLOGIES.reduce((sum,t) => sum+t.prerequisites.length,0));
     for (const tech of TECHNOLOGIES) for (const id of tech.prerequisites) expect(view.container.querySelector(`path[data-source="${id}"][data-target="${tech.id}"]`)).toBeTruthy();
     const svg = view.container.querySelector('svg')!;
@@ -169,8 +169,8 @@ describe('Research UI V2', () => {
     view.rerender(<ResearchModal {...view} playerCountry={{...view.playerCountry,resources:{...view.playerCountry.resources,gold:0}}} />);
     expect(screen.queryByRole('button',{name:'Iniciar pesquisa'})).toBeNull();
     expect(screen.getByText('Ouro insuficiente')).toBeTruthy();
-    view.rerender(<ResearchModal {...view} techState={{...initial(),activeResearchId:child.id}} />);
-    expect(screen.getByText('Outra pesquisa já ativa')).toBeTruthy();
+    view.rerender(<ResearchModal {...view} techState={{...initial(),researchSlots: [{id:0,technologyId:child.id,progressDays:0}]}} />);
+    expect(screen.getByText('Nenhum slot de pesquisa livre')).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole('button',{name:'Voltar à árvore'}));
   });
   it('revalidates again at action time', () => {

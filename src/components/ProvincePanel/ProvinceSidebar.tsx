@@ -89,7 +89,7 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
             <h4 className="province-panel__sidebar-subtitle">⚔️ Recrutando</h4>
             {recruitmentsHere.map((rec) => {
               const def = UNIT_DEFINITIONS[rec.unitType];
-              const totalTime = def.trainingTime;
+              const totalTime = rec.totalDays ?? def.trainingTime;
               const progress = Math.max(
                 0,
                 Math.min(

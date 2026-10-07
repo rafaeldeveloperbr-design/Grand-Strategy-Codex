@@ -1,5 +1,7 @@
 # Military Units V3 moderno — auditoria e plano
 
+> Registro da etapa preparatória preservado. O catálogo moderno foi posteriormente implementado na branch `feat/Military-Units-V3`; decisões finais, compatibilidade e balance estão em [MILITARY_UNITS_V3.md](./MILITARY_UNITS_V3.md). Os trechos abaixo descrevem o estado auditado antes dessa implementação.
+
 ## Escopo desta etapa
 
 Auditoria realizada na branch atual `feat/Buildings-V2`, com árvore limpa no início. Nenhuma unidade moderna foi implementada. Catálogo, custos, balance, IA, UI, recrutamento, combate e formato de saves continuam iguais. Não houve commit ou push.

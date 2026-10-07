@@ -1,8 +1,9 @@
-import { Country, Province, UnitType, Recruitment, BuildingConstruction } from '../../types';
+import { Army, Country, Province, Recruitment, BuildingConstruction } from '../../types';
 import { CountryTechState } from '../../types/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
 import { LAWS } from '../../constants/laws';
 
+import { rankRecruitmentProjects } from '../military/aiRecruitment';
 import { startBuilding } from '../buildings';
 import { calculateWorkforce, getFoodShortageStatus, normalizePopulation } from '../population';
 import { normalizeMarket } from '../market';
@@ -10,7 +11,7 @@ import { UNIT_DEFINITIONS } from '../../data/units';
 import { getBuildingName, getUnitName } from '../../utils/translations';
 import { calculateTechBonuses, startTechnologyResearch } from '../technology';
 import { chooseAILaw, enactLaw } from '../government';
-import { getRecruitmentBlockReason, queueRecruitment } from '../military/recruitmentEngine';
+import { queueRecruitment } from '../military/recruitmentEngine';
 
 import { rankBuildingProjects } from '../buildings/constructionAI';
 import type { LogisticsSnapshot } from '../logistics';
@@ -25,6 +26,7 @@ export function processAIEconomicDecisions(
   canRecruitMilitary: boolean = true,
   atWar: boolean = false,
   logistics?: LogisticsSnapshot,
+  armies: Army[] = [],
 ): {
   techState: CountryTechState;
   buildingConstructions: BuildingConstruction[];
@@ -157,19 +159,14 @@ export function processAIEconomicDecisions(
   }
 
   // 4. RECRUTAMENTO DE TROPAS MILITARES
-  if (updatedCountry.resources.gold >= 250 && updatedCountry.resources.manpower >= 1000) {
+  if (updatedCountry.resources.gold > 0 && updatedCountry.resources.manpower > 0) {
     if (canRecruitMilitary) {
       const aiProvinces = updatedProvinces.filter(p => p.owner === country.tag);
 
       if (aiProvinces.length > 0) {
-        const targetProvince = [...aiProvinces].sort((a, b) => b.development - a.development || a.id.localeCompare(b.id))[0];
-        const unitTypes = Object.keys(UNIT_DEFINITIONS) as UnitType[];
-        const existingCounts = new Map<UnitType, number>();
-        for (const recruitment of updatedRecruitments.filter(item => item.owner === country.tag)) existingCounts.set(recruitment.unitType, (existingCounts.get(recruitment.unitType) ?? 0) + recruitment.count);
-        const desiredWeight: Record<UnitType, number> = { infantry: 6, archers: 2, cavalry: 2, artillery: atWar ? 2 : 1, heavy_cavalry: 1, elite_guard: 1, siege_engine: atWar ? 1 : 0 };
-        const available = unitTypes.filter(type => desiredWeight[type] > 0 && getRecruitmentBlockReason(type, { country: updatedCountry, province: targetProvince, technology: updatedTechState }) === null);
-        const chosenUnit = available.sort((a, b) => ((existingCounts.get(a) ?? 0) + 1) / desiredWeight[a] - ((existingCounts.get(b) ?? 0) + 1) / desiredWeight[b] || a.localeCompare(b))[0];
-        if (chosenUnit) {
+        const project = rankRecruitmentProjects(updatedCountry, updatedProvinces, updatedTechState, armies, updatedRecruitments, atWar, logistics)[0];
+        if (project) {
+          const targetProvince = project.province, chosenUnit = project.type;
           const result = queueRecruitment(chosenUnit, { country: updatedCountry, province: targetProvince, technology: updatedTechState }, `ai_rec_${country.tag}_${dateString}_${updatedRecruitments.length}`);
           if (result.success) {
             updatedCountry = result.country;

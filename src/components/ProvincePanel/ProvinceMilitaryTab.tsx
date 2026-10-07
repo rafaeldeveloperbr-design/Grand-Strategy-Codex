@@ -1,7 +1,7 @@
 import React from 'react';
 import { getProvinceLogistics, type LogisticsSnapshot } from '../../engine/logistics';
 import { Province, Country, Army, UnitType } from '../../types';
-import { UNIT_DEFINITIONS } from '../../data/units';
+import { UNIT_DEFINITIONS, RECRUITABLE_UNIT_IDS, getUnitTechnologyName } from '../../data/units';
 import { calculateArmyMorale, calculateArmyOrganization, calculateArmySize, getArmySupply, getEffectiveRecruitmentCost, getRecruitmentBlockReason } from '../../engine/military';
 import type { CountryTechState } from '../../types/technology';
 
@@ -61,7 +61,7 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
       <div className="province-panel__section">
         <h3 className="province-panel__subtitle">Recrutar Unidades</h3>
         <div className="province-panel__build-options">
-          {(Object.keys(UNIT_DEFINITIONS) as UnitType[]).map((type) => {
+          {RECRUITABLE_UNIT_IDS.map((type) => {
             const def = UNIT_DEFINITIONS[type];
             const context = { country: playerCountry, province, technology };
             const cost = getEffectiveRecruitmentCost(type, context);
@@ -83,6 +83,11 @@ export const ProvinceMilitaryTab: React.FC<ProvinceMilitaryTabProps> = ({
                       {def.role} ATK {def.attack} · DEF {def.defense} · CHOQUE {def.shock} · CERCO {def.siege}
                     </span>
                   </div>
+                </div>
+                <div className="province-panel__build-desc">
+                  Força {def.maxStrength} · Mobilidade {def.mobility} · Supply {def.supplyUse} · Manutenção {def.maintenance}/dia
+                  <br />Requisitos: {def.requiredArsenalLevel ? `Arsenal Militar nível ${def.requiredArsenalLevel}` : 'Sem Arsenal'}
+                  {def.requiredTechnology ? ` · Tecnologia: ${getUnitTechnologyName(def.requiredTechnology)}` : ''}
                 </div>
                 <div className="province-panel__build-costs">
                   <span className="province-panel__build-cost">💰 {cost.gold}</span>

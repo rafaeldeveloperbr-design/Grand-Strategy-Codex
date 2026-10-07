@@ -1,3 +1,4 @@
+import { getUnitName } from '../utils/translations';
 import React from 'react';
 import { CombatResult, Country } from '../types';
 import { formatArmySize } from '../utils/formatters';
@@ -54,15 +55,6 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
     }
   };
 
-  const UNIT_LABELS: Record<string, string> = {
-    infantry: '🗡️ Infantaria',
-    cavalry: '🐎 Cavalaria',
-    artillery: '💣 Artilharia',
-    archers: '🏹 Arqueiros',
-    heavy_cavalry: '🐴 Cavalaria Pesada',
-    elite_guard: '👑 Guarda Real',
-    siege_engine: '🏗️ Armas de Cerco',
-  };
 
   const renderComposition = (
     composition: NonNullable<typeof combatReport>['attacker']['regimentComposition']
@@ -85,7 +77,7 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
           return (
             <div className="stat-row" key={type}>
               <span className="stat-label">
-                {UNIT_LABELS[type] ?? type}
+                {getUnitName(type)}
               </span>
 
               <span className="stat-value">

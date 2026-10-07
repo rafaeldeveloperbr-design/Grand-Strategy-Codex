@@ -6,11 +6,17 @@
  */
 
 import { UnitDefinition, UnitType } from '../types';
+import { TECHNOLOGIES } from './technology';
 
 /**
  * Definições de todos os tipos de unidades militares
  */
 export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
+  motorized_infantry: { type: 'motorized_infantry', name: 'Infantaria Motorizada', icon: '🚚', role: 'Infantaria móvel, com equipamento e abastecimento mais caros.', cost: 100, manpowerCost: 1000, ironCost: 10, toolsCost: 8, trainingTime: 40, maxStrength: 1000, maxMorale: 100, maxOrganization: 100, attack: 16, defense: 11, shock: 8, siege: 1, mobility: 1.6, supplyUse: 1.6, maintenance: .2, requiredArsenalLevel: 1 },
+  armor: { type: 'armor', name: 'Blindados', icon: '🛡️', role: 'Choque ofensivo pesado; exige indústria e boa logística.', cost: 240, manpowerCost: 500, ironCost: 24, toolsCost: 18, trainingTime: 70, maxStrength: 500, maxMorale: 100, maxOrganization: 90, attack: 32, defense: 18, shock: 28, siege: 4, mobility: 1.3, supplyUse: 3, maintenance: .5, requiredArsenalLevel: 2 },
+  reconnaissance: { type: 'reconnaissance', name: 'Reconhecimento', icon: '🔭', role: 'Força leve de elevada mobilidade e combate limitado.', cost: 70, manpowerCost: 500, ironCost: 5, toolsCost: 5, trainingTime: 25, maxStrength: 500, maxMorale: 90, maxOrganization: 95, attack: 7, defense: 6, shock: 5, siege: 0, mobility: 2, supplyUse: .7, maintenance: .14, requiredArsenalLevel: 1 },
+  engineers: { type: 'engineers', name: 'Engenheiros', icon: '🛠️', role: 'Apoio defensivo e cerco, com ataque limitado.', cost: 90, manpowerCost: 600, ironCost: 8, toolsCost: 10, trainingTime: 35, maxStrength: 600, maxMorale: 95, maxOrganization: 100, attack: 9, defense: 17, shock: 2, siege: 12, mobility: .9, supplyUse: 1.1, maintenance: .15, requiredArsenalLevel: 1 },
+  garrison: { type: 'garrison', name: 'Guarnição', icon: '🏰', role: 'Defesa territorial econômica; inadequada para ofensivas longas.', cost: 35, manpowerCost: 1000, ironCost: 2, toolsCost: 2, trainingTime: 20, maxStrength: 1000, maxMorale: 90, maxOrganization: 95, attack: 5, defense: 15, shock: 1, siege: 0, mobility: .4, supplyUse: .6, maintenance: .06 },
   infantry: {
     type: 'infantry',
     name: 'Infantaria',
@@ -39,6 +45,7 @@ export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
   },
   artillery: {
     type: 'artillery',
+    requiredArsenalLevel: 1,
     name: 'Artilharia',
     icon: '💣',
     cost: 120,
@@ -103,6 +110,13 @@ export const UNIT_DEFINITIONS: Record<UnitType, UnitDefinition> = {
     role: 'Especialista em neutralizar fortalezas; frágil em campo.', maxStrength: 400, maxMorale: 75, maxOrganization: 70, shock: 2, siege: 35, supplyUse: 2.2, maintenance: .3, requiredTechnology: 'fortifications',
   },
 };
+
+export const RECRUITABLE_UNIT_IDS = ['infantry', 'motorized_infantry', 'armor', 'artillery', 'reconnaissance', 'engineers', 'garrison'] as const;
+export function isRecognizedUnitType(value: unknown): value is UnitType {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(UNIT_DEFINITIONS, value);
+}
+export const isRecruitableUnitType = (value: UnitType): boolean => RECRUITABLE_UNIT_IDS.some(id => id === value);
+export const getUnitTechnologyName = (id: string): string => TECHNOLOGIES.find(t => t.id === id)?.title ?? 'Tecnologia indisponível';
 
 /**
  * Calcula o custo total para recrutar uma unidade

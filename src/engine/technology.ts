@@ -1,3 +1,5 @@
+import { UNIT_DEFINITIONS } from '../data/units';
+import type { UnitType } from '../types';
 import type { Country } from '../types';
 import type { CountryTechState, RewardEffect, TechnologyEffect } from '../types/technology';
 import type { AIDifficulty } from '../types/difficulty';
@@ -7,7 +9,7 @@ import { calculateLawModifiers } from './government';
 import { getGoodName, getUnitName } from '../utils/translations';
 
 export interface TechnologyBonuses {
-  combatPowerBonus: { infantry: number; cavalry: number; artillery: number };
+  combatPowerBonus: Record<UnitType, number>;
   goldIncomeMultiplier: number;
   buildCostMultiplier: number;
   buildTimeMultiplier: number;
@@ -29,7 +31,7 @@ export interface TechnologyModifierEntry { label: string; percent: number }
 export interface ResearchProgress { current: number; required: number; percent: number; remainingProgress: number; estimatedDaysRemaining: number }
 
 const createNeutralBonuses = (): TechnologyBonuses => ({
-  combatPowerBonus: { infantry: 0, cavalry: 0, artillery: 0 },
+  combatPowerBonus: Object.fromEntries(Object.keys(UNIT_DEFINITIONS).map(id => [id, 0])) as Record<UnitType, number>,
   goldIncomeMultiplier: 1,
   buildCostMultiplier: 1,
   buildTimeMultiplier: 1,
@@ -123,7 +125,7 @@ function applyTechnologyEffect(effect: TechnologyEffect, bonuses: TechnologyBonu
     case 'GOOD_PRODUCTION': bonuses.productionMultipliers[effect.good] += effect.value; break;
     case 'PRODUCTION_EFFICIENCY': for (const good of ['food', 'wood', 'iron', 'tools'] as const) bonuses.productionMultipliers[good] += effect.value; break;
     case 'RECRUITMENT_TIME': bonuses.recruitmentTimeMultiplier += effect.value; break;
-    case 'COMBAT_POWER': for (const unit of ['infantry', 'cavalry', 'artillery'] as const) bonuses.combatPowerBonus[unit] += effect.value; break;
+    case 'COMBAT_POWER': for (const unit of Object.keys(UNIT_DEFINITIONS) as UnitType[]) bonuses.combatPowerBonus[unit] += effect.value; break;
     case 'MILITARY_MAINTENANCE': bonuses.militaryMaintenanceMultiplier += effect.value; break;
     case 'FORTIFICATION_BONUS': bonuses.fortificationMultiplier += effect.value; break;
     case 'POPULATION_GROWTH': bonuses.populationGrowthMultiplier += effect.value; break;

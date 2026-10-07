@@ -79,10 +79,10 @@ export function synchronizeBattle(battle: BattleExtended, armies: Army[]): Battl
 export function checkAllProvinceCombats(
   armies: Army[], provinces: Province[], wars: WarPair[], currentDate: GameDate,
   activeBattles: BattleExtended[],
-  _techBonusesByCountry?: Map<string, { infantry: number; cavalry: number; artillery: number }>,
+  techBonusesByCountry?: Map<string, Partial<Record<UnitType, number>>>,
   logistics?: LogisticsSnapshot
 ) {
-  void _techBonusesByCountry;
+
   let updatedArmies = [...armies];
   const updatedBattles: BattleExtended[] = [];
   const newBattles: BattleExtended[] = [];
@@ -116,7 +116,7 @@ export function checkAllProvinceCombats(
     const attackers = available.filter(a => a.owner !== province.owner && atWar(a.owner, province.owner, wars));
     if (!attackers.length || !defenders.length) continue;
     const battle = startContinuousBattle(attackers, defenders, province, currentDate,
-      `battle_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, logistics);
+      `battle_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, logistics, techBonusesByCountry);
     newBattles.push(battle);
     updatedArmies = updatedArmies.map(a => battle.participantArmyIds.includes(a.id) ? { ...a, inCombat: true } : a);
   }
@@ -141,7 +141,7 @@ function getRegimentComposition(
 function createBattleSideSnapshot(
   armies: Army[],
   province: Province,
-  logistics?: LogisticsSnapshot
+  logistics?: LogisticsSnapshot, unitBonuses: ReadonlyMap<string, Partial<Record<UnitType, number>>> = new Map()
 ): BattleSideSnapshot {
   const troops = armies.reduce(
     (sum, army) => sum + calculateArmySize(army),
@@ -162,7 +162,7 @@ function createBattleSideSnapshot(
 
   const stats = armies.reduce(
     (total, army) => {
-      const armyStats = calculateArmyCombatStats(army);
+      const armyStats = calculateArmyCombatStats(army, unitBonuses.get(army.owner));
 
       return {
         attack: total.attack + armyStats.attack,
@@ -196,7 +196,7 @@ function createBattleSideSnapshot(
   };
 }
 
-export function startContinuousBattle(attackerArmies: Army[], defenderArmies: Army[], province: Province, currentDate: GameDate, battleId: string, logistics?: LogisticsSnapshot): BattleExtended {
+export function startContinuousBattle(attackerArmies: Army[], defenderArmies: Army[], province: Province, currentDate: GameDate, battleId: string, logistics?: LogisticsSnapshot, unitBonuses: ReadonlyMap<string, Partial<Record<UnitType, number>>> = new Map()): BattleExtended {
   const attackerTroops = attackerArmies.reduce((sum, army) => sum + calculateArmySize(army), 0);
   const defenderTroops = defenderArmies.reduce((sum, army) => sum + calculateArmySize(army), 0);
   const smaller = Math.min(attackerTroops, defenderTroops);
@@ -218,7 +218,7 @@ export function startContinuousBattle(attackerArmies: Army[], defenderArmies: Ar
 
     attackerCombatSnapshot: createBattleSideSnapshot(
       attackerArmies,
-      province, logistics
+      province, logistics, unitBonuses
     ),
 
     defenderCombatSnapshot: createBattleSideSnapshot(
@@ -243,7 +243,7 @@ export function addReinforcementsToBattle(battle: BattleExtended, army: Army, si
 }
 
 /** Processes every participant, including collective retreat/annihilation. */
-export function processBattleDay(battle: BattleExtended, armies: Army[], province: Province, allProvinces: Province[], combatMultipliers: ReadonlyMap<string, number> = new Map(), fortificationMultipliers: ReadonlyMap<string, number> = new Map(), logistics?: LogisticsSnapshot) {
+export function processBattleDay(battle: BattleExtended, armies: Army[], province: Province, allProvinces: Province[], combatMultipliers: ReadonlyMap<string, number> = new Map(), fortificationMultipliers: ReadonlyMap<string, number> = new Map(), logistics?: LogisticsSnapshot, unitBonuses: ReadonlyMap<string, Partial<Record<UnitType, number>>> = new Map()) {
   const synced = synchronizeBattle(battle, armies);
   if (!synced) {
     const attackerAlive = sideTotal(battle, armies, 'attacker') > 0;
@@ -261,8 +261,8 @@ export function processBattleDay(battle: BattleExtended, armies: Army[], provinc
   const fortificationMultiplier = fortificationMultipliers.get(defenderOwner) ?? 1;
   const attackerArmies = participants(synced, armies, 'attacker');
   const defenderArmies = participants(synced, armies, 'defender');
-  const attackerStats = attackerArmies.reduce((total, army) => { const stats = calculateArmyCombatStats(army); return { attack: total.attack + stats.attack, defense: total.defense + stats.defense, shock: total.shock + stats.shock }; }, { attack: 0, defense: 0, shock: 0 });
-  const defenderStats = defenderArmies.reduce((total, army) => { const stats = calculateArmyCombatStats(army); return { attack: total.attack + stats.attack, defense: total.defense + stats.defense, shock: total.shock + stats.shock }; }, { attack: 0, defense: 0, shock: 0 });
+  const attackerStats = attackerArmies.reduce((total, army) => { const stats = calculateArmyCombatStats(army, unitBonuses.get(army.owner)); return { attack: total.attack + stats.attack, defense: total.defense + stats.defense, shock: total.shock + stats.shock }; }, { attack: 0, defense: 0, shock: 0 });
+  const defenderStats = defenderArmies.reduce((total, army) => { const stats = calculateArmyCombatStats(army, unitBonuses.get(army.owner)); return { attack: total.attack + stats.attack, defense: total.defense + stats.defense, shock: total.shock + stats.shock }; }, { attack: 0, defense: 0, shock: 0 });
   const attackerSupply = attackerArmies.reduce((sum, army) => sum + getArmySupply(army, province, armies, logistics).combatMultiplier, 0) / attackerArmies.length;
   const defenderSupply = defenderArmies.reduce((sum, army) => sum + getArmySupply(army, province, armies, logistics).combatMultiplier, 0) / defenderArmies.length;
   const siege = attackerArmies.reduce((sum, army) => sum + calculateArmySiege(army), 0);

@@ -24,15 +24,15 @@ describe('Economy V2.1 national UI', () => {
     expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
     expect(screen.getByRole('heading',{name: 'Economia nacional · Brasil'})).toBeTruthy();
     expect(screen.getByRole('table').textContent).toContain('Mercado nacional e comércio por bem');
-    const food = screen.getByRole('rowheader',{name: 'FOOD'}).closest('tr')!;
+    const food = screen.getByRole('rowheader',{name: 'Alimentos'}).closest('tr')!;
     expect(within(food).getAllByRole('cell').map(cell => cell.textContent)).toEqual(['9,0','12,0','15,0','100,0','-3,0','3,0','0,0','25%','2,0 ouro']);
-    expect(screen.getAllByRole('rowheader').map(cell => cell.textContent)).toEqual(['FOOD','WOOD','IRON','TOOLS']);
+    expect(screen.getAllByRole('rowheader').map(cell => cell.textContent)).toEqual(['Alimentos','Madeira','Ferro','Ferramentas']);
     expect(screen.getByText('Importações totais').parentElement!.textContent).toBe('Importações totais6,0 ouro');
     expect(screen.getByText('Exportações totais').parentElement!.textContent).toBe('Exportações totais8,0 ouro');
     expect(screen.getByText('Saldo comercial · Superávit').parentElement!.textContent).toContain('+2,0 ouro');
     expect(screen.getByText('Receita tarifária').parentElement!.textContent).toContain('0,6 ouro');
-    expect(screen.getByText(/FOOD ← Chile/)).toBeTruthy();
-    expect(screen.getByText(/TOOLS → Argentina/)).toBeTruthy();
+    expect(screen.getByText(/Alimentos ← Chile/)).toBeTruthy();
+    expect(screen.getByText(/Ferramentas → Argentina/)).toBeTruthy();
   });
   it('shows a trade deficit with its sign and allows tariff changes within 0..50%', () => {
     const props = fixture(); props.country.trade.goods.tools.exportValue = 0;

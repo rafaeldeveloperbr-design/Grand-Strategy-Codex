@@ -77,6 +77,7 @@ export function migrateLegacyRebels(provinces: Province[], countries: Country[],
 function normalizeRebelRegiments(regiments: Army['regiments']): Army['regiments'] {
   return regiments.flatMap(regiment => {
     const definition = UNIT_DEFINITIONS[regiment.type], result: Army['regiments'] = [];
+    if (regiment.strength <= (regiment.maxStrength ?? definition.maxStrength)) return [regiment];
     for (let remaining = clamp(regiment.strength, 1000000); remaining > 0; remaining -= definition.maxStrength) {
       result.push({ ...regiment, strength: Math.min(remaining, definition.maxStrength), maxStrength: definition.maxStrength,
         organization: clamp(regiment.organization ?? definition.maxOrganization, definition.maxOrganization),

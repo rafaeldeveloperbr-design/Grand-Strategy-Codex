@@ -29,7 +29,7 @@ describe('Buildings V2 cards and activities', () => {
     expect(infrastructure.getByText(/Nível 2 \/ 5/)).toBeTruthy();
     expect(infrastructure.getByText(/Atual:.*\+16% eficiência logística/)).toBeTruthy();
     expect(infrastructure.getByText(/Próximo nível 3:.*\+24% eficiência logística/)).toBeTruthy();
-    expect(infrastructure.getByText('Ouro 1170')).toBeTruthy(); expect(infrastructure.getByText('WOOD 45')).toBeTruthy();
+    expect(infrastructure.getByText('Ouro 1170')).toBeTruthy(); expect(infrastructure.getByText('Madeira 45')).toBeTruthy();
     expect(infrastructure.getByText('Tempo: 86 dias')).toBeTruthy();
   });
   it('uses the shared prerequisite and resource reasons, and dispatches only available upgrades', () => {

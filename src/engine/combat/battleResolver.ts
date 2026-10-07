@@ -1,3 +1,4 @@
+import type { UnitType } from '../../types';
 import { Army, Province, GameDate, CombatResult } from '../../types';
 import {
   calculateArmyBasePower,
@@ -19,8 +20,8 @@ export function resolveBattle(
   defender: Army,
   province: Province,
   currentDate: GameDate,
-  attackerTechBonuses?: { infantry: number; cavalry: number; artillery: number },
-  defenderTechBonuses?: { infantry: number; cavalry: number; artillery: number }
+  attackerTechBonuses?: Partial<Record<UnitType, number>>,
+  defenderTechBonuses?: Partial<Record<UnitType, number>>
 ): CombatResult {
   // Salva estado original dos exércitos
   const attackerOriginal = { ...attacker, regiments: attacker.regiments.map(r => ({ ...r })) };

@@ -1,3 +1,4 @@
+import { processPoliticalTick } from '../engine/politics';
 import { cleanupDiplomacy } from '../engine/diplomacy';
 import {
   useCallback,
@@ -191,6 +192,10 @@ export function useGameLoop(props: Props) {
     // 2. ECONOMY - primeiro, gera recursos e recrutamentos
     const eco = processEconomyTick({ recruitments, armies, countries, provinces, buildingConstructions, wars, relations, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, date: snapshot.date, allCountries, addToast, addAILog, addLog, formatGameDate });
     recruitments = eco.recruitments; armies = eco.armies; provinces = eco.provinces; buildingConstructions = eco.buildingConstructions; countries = eco.countries;
+
+    const political = processPoliticalTick(countries,{provinces,armies,wars,date:snapshot.date},playerCountryTag);
+    countries = political.countries;
+    political.messages.forEach(message => {addLog(message);addAILog('Governo','government',message,formatGameDate(snapshot.date));});
 
     // 4. STABILITY - depende de economy
     const unr = processUnrestTick({ provinces, armies, countries, wars, relations, snapshot, playerCountryTag, allCountries, addLog, addToast });

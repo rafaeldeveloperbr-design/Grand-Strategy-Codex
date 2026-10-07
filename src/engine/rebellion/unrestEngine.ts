@@ -1,9 +1,10 @@
 import type { Army, Country, GameDate, Province, War } from '../../types';
 import { normalizePopulation } from '../population';
+import { politicalRebellionPressure } from '../politics';
 import { REBELLION_BALANCE as B } from './balance';
 import { clamp, friendlyTroops, normalizeRebellion, rebellionDay } from './rebellionUtils';
 import type { UnrestExplanation, UnrestModifier } from './types';
-export function calculateUnrest(p: Province, date: GameDate, armies: Army[] = [], country?: Country, wars: War[] = []): UnrestExplanation {
+export function calculateUnrest(p: Province, date: GameDate, armies: Army[] = [], country?: Country, wars: War[] = [], politicalPressure?: number): UnrestExplanation {
   const pop = normalizePopulation(p.population), state = normalizeRebellion(p.rebellion);
   const modifiers: UnrestModifier[] = [];
   const add = (source: string, value: number) => { if (value !== 0) modifiers.push({ source, value }); };
@@ -13,6 +14,7 @@ export function calculateUnrest(p: Province, date: GameDate, armies: Army[] = []
   add('low_development', Math.max(0, 4 - p.development) * B.developmentPressure);
   if (p.lastConquestDate !== undefined) add('recent_conquest', B.conquestPressure * Math.max(0, 1 - Math.max(0, rebellionDay(date) - p.lastConquestDate) / B.conquestDays));
   if (country) {
+    add('politics',politicalPressure ?? politicalRebellionPressure(country,{provinces:[p],armies,wars}));
     add('stability', Math.max(0, B.stabilityBaseline - country.resources.stability) * B.stabilityPressure);
     add('prestige', Math.max(0, -country.resources.prestige) * B.prestigePressure);
     add('taxation', country.activeLaws.taxation === 'taxation_high' ? B.highTax : country.activeLaws.taxation === 'taxation_low' ? B.lowTax : 0);

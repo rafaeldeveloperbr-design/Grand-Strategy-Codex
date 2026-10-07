@@ -1,4 +1,5 @@
 import type { Army, Country, GameDate, Province } from '../../types';
+import { politicalConsequence } from '../politics';
 import type { RebellionAction } from './types';
 import { REBELLION_BALANCE as B } from './balance';
 import { clamp, friendlyTroops, getProvinceRebellion, normalizeRebellion, rebellionDay } from './rebellionUtils';
@@ -28,7 +29,7 @@ export function applyRebellionAction(provinces: Province[], countries: Country[]
       rebellion: negotiated ? { ...normalizeRebellion(item.rebellion), ...updated, factionId: undefined } : updated,
       population: action === 'repression' ? { ...pop, total: Math.max(0, pop.total - Math.round(Math.min(1, troops / Math.max(1, pop.total * B.garrisonPopulationRatio)) * pop.total * B.repressionDeaths)) } : item.population } : item),
     armies: negotiated ? armies.filter(a => a.owner !== negotiated.id) : armies,
-    countries: countries.map((c): Country => c.tag === countryTag ? { ...c,
+    countries: countries.map((c): Country => c.tag === countryTag ? { ...politicalConsequence(c,action === 'repression'),
       provinces: negotiated ? Array.from(new Set([...c.provinces, ...ids.filter(id => provinces.find(p => p.id === id)?.owner === negotiated.id)])) : c.provinces,
       resources: { ...c.resources, gold: c.resources.gold - cost, prestige: c.resources.prestige - (action === 'repression' ? B.repressionPrestige : 0) },
       rebellions: c.rebellions?.map(f => f.id === negotiated?.id ? { ...f, status: 'negotiated', resolution: { reason: 'negotiation', day } } : f) } : c) };

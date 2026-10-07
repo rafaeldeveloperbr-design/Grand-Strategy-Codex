@@ -27,7 +27,7 @@ export const REBELLION_BALANCE = {
   penalties: { gold: 0.5, manpower: 0.3, growth: 0.4, production: 0.25, progress: 0.15 },
   costs: { repression: 0, tax_relief: 0, concessions: 150, autonomy: 0, investment: 300, negotiate: 500 },
   actionProgress: { repression: 15, tax_relief: 8, concessions: 20, autonomy: 25, investment: 5, negotiate: 35 },
-  autonomyGrant: 50, concessionResentment: 8, victoryStability: 55,
+  autonomyGrant: 50, concessionResentment: 8,
   defeatProgress: 20, victoryProgress: 10, aiAdvantage: 1.25,
   reinforcements: { minimumSupport: 25, controlledMinimumSupport: 0.25, supportPopulationRate: 0.001, controlledPopulationRate: 0.002,
     dailyCap: 100, populationPoolRatio: 0.3, maximumStrength: 40000 },

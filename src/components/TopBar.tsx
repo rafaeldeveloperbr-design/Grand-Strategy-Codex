@@ -94,6 +94,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           {/* === Botões de Tecnologia === */}
       <div className="top-bar__tech-group">
         <button className="topbar__icon-btn" onClick={onEconomyClick} title="Economia nacional e comércio" aria-label="Abrir economia nacional">📦</button>
+        {onGovernmentClick && <button className="topbar__icon-btn" onClick={onGovernmentClick} title="Governo e política interna" aria-label="Abrir Governo">🏛️</button>}
         <button
           className="topbar__icon-btn"
           onClick={onResearchClick}

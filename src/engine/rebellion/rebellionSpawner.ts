@@ -2,6 +2,7 @@ import type { Army, Country, Province, Regiment } from '../../types';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import { createRegiment, calculateArmySpeed } from '../military';
 import { normalizePopulation } from '../population';
+import { politicalRebelPreference } from '../politics';
 import { REBELLION_BALANCE as B } from './balance';
 import { clamp, troopCount } from './rebellionUtils';
 import type { RebelType, RebellionFaction, RebellionObjective } from './types';
@@ -9,7 +10,9 @@ import type { RebelType, RebellionFaction, RebellionObjective } from './types';
 /** No religion/culture inference: unsupported types are deliberately never selected. */
 export function selectRebelType(
   p: Province,
-  country?: Country
+  country?: Country,
+  provinces: Province[] = [p],
+  armies: Army[] = []
 ): RebelType {
   if (
     p.originalOwner &&
@@ -38,7 +41,7 @@ export function selectRebelType(
     return 'pretenders';
   }
 
-  return 'peasants';
+  return (country && politicalRebelPreference(country,{provinces,armies,wars:[]})) || 'peasants';
 }
 export function createObjective(type: RebelType, involved: Province[], country: Country, provinces: Province[]): RebellionObjective {
   const capital = provinces.find(p => p.id === (country.capitalId ?? country.capital)) ?? provinces.filter(p => p.owner === country.tag).sort((a, b) => b.development - a.development || a.id.localeCompare(b.id))[0];
@@ -61,14 +64,14 @@ export function createRebelArmy(faction: RebellionFaction, province: Province): 
     position: null, inCombat: false, separatistMode: false };
   return { ...army, movementSpeed: calculateArmySpeed(army) };
 }
-export function groupRebellion(origin: Province, provinces: Province[], country: Country): Province[] {
-  const type = selectRebelType(origin, country), group: Province[] = [], queue = [origin.id], seen = new Set<string>();
+export function groupRebellion(origin: Province, provinces: Province[], country: Country, armies: Army[] = []): Province[] {
+  const type = selectRebelType(origin, country, provinces, armies), group: Province[] = [], queue = [origin.id], seen = new Set<string>();
   while (queue.length) {
     const id = queue.shift()!;
     if (seen.has(id)) continue;
     seen.add(id);
     const p = provinces.find(item => item.id === id);
-    if (!p || p.owner !== origin.owner || p.rebellion?.factionId || (p.id !== origin.id && (p.unrest ?? 0) < B.groupingUnrest) || selectRebelType(p, country) !== type) continue;
+    if (!p || p.owner !== origin.owner || p.rebellion?.factionId || (p.id !== origin.id && (p.unrest ?? 0) < B.groupingUnrest) || selectRebelType(p, country, provinces, armies) !== type) continue;
     if (type === 'separatists' && p.originalOwner !== origin.originalOwner) continue;
     group.push(p); queue.push(...p.neighbors);
   }

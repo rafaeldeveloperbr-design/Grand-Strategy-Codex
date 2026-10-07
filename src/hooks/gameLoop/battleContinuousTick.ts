@@ -1,3 +1,4 @@
+import { politicalBattleOutcome } from '../../engine/politics';
 /**
  * battleContinuousTick.ts - FIX RECUO - TYPED
  */
@@ -434,8 +435,8 @@ export function processBattleContinuous(p: Params) {
     const winnerCountry = enrichedResult.winner === 'attacker' ? attacker.owner : defender.owner;
     const loserCountry = enrichedResult.winner === 'attacker' ? defender.owner : attacker.owner;
     countries = countries.map(c => {
-      if (c.tag === winnerCountry) return applyStabilityPrestigeChanges(c, 0, 2);
-      if (c.tag === loserCountry) return applyStabilityPrestigeChanges(c, 0, -3);
+      if (c.tag === winnerCountry) return politicalBattleOutcome(applyStabilityPrestigeChanges(c, 0, 2),true,enrichedResult.attackerCasualties + enrichedResult.defenderCasualties);
+      if (c.tag === loserCountry) return politicalBattleOutcome(applyStabilityPrestigeChanges(c, 0, -3),false,enrichedResult.attackerCasualties + enrichedResult.defenderCasualties);
       return c;
     });
   }

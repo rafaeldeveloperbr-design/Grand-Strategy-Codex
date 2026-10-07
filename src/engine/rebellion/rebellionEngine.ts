@@ -3,6 +3,7 @@ import type { DiplomaticRelation } from '../../types/diplomacy';
 import { startInternalWar } from '../diplomacy';
 import { normalizePopulation } from '../population';
 import { REBELLION_BALANCE as B } from './balance';
+import { politicalRebellionPressure } from '../politics';
 import { calculateUnrest } from './unrestEngine';
 import { advanceRebellionProgress, unrestBand } from './rebellionProgress';
 import { clamp, friendlyTroops, normalizeRebellion, rebellionDay, troopCount } from './rebellionUtils';
@@ -15,11 +16,12 @@ import { REBEL_TYPE_LABELS, OBJECTIVE_LABELS } from './feedback';
 
 export function processProvincialPressure(provinces: Province[], date: GameDate, armies: Army[], countries: Country[] = [], wars: War[] = []) {
   const logs: string[] = [], day = rebellionDay(date);
+  const politicalPressure = new Map(countries.map(c => [c.tag,politicalRebellionPressure(c,{provinces,armies,wars})]));
   const updatedProvinces = provinces.map(p => {
     // Rebel occupation remains attached to the original faction and country.
     const state = normalizeRebellion(p.rebellion);
     if (p.owner.startsWith('rebel_')) return { ...p, rebellion: state };
-    const explanation = calculateUnrest(p, date, armies, countries.find(c => c.tag === p.owner), wars);
+    const explanation = calculateUnrest(p, date, armies, countries.find(c => c.tag === p.owner), wars, politicalPressure.get(p.owner));
     const unrest = clamp((p.unrest ?? 0) + (explanation.total - (p.unrest ?? 0)) * B.pressureRate);
     const ratio = friendlyTroops(p, armies) / Math.max(1, normalizePopulation(p.population).total * B.garrisonPopulationRatio);
     const progress = state.factionId ? state.progress : advanceRebellionProgress(state.progress, unrest, ratio, state.suppressionDays);
@@ -44,7 +46,7 @@ export function spawnRebellions(provinces: Province[], countries: Country[], arm
     if (p.owner.startsWith('rebel_') || p.rebellion?.factionId || (p.rebellion?.progress ?? 0) < B.progressLimit) continue;
     const country = countries.find(c => c.tag === p.owner);
     if (!country) continue;
-    const group = groupRebellion(p, provinces, country), type = selectRebelType(p, country);
+    const group = groupRebellion(p, provinces, country, armies), type = selectRebelType(p, country, provinces, armies);
     const day = rebellionDay(date), id = `rebel_v2_${country.tag}_${p.id}_${day}`;
     const faction: RebellionFaction = { id, type, originProvince: p.id, involvedProvinces: group.map(p => p.id), owner: country.tag,
       originalCountry: country.tag, restorationCountry: type === 'separatists' ? p.originalOwner : undefined,

@@ -9,3 +9,7 @@ export * from './diplomacyLifecycle';
 export * from './casusBelli';
 export * from './diplomacyMigration';
 export * from './diplomacyInitialization';
+export * from './campaigns';
+export * from './campaignEnd';
+export * from './warResolution';
+export * from './warResolutionBalance';

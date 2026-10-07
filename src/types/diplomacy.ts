@@ -34,6 +34,8 @@ export interface War {
   /** ID único da guerra */
   id: string;
   campaignId?: string;
+  /** Optional additive ledger on campaign root; deduplicates completed battle statistics. */
+  recordedBattleIds?: string[];
   casusBelliType?: CasusBelliType;
   /** País atacante */
   attacker: string;
@@ -43,9 +45,9 @@ export interface War {
   startDate: { year: number; month: number; day: number };
   /** Pontuação de guerra (positivo = atacante vencendo) */
   warScore: number;
-  /** Baixas do atacante */
+  /** Contribution attributed to this pair's attacker; aggregate across campaign, never replicate. */
   attackerCasualties: number;
-  /** Baixas do defensor */
+  /** Contribution attributed to this pair's defender; aggregate across campaign, never replicate. */
   defenderCasualties: number;
   /** Províncias ocupadas pelo atacante */
   occupiedByAttacker: string[];

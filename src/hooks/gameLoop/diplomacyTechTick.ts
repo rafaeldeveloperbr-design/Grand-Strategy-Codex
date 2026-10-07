@@ -88,12 +88,5 @@ export function processDiplomacyTechTick(p: Params) {
   });
   botTechStatesRef.current = currentBotTechStates;
 
-  // PASSO F: WAR SCORE
-  wars = wars.map(war => {
-    const attackerProvs = provinces.filter(pr => pr.owner === war.attacker).length;
-    const defenderProvs = provinces.filter(pr => pr.owner === war.defender).length;
-    return { ...war, warScore: attackerProvs - defenderProvs };
-  });
-
   return { countries, provinces, armies, wars, relations, currentPlayerTechState, currentBotTechStates };
 }

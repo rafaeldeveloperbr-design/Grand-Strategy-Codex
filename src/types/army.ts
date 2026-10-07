@@ -154,6 +154,8 @@ export interface RetreatInfo {
 
 export interface BattleParticipantDetail {
   id: string;
+  owner?: string;
+  loss?: number;
   side: 'attacker' | 'defender';
   final: number;
 }

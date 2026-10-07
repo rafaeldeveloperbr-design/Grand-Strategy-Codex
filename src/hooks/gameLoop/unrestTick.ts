@@ -47,7 +47,7 @@ export function processUnrestTick(p: Params) {
   // and AI can resolve a newly created faction before that commit.
 
   const countriesWithoutProvinces = countries.filter(c => {
-    if (c.isAnnexed) return false;
+    if (c.isAnnexed || wars.some(w => [w.attacker,w.defender].includes(c.tag))) return false;
     const ownedProvinces = provinces.filter(pr => pr.owner === c.tag);
     return ownedProvinces.length === 0 && !c.rebellions?.some(f => f.status === 'active') && c.tag !== playerCountryTag;
   });

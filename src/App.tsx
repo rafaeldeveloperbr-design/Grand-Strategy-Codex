@@ -52,6 +52,7 @@ import { useEconomyActions } from './hooks/app/useEconomyActions';
 import { useArmyActions } from './hooks/app/useArmyActions';
 import { useDiplomacyActions } from './hooks/app/useDiplomacyActions';
 import { createInitialDiplomacy } from './engine/diplomacy';
+import { getCampaigns } from './engine/diplomacy/campaigns';
 import { useTechActions } from './hooks/app/useTechActions';
 import { useCheats } from './hooks/app/useCheats';
 import { CheatPanel } from './components/CheatPanel';
@@ -173,6 +174,7 @@ const App: React.FC = () => {
     };
   }, [showCheatPanel, cheats]);
 
+  const playerCampaignCount = getCampaigns(wars).filter(c => [...c.attackerParticipants,...c.defenderParticipants].includes(playerCountryTag)).length;
   return (
     <div className="game">
       <TopBar
@@ -225,7 +227,7 @@ const App: React.FC = () => {
           </div>
         )}
         {diplomacyTargetCountry && <DiplomacyPanel key={`${playerCountryTag}:${diplomacyTargetCountry.tag}`} targetCountry={diplomacyTargetCountry} playerCountry={playerCountry} context={{ relations: diplomaticRelations, wars, countries: allCountries, provinces, armies, date }} onClose={modals.handleCloseDiplomacy} onAction={diplomacy.handleAction} onProposal={diplomacy.handleProposal} onCall={diplomacy.handleCall} feedback={diplomacy.feedback} />}
-        {modals.showWarPanel && <WarPanel wars={wars} playerCountry={playerCountry} allCountries={allCountries} onClose={() => modals.setShowWarPanel(false)} onMakePeace={diplomacy.handleMakePeace} />}
+        {modals.showWarPanel && <WarPanel provinces={provinces} armies={armies} date={date} wars={wars} playerCountry={playerCountry} allCountries={allCountries} onClose={() => modals.setShowWarPanel(false)} onMakePeace={diplomacy.handleMakePeace} />}
         {modals.battleReport && <BattleReportModal battleResult={modals.battleReport} playerCountry={playerCountry} allCountries={allCountries} onClose={() => { modals.setBattleReport(null); modals.setIsPaused(false); }} />}
         {modals.showBattleHistory && <BattleHistoryModal playerCountryTag={playerCountryTag} battleHistory={battleHistory} allCountries={allCountries} onClose={() => modals.setShowBattleHistory(false)} onViewBattle={(b) => { modals.setShowBattleHistory(false); modals.setBattleReport(b); modals.setIsPaused(true); }} />}
         {showEconomyPanel && <NationalEconomyPanel country={playerCountry} countries={allCountries} provinces={provinces} onTariffChange={handleTariffChange} onClose={closeEconomyPanel} />}
@@ -273,7 +275,7 @@ const App: React.FC = () => {
         <div className="game__bottom-info"><span className="game__bottom-label">Histórico:</span><button className="game__bottom-history-btn" aria-label="Abrir histórico de batalhas" onClick={() => modals.setShowBattleHistory(true)}>📜 Batalhas ({battleHistory.length})</button></div>
         <div className="game__bottom-info"><span className="game__bottom-label">Avisos:</span><button className="game__bottom-notifications-btn" onClick={() => { modals.setShowNotificationModal(true); markAllAsRead(); }}>🔔 {unreadCount > 0 ? <span className="game__bottom-notifications-badge">{unreadCount}</span> : notificationHistory.length}</button></div>
         <div className="game__bottom-info"><span className="game__bottom-label">Log IA:</span><button className="game__bottom-ai-log-btn" onClick={() => modals.setShowAILogModal(true)}>🤖 IA</button></div>
-        <div className="game__bottom-info"><span className="game__bottom-label">Guerras:</span><button className="game__bottom-war-btn" onClick={() => modals.setShowWarPanel(true)}>{wars.filter(w => w.attacker === playerCountryTag || w.defender === playerCountryTag).length > 0 ? `⚔️ ${wars.filter(w => w.attacker === playerCountryTag || w.defender === playerCountryTag).length}` : '🕊️ Paz'}</button></div>
+        <div className="game__bottom-info"><span className="game__bottom-label">Guerras:</span><button className="game__bottom-war-btn" onClick={() => modals.setShowWarPanel(true)}>{playerCampaignCount > 0 ? `⚔️ ${playerCampaignCount}` : '🕊️ Paz'}</button></div>
         <div className="game__bottom-info"><span className="game__bottom-label">Velocidade:</span><span className="game__bottom-value game__bottom-value--highlight">{gameSpeed === 0 ? '⏸ Pausado' : `▶ x${gameSpeed}`}</span></div>
       </div>
       <button onClick={() => setShowCheatPanel(!showCheatPanel)} style={{ position: 'fixed', top: '100px', right: '1600px', zIndex: 9998, background: '#f39c12', border: 'none', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>🎮 CHEAT</button>

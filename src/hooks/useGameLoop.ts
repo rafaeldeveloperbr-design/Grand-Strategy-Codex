@@ -1,3 +1,4 @@
+import { processWarResolutionTick } from '../engine/diplomacy/warResolution';
 import { processPoliticalTick } from '../engine/politics';
 import { cleanupDiplomacy } from '../engine/diplomacy';
 import {
@@ -219,6 +220,16 @@ export function useGameLoop(props: Props) {
 
     const cont = processBattleContinuous({ armies, provinces, countries, wars, relations, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef, cancelProvinceActivities });
     armies = cont.armies; provinces = cont.provinces; countries = cont.countries; currentActiveBattles = cont.currentActiveBattles; wars = cont.wars; recruitments = cont.recruitments; buildingConstructions = cont.buildingConstructions;
+
+    const resolvedWars = processWarResolutionTick({provinces,countries,wars,relations,armies,activeBattles:currentActiveBattles,recruitments,constructions:buildingConstructions,date:snapshot.date});
+    ({provinces,countries,wars,relations,armies,recruitments} = resolvedWars);
+    buildingConstructions = resolvedWars.constructions; currentActiveBattles = resolvedWars.activeBattles;
+    setActiveBattles(currentActiveBattles); activeBattlesRef.current = currentActiveBattles;
+    for (const resolution of resolvedWars.resolutions) {
+      addLog(resolution.message);
+      if (resolution.participants.includes(playerCountryTag)) addToast(resolution.message,'warning','Fim da guerra');
+      addAILog(countries.find(c => c.tag === resolution.winner)?.name ?? 'País','diplomacy',resolution.message,formatGameDate(snapshot.date));
+    }
 
     // 10. REBELLION - por último, depende de stability + combat
     const reb = processRebelTick({ recruitments, buildingConstructions, provinces, armies, countries, wars, relations, currentActiveBattles, snapshot, playerCountryTag, hasTriggeredEndGame, battleHistory, dateRef, addLog, addToast, setActiveBattles, activeBattlesRef, setEndGameType, setGameStats, setHasTriggeredEndGame, setIsPaused });

@@ -96,6 +96,17 @@ export function getStorageCapacity(province: Province): number {
 export function calculateLocalPrice(id: GoodId, supply: number, demand: number): number { const base = GOODS[id].basePrice; if (demand <= 0) return base * .5; return round(base * clamp(Math.sqrt(demand / Math.max(.01, supply)), .5, 3)); }
 export function calculatePurchasingPower(province: Province, goods: Record<GoodId, GoodMarketState>): number { const p = recalculateEmployment(province); const workforce = p.employed + p.unemployed; const employment = workforce ? p.employed / workforce : 0; const food = goods.food; return round(clamp(45 + employment * 35 + province.development * 1.5 - (food.price - 1) * 18 - (food.demand ? food.shortage / food.demand : 0) * 35, 0, 100)); }
 export function calculateMarketSatisfactionAdjustment(market: ProvinceMarket): number { const food = market.goods.food; return clamp((1 - food.price) * 8 + (market.purchasingPower - 50) * .16 - (food.demand ? food.shortage / food.demand : 0) * 18, -30, 8); }
+/** Reprice transferred real stocks without another production/consumption tick. */
+export function refreshProvinceMarket(province: Province, purchasingPowerMultiplier = 1): ProvinceMarket {
+  const market = normalizeMarket(province.market);
+  for (const id of ALL_GOODS) {
+    const good = market.goods[id],effectiveSupply = good.consumption+good.stock;
+    good.shortage = round(Math.max(0,good.demand-effectiveSupply));
+    good.price = calculateLocalPrice(id,effectiveSupply,good.demand);
+  }
+  market.purchasingPower = clamp(calculatePurchasingPower(province,market.goods)*purchasingPowerMultiplier,0,100);
+  return market;
+}
 export function processProvinceMarket(province: Province, multipliers: Partial<Record<GoodId, number>> = {}, purchasingPowerMultiplier = 1): ProvinceMarket {
   const previous = normalizeMarket(province.market); const production = calculateProduction(province, multipliers); const demand = calculateDemand(province);
   // Workshops use conserved provincial stocks; output scales proportionally with either missing input.

@@ -27,6 +27,7 @@ interface TopBarProps {
   onTechClick?: () => void;
   onSettingsClick?: () => void;
   onGovernmentClick?: () => void;
+  onEconomyClick?: () => void;
 }
 
 /**
@@ -70,6 +71,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onFocusClick,
   onSettingsClick,
   onGovernmentClick,
+  onEconomyClick,
 }) => {
   const { resources, economy } = playerCountry;
   const goldBalance = economy.goldIncome - economy.goldExpense;
@@ -91,6 +93,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           {/* === Botões de Tecnologia === */}
       <div className="top-bar__tech-group">
+        <button className="topbar__icon-btn" onClick={onEconomyClick} title="Economia nacional e comércio" aria-label="Abrir economia nacional">📦</button>
         <button
           className="topbar__icon-btn"
           onClick={onResearchClick}

@@ -150,11 +150,29 @@ export function calculateCountryExpenses(country: Country, provinces: Province[]
  * Processa um tick diário para um país e suas províncias.
  * Retorna as províncias atualizadas e o país atualizado.
  */
+export function prepareCountryMarkets(country: Country, provinces: Province[], techBonuses?: TechnologyBonuses): Province[] {
+  const lawModifiers = calculateLawModifiers(country.activeLaws);
+  const effectiveStability = Math.min(100, country.resources.stability + ((techBonuses?.stabilityModifier ?? 0) + lawModifiers.stabilityModifier) * 100);
+  const stabilityModifiers = getStabilityModifiers(effectiveStability);
+  const buildTimeMultiplier = (techBonuses?.buildTimeMultiplier ?? 1.0) * lawModifiers.constructionSpeedMultiplier * stabilityModifiers.constructionSpeed;
+  const productionMultipliers = Object.fromEntries((['food','wood','iron','tools'] as const).map(good => [good, (techBonuses?.productionMultipliers[good] ?? 1) * lawModifiers.productionMultipliers[good]]));
+  const prepared = provinces.map(province => ({
+    ...province,
+    population: recalculateEmployment(province),
+    market: processProvinceMarket({ ...province, population: recalculateEmployment(province) }, Object.fromEntries(Object.entries(productionMultipliers).map(([good, multiplier]) => [good, multiplier * calculateUnrestEconomicImpact(province.unrest ?? 0, province.rebellion?.progress).productionMultiplier])), lawModifiers.purchasingPowerMultiplier),
+    buildings: province.buildings.map(b => ({...b,daysRemaining: Math.max(0,b.daysRemaining-buildTimeMultiplier)})),
+  }));
+  return processInternalTrade(prepared, (techBonuses?.internalTradeMultiplier ?? 1) * lawModifiers.internalTradeMultiplier, lawModifiers.purchasingPowerMultiplier);
+}
+
+/** Existing standalone tick remains compatible. The world loop prepares all
+ * markets first, trades internationally, then calls this with prepared markets. */
 export function processDailyTick(
   country: Country,
   provinces: Province[],
   techBonuses?: TechnologyBonuses,
-  atWar: boolean = false
+  atWar: boolean = false,
+  marketsPrepared: boolean = false
 ): { country: Country; provinces: Province[] } {
   // Calcula economia total do país
   let totalGoldIncome = 0;
@@ -170,30 +188,9 @@ export function processDailyTick(
   // Combina multiplicadores de tecnologia, leis e estabilidade
   const goldIncomeMultiplier = (techBonuses?.goldIncomeMultiplier ?? 1.0) * lawModifiers.goldIncomeMultiplier * stabilityModifiers.goldIncome;
   const manpowerMultiplier = (techBonuses?.manpowerMultiplier ?? 1.0) * lawModifiers.manpowerMultiplier * stabilityModifiers.manpowerGrowth;
-  const buildTimeMultiplier = (techBonuses?.buildTimeMultiplier ?? 1.0) * lawModifiers.constructionSpeedMultiplier * stabilityModifiers.constructionSpeed;
-  const productionMultipliers = Object.fromEntries((['food','wood','iron','tools'] as const).map(good => [good, (techBonuses?.productionMultipliers[good] ?? 1) * lawModifiers.productionMultipliers[good]]));
   const capacityMultiplier = (techBonuses?.populationCapacityMultiplier ?? 1) * lawModifiers.populationCapacityMultiplier;
 
-  // Employment limits production; the resulting real market then informs
-  // satisfaction and the following demographic change.
-  let updatedProvinces: Province[] = provinces.map((province) => {
-    // Avança construções (com multiplicadores de tecnologia e leis)
-    const updatedBuildings = province.buildings.map((b) => ({
-      ...b,
-      daysRemaining: Math.max(0, b.daysRemaining - buildTimeMultiplier),
-    }));
-
-    return {
-      ...province,
-      population: recalculateEmployment(province),
-      market: processProvinceMarket({ ...province, population: recalculateEmployment(province) }, Object.fromEntries(Object.entries(productionMultipliers).map(([good, multiplier]) => [good, multiplier * calculateUnrestEconomicImpact(province.unrest ?? 0, province.rebellion?.progress).productionMultiplier])), lawModifiers.purchasingPowerMultiplier),
-      buildings: updatedBuildings,
-    };
-  });
-
-  // Local production/consumption is followed by deterministic domestic
-  // redistribution, then market-sensitive satisfaction is finalized.
-  updatedProvinces = processInternalTrade(updatedProvinces, (techBonuses?.internalTradeMultiplier ?? 1) * lawModifiers.internalTradeMultiplier, lawModifiers.purchasingPowerMultiplier).map(province => {
+  let updatedProvinces = (marketsPrepared ? provinces : prepareCountryMarkets(country,provinces,techBonuses)).map(province => {
     const unrestImpact = calculateUnrestEconomicImpact(province.unrest ?? 0, province.rebellion?.progress, province.rebellion?.autonomy, province.rebellion?.reliefDays);
     const growth = calculateDailyPopulationGrowth(province, country, techBonuses, atWar);
     return processProvincePopulation(province, 1, country.activeLaws?.taxation || 'taxation_normal', {

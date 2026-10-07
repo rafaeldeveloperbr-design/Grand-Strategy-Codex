@@ -15,16 +15,16 @@ Configura??o ?nica: `index.ts`. Classifica??o: `../../data/map/regions/southAmer
 
 ## Integra??o
 
-- Movimento: progresso por tick = velocidade ? multiplicador de supply da origem ? custo de terreno do destino. Cada aresta mant?m sua chegada, acesso diplom?tico e valida??o. Dura??o em dias ? discretizada pelos ticks; arredondamento pode fazer custos pr?ximos produzirem o mesmo n?mero de dias. BFS continua escolhendo menor n?mero de arestas.
-- Supply: capacidade de desenvolvimento + edif?cios conclu?dos multiplicada pelo terreno, antes da penalidade territorial e da divis?o por demanda dos ex?rcitos do mesmo owner. Ratio fica entre 0 e 1. N?o consome estoque nem aplica dano passivo de organiza??o/moral; recupera??o continua no sistema existente.
-- Combate cont?nuo: press?o defensora existente ? (1 + b?nus de fortifica??o existente) ? defesa do terreno. Cerco e tecnologia de fortifica??o continuam funcionando. Resolu??o direta tamb?m multiplica o poder defensor uma ?nica vez. O atacante n?o recebe b?nus de terreno.
-- IA: execu??o usa os sistemas comuns. Scores existentes de poder defensor nacional e rebelde incluem terreno. Nenhum planner novo e nenhuma altera??o de rota estrat?gica.
-- UI: modo TERRENO usa cores categ?ricas e legenda dos seis tipos; tooltip e painel mostram r?tulo e tr?s percentuais. O modo supply reflete capacidade com terreno. Pol?tica, sele??o e stacks mant?m a l?gica existente.
-- Saves: campo opcional apenas para compatibilidade com mapas legados/sint?ticos. Ao carregar terreno ausente ou desconhecido, recuperar pelo ID do mapa base; prov?ncia sem defini??o usa plains. Serializa??o omite terreno igual ao mapa base, preservando overrides v?lidos.
+- Movimento: progresso por tick = velocidade ? multiplicador de supply da origem ? custo de Terreno do destino. Cada aresta mant?m sua chegada, acesso diplom?tico e valida??o. Dura??o em dias ? discretizada pelos ticks; arredondamento pode fazer custos pr?ximos produzirem o mesmo n?mero de dias. BFS continua escolhendo menor n?mero de arestas.
+- Supply: capacidade de desenvolvimento + edif?cios conclu?dos multiplicada pelo Terreno, antes da penalidade territorial e da divis?o por demanda dos ex?rcitos do mesmo owner. Ratio fica entre 0 e 1. N?o consome estoque nem aplica dano passivo de organiza??o/moral; recupera??o continua no sistema existente.
+- Combate cont?nuo: press?o defensora existente ? (1 + b?nus de fortifica??o existente) ? defesa do Terreno. Cerco e tecnologia de fortifica??o continuam funcionando. Resolu??o direta tamb?m multiplica o poder defensor uma ?nica vez. O atacante n?o recebe b?nus de Terreno.
+- IA: execu??o usa os sistemas comuns. Scores existentes de poder defensor nacional e rebelde incluem Terreno. Nenhum planner novo e nenhuma altera??o de rota estrat?gica.
+- UI: modo Terreno usa cores categ?ricas e legenda dos seis tipos; tooltip e painel mostram r?tulo e tr?s percentuais. O modo supply reflete capacidade com Terreno. Pol?tica, sele??o e stacks mant?m a l?gica existente.
+- Saves: campo opcional apenas para compatibilidade com mapas legados/sint?ticos. Ao carregar Terreno ausente ou desconhecido, recuperar pelo ID do mapa base; prov?ncia sem defini??o usa plains. Serializa??o omite Terreno igual ao mapa base, preservando overrides v?lidos.
 
 ## Limita??es e evolu??o
 
-Uma categoria por prov?ncia extensa: costas e Andes podem coexistir dentro do mesmo pol?gono. Selva nas Guianas representa o interior dominante; Santiago usa colinas para o vale central e sop?s; Patag?nia ?rida usa deserto por n?o existir steppe nesta V1. N?o h? clima, rios, naval, infraestrutura nova, attrition espec?fica ou b?nus por unidade. Rotas estrat?gicas ponderadas por terreno podem ser uma evolu??o futura, mantendo os acessos diplom?ticos.
+Uma categoria por prov?ncia extensa: costas e Andes podem coexistir dentro do mesmo pol?gono. Selva nas Guianas representa o interior dominante; Santiago usa colinas para o vale central e sop?s; Patag?nia ?rida usa deserto por n?o existir steppe nesta V1. N?o h? clima, rios, naval, infraestrutura nova, attrition espec?fica ou b?nus por unidade. Rotas estrat?gicas ponderadas por Terreno podem ser uma evolu??o futura, mantendo os acessos diplom?ticos.
 
 ## Classifica??o das 56 prov?ncias
 

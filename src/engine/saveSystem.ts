@@ -1,3 +1,4 @@
+import { migrateDiplomacy } from './diplomacy';
 // src/engine/saveSystem.ts - V2 Tipado e Versionado com fronteira unknown
 import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../types';
 import type { CountryTechState } from '../types/technology';
@@ -35,7 +36,7 @@ export type SaveGameV1 = {
   countries: Country[];
   armies: Army[];
   wars: War[];
-  relations: DiplomaticRelation[];
+  relations: unknown[];
   recruitments: Recruitment[];
   constructions: BuildingConstruction[];
   playerTech: CountryTechState;
@@ -52,7 +53,7 @@ export type SaveGameV2 = {
   date: GameDate;
   world: { provinces: Province[]; countries: Country[] };
   military: { armies: Army[]; wars: War[]; activeBattles: ActiveBattle[]; recruitments: Recruitment[] };
-  diplomacy: { relations: DiplomaticRelation[] };
+  diplomacy: { version?: 2; relations: DiplomaticRelation[] };
   economy: { constructions: BuildingConstruction[] };
   technology: { player: CountryTechState; bots: Map<string, CountryTechState> };
 };
@@ -146,7 +147,7 @@ function migrateV1ToV2(v1: SaveGameV1): SaveGameV2 {
     version: 2, id: v1.id, name: v1.name, timestamp: v1.timestamp, date: v1.date,
     world: { provinces: v1.provinces.map(normalizeSavedProvince), countries: v1.countries.map(normalizeSavedCountry) },
     military: { armies: v1.armies, wars: v1.wars, activeBattles: v1.activeBattles, recruitments: v1.recruitments },
-    diplomacy: { relations: v1.relations },
+    diplomacy: { relations: migrateDiplomacy(v1.relations,v1.wars,v1.date) },
     economy: { constructions: v1.constructions },
     technology: { player: normalizeTechState(v1.playerTech), bots: new Map([...botTechsMap].map(([tag,state]) => [tag, normalizeTechState(state, tag)])) },
   };
@@ -159,6 +160,7 @@ function migrateRebellionSave(save: SaveGameV2): SaveGameV2 {
     if (typeof army.owner === 'string' && army.owner !== migrated.armies[index].owner) tags.set(army.owner, migrated.armies[index].owner);
   });
   const rename = (tag: string): string => tags.get(tag) ?? tag;
+  const normalizedRelations = migrateDiplomacy(save.diplomacy?.relations,save.military.wars,save.date);
   const snapshot = (army?: Army): Army | undefined => army ? { ...army, owner: rename(army.owner) } : undefined;
   return { ...save, world: { provinces: migrated.provinces, countries: migrated.countries },
     military: { ...save.military, armies: migrated.armies,
@@ -166,7 +168,8 @@ function migrateRebellionSave(save: SaveGameV2): SaveGameV2 {
       activeBattles: save.military.activeBattles.map(battle => ({ ...battle,
         attackerCountryId: rename(battle.attackerCountryId), defenderCountryId: rename(battle.defenderCountryId),
         attackerInitialSnapshot: snapshot(battle.attackerInitialSnapshot), defenderInitialSnapshot: snapshot(battle.defenderInitialSnapshot) })) },
-    diplomacy: { relations: save.diplomacy.relations.map(relation => ({ ...relation, countryA: rename(relation.countryA), countryB: rename(relation.countryB) })) } };
+    diplomacy: { version: 2, relations: migrateDiplomacy(normalizedRelations.map(relation => ({ ...relation, countryA: rename(relation.countryA), countryB: rename(relation.countryB) })),
+      save.military.wars.map(war => ({...war,attacker: rename(war.attacker),defender: rename(war.defender)})),save.date) } };
 }
 
 // ============ LOAD COM DETECÇÃO DE VERSÃO + UNKNOWN ============
@@ -213,7 +216,7 @@ export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, cus
     timestamp: now, date: refs.dateRef.current,
     world: { provinces: refs.provincesRef.current, countries: refs.countriesRef.current },
     military: { armies: refs.armiesRef.current, wars: refs.warsRef.current, activeBattles: refs.activeBattlesRef.current, recruitments: refs.recruitmentsRef.current },
-    diplomacy: { relations: refs.diplomaticRelationsRef.current },
+    diplomacy: { version: 2, relations: refs.diplomaticRelationsRef.current },
     economy: { constructions: refs.buildingConstructionsRef.current },
     technology: { player: refs.playerTechStateRef.current, bots: refs.botTechStatesRef.current },
   };

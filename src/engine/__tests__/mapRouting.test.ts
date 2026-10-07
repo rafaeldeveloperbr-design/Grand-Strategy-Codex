@@ -54,14 +54,14 @@ describe('South America routing audit', () => {
     expect(route.every(id => ['COL', 'BRA', 'ARG'].includes(provincesData.find(p => p.id === id)!.owner))).toBe(true);
   });
 
-  it.each([['peace', 79, false], ['peace', 80, true], ['alliance', 80, true], ['war', -100, true]] as const)('respects the existing access rule for %s / opinion %s', (status, opinion, allowed) => {
+  it.each([['peace', 79, false], ['peace', 80, false], ['access', 0, true], ['alliance', 80, true], ['war', -100, true]] as const)('respects explicit V2 access for %s / opinion %s', (status, opinion, allowed) => {
     expect(!!moveArmy(army('BRA', 'sa_bra_amazonas'), 'sa_col_amazonia', provincesData, [relation('BRA', 'COL', status, opinion)])).toBe(allowed);
   });
 
   it('does not create access through an unrelated occupation', () => {
     const map = world();
     const occupied = transferProvince({ ...map, recruitments: [], constructions: [] }, 'sa_bra_amazonas', 'VEN');
-    const relations = [relation('COL', 'BRA', 'peace', 80), relation('COL', 'ARG')];
+    const relations = [relation('COL', 'BRA', 'access', 80), relation('COL', 'ARG')];
     expect(findPath('sa_col_amazonia', 'sa_arg_buenos_aires', occupied.provinces, 'COL', relations)).toEqual([]);
   });
 });

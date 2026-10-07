@@ -1,89 +1,65 @@
-/**
- * useDiplomacyActions.ts - CORRIGIDO - assinaturas reais do seu App.tsx original
- */
-import { useCallback } from 'react';
-import { improveRelations, offerNonAggressionPact, declareWar, makePeace, DIPLOMATIC_COSTS } from '../../engine/diplomacy';
-import type { Country, War, GameDate } from '../../types';
-import type { DiplomaticRelation } from '../../types/diplomacy';
-
+import type { ToastType } from '../../types/toast';
+import { useState } from 'react';
+import type { ActiveBattle, Army, Country, DiplomaticRelation, GameDate, Province, War } from '../../types';
+import type { DiplomacyAction } from '../../types/diplomacy';
+import { actionBlockReason, breakAlliance, breakNonAggressionPact, callAllyToWar, cancelInvalidDiplomaticRoutes, declareWar, generateConquestCasusBelli,
+  guaranteeIndependence, makePeace, offerAgreement, respondAgreement, respondToWarCall,
+  resolvePeaceBattles, revokeMilitaryAccess, shouldAcceptAgreement, withdrawGuarantee } from '../../engine/diplomacy';
+import type { DiplomacyContext, DiplomacyResult } from '../../engine/diplomacy';
 type Params = {
-  diplomacyTarget: string | null;
-
-  setDiplomacyTarget: React.Dispatch<
-    React.SetStateAction<string | null>
-  >;
-
-  playerCountry: Country;
-  playerCountryTag: string;
-
-  allCountries: Country[];
-
-  setAllCountries: React.Dispatch<
-    React.SetStateAction<Country[]>
-  >;
-
-  diplomaticRelations: DiplomaticRelation[];
-
-  setDiplomaticRelations: React.Dispatch<
-    React.SetStateAction<DiplomaticRelation[]>
-  >;
-
-  wars: War[];
-
-  setWars: React.Dispatch<
-    React.SetStateAction<War[]>
-  >;
-
-  date: GameDate;
-
-  addLog: (msg: string) => void;
+  diplomacyTarget: string | null; playerCountryTag: string;
+  countriesRef: {current: Country[]}; provincesRef: {current: Province[]}; armiesRef: {current: Army[]};
+  diplomaticRelationsRef: {current: DiplomaticRelation[]}; warsRef: {current: War[]}; dateRef: {current: GameDate};
+  setDiplomaticRelations: (r: DiplomaticRelation[]) => void; setWars: (w: War[]) => void;
+  setArmies: (a: Army[]) => void;
+  activeBattlesRef: {current: ActiveBattle[]}; setActiveBattles: (b: ActiveBattle[]) => void;
+  addLog: (message: string) => void;
+  addToast: (message: string,type?: ToastType,title?: string) => void;
 };
-
-export function useDiplomacyActions(params: Params) {
-  const { diplomacyTarget, setDiplomacyTarget, playerCountry, playerCountryTag, allCountries, setAllCountries, diplomaticRelations, setDiplomaticRelations, wars, setWars, date, addLog } = params;
-
-  const handleImproveRelations = useCallback(() => {
-    if (!diplomacyTarget) return;
-    if (playerCountry.resources.gold < DIPLOMATIC_COSTS.improve_relations.gold) return;
-    setAllCountries(prev =>
-      prev.map(c => c.tag === playerCountryTag ? { ...c, resources: { ...c.resources, gold: c.resources.gold - DIPLOMATIC_COSTS.improve_relations.gold } } : c));
-    setDiplomaticRelations(prev => improveRelations(prev, playerCountryTag, diplomacyTarget, DIPLOMATIC_COSTS.improve_relations.opinionChange));
-    addLog(`💰 Melhorou relações com ${allCountries.find(c => c.tag === diplomacyTarget)?.name}`);
-  }, [diplomacyTarget, playerCountry, playerCountryTag, allCountries, addLog, setAllCountries, setDiplomaticRelations]);
-
-  const handleOfferNonAggression = useCallback(() => {
-    if (!diplomacyTarget) return;
-    if (playerCountry.resources.gold < DIPLOMATIC_COSTS.offer_non_aggression.gold) return;
-    setAllCountries((prev: Country[]) => prev.map((c: Country) => c.tag === playerCountryTag ? { ...c, resources: { ...c.resources, gold: c.resources.gold - DIPLOMATIC_COSTS.offer_non_aggression.gold } } : c));
-    setDiplomaticRelations(prev =>
-      offerNonAggressionPact(
-        prev,
-        playerCountryTag,
-        diplomacyTarget,
-        365
-      )
-    );
-    addLog(`🤝 Pacto de não agressão com ${allCountries.find(c => c.tag === diplomacyTarget)?.name}`);
-  }, [diplomacyTarget, playerCountry, playerCountryTag, allCountries, addLog, setAllCountries, setDiplomaticRelations]);
-
-  const handleDeclareWar = useCallback(() => {
-    if (!diplomacyTarget) return;
-    const result = declareWar(diplomaticRelations, wars, playerCountryTag, diplomacyTarget, date);
-    setDiplomaticRelations(result.relations);
-    setWars(result.wars);
-    addLog(`⚔️ Guerra declarada contra ${allCountries.find(c => c.tag === diplomacyTarget)?.name}!`);
-    setDiplomacyTarget(null);
-  }, [diplomacyTarget, diplomaticRelations, wars, playerCountryTag, date, allCountries, addLog, setDiplomaticRelations, setWars, setDiplomacyTarget]);
-
-  const handleMakePeace = useCallback((warId: string) => {
-    const war = wars.find(w => w.id === warId);
-    if (!war) return;
-    const enemy = war.attacker === playerCountryTag ? war.defender : war.attacker;
-    const result = makePeace(diplomaticRelations, wars, playerCountryTag, enemy);
-    setDiplomaticRelations(result.relations);
-    setWars(result.wars);
-    addLog(`🕊️ Paz assinada com ${allCountries.find(c => c.tag === enemy)?.name}`);
-  }, [wars, diplomaticRelations, playerCountryTag, allCountries, addLog, setDiplomaticRelations, setWars]);
-
-  return { handleImproveRelations, handleOfferNonAggression, handleDeclareWar, handleMakePeace };
+export function useDiplomacyActions(p: Params) {
+  const [feedback,setFeedback] = useState('');
+  const context = (): DiplomacyContext => ({relations: p.diplomaticRelationsRef.current,wars: p.warsRef.current,
+    countries: p.countriesRef.current,provinces: p.provincesRef.current,armies: p.armiesRef.current,date: p.dateRef.current});
+  const publish = (r: DiplomacyResult) => {
+    p.diplomaticRelationsRef.current = r.relations; p.warsRef.current = r.wars;
+    p.setDiplomaticRelations(r.relations); p.setWars(r.wars);
+    const armies = cancelInvalidDiplomaticRoutes(p.armiesRef.current,p.provincesRef.current,r.relations);
+    p.armiesRef.current = armies; p.setArmies(armies);
+    const message = r.message.replace(/\b[A-Z]{2,4}\b/g,tag => p.countriesRef.current.find(c => c.tag === tag)?.name ?? tag);
+    setFeedback(message); p.addLog(message); p.addToast(message,r.ok && !message.includes('recusou') ? 'success' : 'warning','Diplomacia');
+  };
+  const handleAction = (action: DiplomacyAction,cbId?: string) => {
+    const a = p.playerCountryTag,b = p.diplomacyTarget; if (!b) return;
+    let ctx = context(); const reason = actionBlockReason(ctx,a,b,action);
+    if (reason) { publish({...ctx,ok: false,message: reason}); return; }
+    if (action === 'offerAlliance' || action === 'offerNap' || action === 'requestAccess') {
+      const kind = action === 'offerAlliance' ? 'alliance' : action === 'offerNap' ? 'nap' : 'access';
+      const offer = offerAgreement(ctx,a,b,kind); if (!offer.ok) { publish(offer); return; }
+      ctx = {...ctx,...offer};
+      publish(respondAgreement(ctx,a,b,kind,shouldAcceptAgreement(ctx,a,b,kind))); return;
+    }
+    const actions = {breakAlliance,breakNap: breakNonAggressionPact,revokeAccess: revokeMilitaryAccess,
+      guarantee: guaranteeIndependence,withdrawGuarantee,declareWar: (c: DiplomacyContext,x: string,y: string) => declareWar(c,x,y,cbId),generateConquestCb: generateConquestCasusBelli};
+    publish(actions[action](ctx,a,b));
+  };
+  const handleProposal = (id: string,accept: boolean) => {
+    const ctx = context(),proposal = ctx.relations.flatMap(r => r.proposals ?? []).find(q => q.id === id && q.to === p.playerCountryTag);
+    if (!proposal) return;
+    publish(proposal.kind === 'call' ? respondToWarCall(ctx,id,accept) : respondAgreement(ctx,proposal.from,proposal.to,proposal.kind,accept));
+  };
+  const handleMakePeace = (warId: string) => {
+    const ctx = context(),war = ctx.wars.find(w => w.id === warId);
+    if (!war || ![war.attacker,war.defender].includes(p.playerCountryTag)) return;
+    const peace = makePeace(ctx,warId);
+    if (peace.ok) {
+      const resolved = resolvePeaceBattles(p.activeBattlesRef.current,p.armiesRef.current,peace.relations);
+      p.activeBattlesRef.current = resolved.battles; p.setActiveBattles(resolved.battles);
+      p.armiesRef.current = resolved.armies;
+    }
+    publish(peace);
+  };
+  const handleCall = (warId: string) => {
+    if (p.diplomacyTarget) publish(callAllyToWar(context(),p.playerCountryTag,p.diplomacyTarget,warId));
+  };
+  return {handleAction,handleProposal,handleMakePeace,handleCall,feedback};
 }

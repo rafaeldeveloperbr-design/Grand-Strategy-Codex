@@ -41,7 +41,7 @@ describe('South America V1 scenario', () => {
     const owner = provincesData.find(province => province.id === start)!.owner;
     // Route existence does not grant access in normal gameplay.
     const relations = countries.filter(country => country.tag !== owner).map(country => ({
-      countryA: owner, countryB: country.tag, status: 'war' as const, opinion: -100, pactDaysRemaining: 0,
+      countryA: owner, countryB: country.tag, status: 'war' as const, opinion: -100, trust: 50,
     }));
     const route = findPath(start, end, provincesData, owner, relations);
     expect(route.length).toBeGreaterThan(0);

@@ -1,3 +1,4 @@
+import { canEnterTerritory, areAtWar } from '../diplomacy';
 import { Army, Province } from '../../types';
 import { DiplomaticRelation } from '../../types/diplomacy';
 
@@ -6,24 +7,7 @@ export function canMoveToProvince(
   targetProvinceOwner: string,
   diplomacy: DiplomaticRelation[]
 ): boolean {
-  if (targetProvinceOwner === botCountryId) {
-    return true;
-  }
-
-  if (!diplomacy || diplomacy.length === 0) {
-    return false;
-  }
-
-  const relation = diplomacy.find(
-    r => (r.countryA === botCountryId && r.countryB === targetProvinceOwner) ||
-         (r.countryA === targetProvinceOwner && r.countryB === botCountryId)
-  );
-
-  if (!relation) {
-    return false;
-  }
-
-  return relation.status === 'war' || relation.opinion >= 80;
+  return canEnterTerritory(diplomacy, botCountryId, targetProvinceOwner);
 }
 
 export function isBorderProvince(
@@ -50,12 +34,7 @@ export function isAtWarWithNeighbor(
     const neighborProv = provinces.find(p => p.id === neighborId);
     if (!neighborProv || neighborProv.owner === botCountryId) return false;
 
-    const relation = diplomacy.find(
-      r => (r.countryA === botCountryId && r.countryB === neighborProv.owner) ||
-           (r.countryA === neighborProv.owner && r.countryB === botCountryId)
-    );
-
-    return relation ? relation.status === 'war' : false;
+    return areAtWar(diplomacy,botCountryId,neighborProv.owner);
   });
 }
 
@@ -64,12 +43,7 @@ export function isAtWarWith(
   countryB: string,
   diplomacy: DiplomaticRelation[]
 ): boolean {
-  const relation = diplomacy.find(
-    r => (r.countryA === countryA && r.countryB === countryB) ||
-         (r.countryA === countryB && r.countryB === countryA)
-  );
-
-  return relation ? relation.status === 'war' : false;
+  return areAtWar(diplomacy, countryA, countryB);
 }
 
 export function calculateDistance(

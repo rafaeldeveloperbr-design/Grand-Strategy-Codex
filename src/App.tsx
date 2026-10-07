@@ -44,6 +44,7 @@ import { useGameModals } from './hooks/app/useGameModals';
 import { useEconomyActions } from './hooks/app/useEconomyActions';
 import { useArmyActions } from './hooks/app/useArmyActions';
 import { useDiplomacyActions } from './hooks/app/useDiplomacyActions';
+import { createInitialDiplomacy } from './engine/diplomacy';
 import { useTechActions } from './hooks/app/useTechActions';
 import { useCheats } from './hooks/app/useCheats';
 import { CheatPanel } from './components/CheatPanel';
@@ -70,7 +71,7 @@ const App: React.FC = () => {
   const [armies, setArmies] = useState<Army[]>(() => createInitialArmies(initialCountries));
   const [recruitments, setRecruitments] = useState<Recruitment[]>([]);
   const [buildingConstructions, setBuildingConstructions] = useState<BuildingConstruction[]>([]);
-  const [diplomaticRelations, setDiplomaticRelations] = useState<DiplomaticRelation[]>([]);
+  const [diplomaticRelations, setDiplomaticRelations] = useState<DiplomaticRelation[]>(() => createInitialDiplomacy(initialCountries,provincesData));
   const [wars, setWars] = useState<War[]>([]);
   const [playerTechState, setPlayerTechState] = useState<CountryTechState>(() => createInitialTechState(playerCountryTag));
   const [botTechStates, setBotTechStates] = useState<Map<string, CountryTechState>>(() => { const m = new Map<string, CountryTechState>(); initialCountries.forEach(c => { if (c.tag !== playerCountryTag) m.set(c.tag, createInitialTechState(c.tag)); }); return m; });
@@ -106,7 +107,6 @@ const App: React.FC = () => {
   const selectedProvinceData = useMemo(() => provinces.find(p => p.id === selection.selectedProvince) ?? null, [provinces, selection.selectedProvince]);
   const selectedArmyData = useMemo(() => armies.find(a => a.id === selection.selectedArmy) ?? null, [armies, selection.selectedArmy]);
   const diplomacyTargetCountry = useMemo(() => allCountries.find(c => c.tag === modals.diplomacyTarget) ?? null, [allCountries, modals.diplomacyTarget]);
-  const diplomacyRelation = useMemo(() => diplomaticRelations.find(r => (r.countryA === playerCountryTag && r.countryB === modals.diplomacyTarget) || (r.countryB === playerCountryTag && r.countryA === modals.diplomacyTarget)) || null, [diplomaticRelations, playerCountryTag, modals.diplomacyTarget]);
 
   useGameLoop({ provincesRef, countriesRef, armiesRef, recruitmentsRef, warsRef, diplomaticRelationsRef, dateRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, aiDifficultyRef, activeBattlesRef, ceilingLogRef, gameLoopRef, playerCountryTag, battleHistory, hasTriggeredEndGame, gameSpeed, isPaused: modals.isPaused, allCountries, setProvinces, setAllCountries, setArmies, setWars, setDiplomaticRelations, setRecruitments, setBuildingConstructions, setPlayerTechState, setBotTechStates, setDate, setActiveBattles, setEndGameType, setGameStats, setHasTriggeredEndGame, setIsPaused: modals.setIsPaused, setBattleHistory, setBattleReport: modals.setBattleReport, addLog, addToast, addAILog, formatGameDate });
 
@@ -121,7 +121,7 @@ const App: React.FC = () => {
     addToast(result.reason, result.accepted ? 'success' : 'warning', 'Resposta à rebelião');
   };
   const armyActions = useArmyActions({ activeBattlesRef, setActiveBattles, selectedArmy: selection.selectedArmy, setSelectedArmy: selection.setSelectedArmy, setSelectedProvince: selection.setSelectedProvince, setIsPanelOpen: selection.setIsPanelOpen, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection: selection.splitSelection, setSplitSelection: selection.setSplitSelection, setShowSplitModal: selection.setShowSplitModal });
-  const diplomacy = useDiplomacyActions({ diplomacyTarget: modals.diplomacyTarget, setDiplomacyTarget: modals.setDiplomacyTarget, playerCountry, playerCountryTag, allCountries, setAllCountries, diplomaticRelations, setDiplomaticRelations, wars, setWars, date, addLog });
+  const diplomacy = useDiplomacyActions({ diplomacyTarget: modals.diplomacyTarget, playerCountryTag, countriesRef, provincesRef, armiesRef, diplomaticRelationsRef, warsRef, dateRef, setDiplomaticRelations, setWars, setArmies, activeBattlesRef, setActiveBattles, addLog, addToast });
   const playerAtWar = wars.some(war => war.attacker === playerCountryTag || war.defender === playerCountryTag);
   const tech = useTechActions({ playerCountry, playerCountryTag, playerTechState, setPlayerTechState, allCountries, setAllCountries, addLog, addToast, playerTechStateRef, setAiDifficulty, setEndGameType, setGameStats, setGameSpeed, setIsPaused: modals.setIsPaused, playerAtWar });
 
@@ -247,7 +247,7 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
-        {diplomacyTargetCountry && <DiplomacyPanel targetCountry={diplomacyTargetCountry} playerCountry={playerCountry} relation={diplomacyRelation} onClose={modals.handleCloseDiplomacy} onImproveRelations={diplomacy.handleImproveRelations} onOfferNonAggression={diplomacy.handleOfferNonAggression} onDeclareWar={diplomacy.handleDeclareWar} />}
+        {diplomacyTargetCountry && <DiplomacyPanel key={`${playerCountryTag}:${diplomacyTargetCountry.tag}`} targetCountry={diplomacyTargetCountry} playerCountry={playerCountry} context={{relations: diplomaticRelations,wars,countries: allCountries,provinces,armies,date}} onClose={modals.handleCloseDiplomacy} onAction={diplomacy.handleAction} onProposal={diplomacy.handleProposal} onCall={diplomacy.handleCall} feedback={diplomacy.feedback} />}
         {modals.showWarPanel && <WarPanel wars={wars} playerCountry={playerCountry} allCountries={allCountries} onClose={() => modals.setShowWarPanel(false)} onMakePeace={diplomacy.handleMakePeace} />}
         {modals.battleReport && <BattleReportModal battleResult={modals.battleReport} playerCountry={playerCountry} allCountries={allCountries} onClose={() => { modals.setBattleReport(null); modals.setIsPaused(false); }} />}
         {modals.showBattleHistory && <BattleHistoryModal playerCountryTag={playerCountryTag} battleHistory={battleHistory} allCountries={allCountries} onClose={() => modals.setShowBattleHistory(false)} onViewBattle={(b) => { modals.setShowBattleHistory(false); modals.setBattleReport(b); modals.setIsPaused(true); }} />}

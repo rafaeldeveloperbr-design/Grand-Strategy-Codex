@@ -74,7 +74,7 @@ export const WarPanel: React.FC<WarPanelProps> = ({
           const attacker = getCountryByTag(war.attacker);
           const defender = getCountryByTag(war.defender);
           const isPlayerAttacker = war.attacker === playerCountry.tag;
-          const playerSide = isPlayerAttacker ? 'attacker' : 'defender';
+          const isCivilWar = [war.attacker,war.defender].some(tag => tag.startsWith('rebel_'));
           const playerCasualties = isPlayerAttacker ? war.attackerCasualties : war.defenderCasualties;
           const enemyCasualties = isPlayerAttacker ? war.defenderCasualties : war.attackerCasualties;
 
@@ -154,10 +154,10 @@ export const WarPanel: React.FC<WarPanelProps> = ({
               <button
                 className="war-panel__peace-btn"
                 onClick={() => onMakePeace(war.id)}
-                disabled={war.warScore < -50 && playerSide === 'attacker'}
-                title={war.warScore < -50 && playerSide === 'attacker' ? 'Pontuação de guerra muito desfavorável' : ''}
+                disabled={isCivilWar}
+                title={isCivilWar ? 'Guerra civil é resolvida pelos objetivos da rebelião' : 'Encerra toda a campanha, incluindo aliados e garantidores'}
               >
-                🕊️ Assinar Tratado de Paz
+                🕊️ Assinar Paz Branca da Campanha
               </button>
             </div>
           );

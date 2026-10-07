@@ -3,10 +3,10 @@ import { calculateArmySize, calculateArmyOrganization, calculateArmyMorale, calc
 
 export type MapMode = 'political' | 'development' | 'population' | 'unrest' | 'supply' | 'terrain';
 export const MAP_MODES: { id: MapMode; label: string; description: string }[] = [
-  { id: 'terrain', label: 'TERRENO', description: 'Terreno e modificadores militares' },
   { id: 'political', label: 'Político', description: 'Controle atual por país' },
   { id: 'development', label: 'Desenvolvimento', description: 'Desenvolvimento provincial' },
   { id: 'population', label: 'População', description: 'População total; escala relativa ao mapa atual' },
+  { id: 'terrain', label: 'Terreno', description: 'Terreno e modificadores militares' },
   { id: 'unrest', label: 'Unrest', description: 'Maior valor entre agitação e organização rebelde' },
   { id: 'supply', label: 'Supply', description: 'Capacidade logística local base; não representa acesso militar' },
 ];

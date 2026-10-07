@@ -74,7 +74,13 @@ export interface Regiment {
 /**
  * Representa um exército (coleção de regimentos)
  */
+export interface ArmyMovementPlan {
+  /** Unreached ordered checkpoints, including the active checkpoint until arrival. */
+  waypoints: string[];
+}
+
 export interface Army {
+  movementPlan?: ArmyMovementPlan;
   rebellionFactionId?: string;
   rebellionMovement?: { target?: string; reason: string; state: 'marching' | 'defending' | 'blocked'; blockedSinceDay?: number; powerRatio?: number; requiredRatio?: number };
   /** ID único do exército */

@@ -11,7 +11,7 @@ interface ArmyMovementLayerProps {
   selectedArmyIds?: string[];
   hoveredArmyId: string | null;
   openStackKey: string | null;
-  onArmyClick: (armyId: string) => void;
+  onArmyClick: (armyId: string, additive?: boolean) => void;
   onArmyHover: (armyId: string | null) => void;
   onStackOpen: (group: ArmyVisualGroup, x: number, y: number) => void;
 }
@@ -26,16 +26,21 @@ export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = ({ presentati
     open?.armies.forEach(army => relevant.add(army.id));
     return [...relevant].flatMap(id => {
       const army = id ? presentation.armyById.get(id) : undefined;
-      if (!army?.destination) return [];
+      if (!army || (!army.destination && !army.movementPlan?.waypoints.length)) return [];
       const origin = army.location ? presentation.provinceById.get(army.location) : undefined;
       const start = army.position ?? origin?.center;
       if (!start) return [];
       // The engine's path includes destination; remove consecutive duplicates only.
-      const ids = [army.destination, ...army.path].filter((value, index, all) => index === 0 || value !== all[index - 1]);
+      const ids = (army.destination ? [army.destination, ...army.path] : []).filter((value, index, all) => index === 0 || value !== all[index - 1]);
       const steps = ids.flatMap(value => { const province = presentation.provinceById.get(value); return province ? [province.center] : []; });
-      if (!steps.length) return [];
-      return [{ army, start, steps, final: steps[steps.length - 1] }];
-    });
+      const waypoints = (army.movementPlan?.waypoints ?? []).flatMap((id, index) => {
+        const province = presentation.provinceById.get(id);
+        return province ? [{ id, index: index + 1, point: province.center }] : [];
+      });
+      const segmentEnd = steps[steps.length - 1] ?? start;
+      const future = waypoints.filter(w => !army.destination || w.id !== army.targetDestination || w.index !== 1);
+      return [{ army, start, steps, waypoints, future, segmentEnd, final: waypoints[waypoints.length - 1]?.point ?? segmentEnd, visualKey: JSON.stringify([army.owner, start, ids, waypoints.map(w => w.id)]) }];
+    }).filter((route, index, all) => !route.waypoints.length || all.findIndex(other => other.visualKey === route.visualKey) === index);
   }, [presentation, selectedIds, hoveredArmyId, openStackKey]);
   const selected = selectedArmy ? presentation.armyById.get(selectedArmy) : undefined;
   const selectedGroup = selectedArmy ? presentation.groups.find(group => group.armies.some(army => selectedIds.has(army.id))) : undefined;
@@ -43,8 +48,10 @@ export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = ({ presentati
   return <g className="army-movement-layer">
     <defs><marker id={arrowId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" /></marker></defs>
     <g className="army-routes" pointerEvents="none">
-      {routes.map(({ army, start, steps, final }) => <g key={army.id} data-route-army={army.id}>
-        <polyline points={[start, ...steps].map(point => `${point.x},${point.y}`).join(' ')} fill="none" stroke={selectedIds.has(army.id) ? 'var(--gold)' : 'var(--accent)'} strokeWidth={selectedIds.has(army.id) ? 3 : 1.5} strokeDasharray="7 4" vectorEffect="non-scaling-stroke" opacity={selectedIds.has(army.id) ? 1 : .55} markerEnd={`url(#${arrowId})`} />
+      {routes.map(({ army, start, steps, final, waypoints, future, segmentEnd }) => <g key={army.id} data-route-army={army.id}>
+        {steps.length > 0 && <polyline data-route-segment="active" points={[start, ...steps].map(point => `${point.x},${point.y}`).join(' ')} fill="none" stroke={selectedIds.has(army.id) ? 'var(--gold)' : 'var(--accent)'} strokeWidth={selectedIds.has(army.id) ? 3 : 1.5} vectorEffect="non-scaling-stroke" opacity={selectedIds.has(army.id) ? 1 : .55} markerEnd={`url(#${arrowId})`} />}
+        {future.length > 0 && <polyline data-route-segment="planned" points={[segmentEnd, ...future.map(w => w.point)].map(point => `${point.x},${point.y}`).join(' ')} fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeDasharray="3 5" vectorEffect="non-scaling-stroke" opacity=".7" />}
+        {waypoints.filter((_, index) => index < 8 || index === waypoints.length - 1).map(w => <g key={`${w.index}-${w.id}`} data-waypoint={w.id}><circle cx={w.point.x} cy={w.point.y} r="9" fill="var(--bg-app)" stroke="var(--gold)" /><text x={w.point.x} y={w.point.y + 3} textAnchor="middle" fill="var(--gold)" fontSize="9">{w.index}</text></g>)}
         <circle cx={final.x} cy={final.y} r="8" fill="none" stroke={selectedIds.has(army.id) ? 'var(--gold)' : 'var(--accent)'} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
         {selectedIds.has(army.id) && <text x={final.x} y={final.y - 12} textAnchor="middle" className="army-route-label">Destino</text>}
       </g>)}

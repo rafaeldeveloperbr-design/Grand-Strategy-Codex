@@ -9,6 +9,7 @@ import {
   splitArmy,
   splitArmyHalf,
   stopArmyMovement,
+  clearMovementPlan,
 } from '../../engine/military';
 
 import { calculateArmySize, retreatArmyManually } from '../../engine/combat';
@@ -74,14 +75,14 @@ type Params = {
 export function useArmyActions(params: Params) {
   const { activeBattlesRef, setActiveBattles, selectedArmy, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection, setSplitSelection, setShowSplitModal } = params;
 
-  const handleProvinceRightClick = useCallback((provinceId: string) => {
+  const handleProvinceRightClick = useCallback((provinceId: string, append = false) => {
     const ids = params.selectedArmyIds ?? (selectedArmy ? [selectedArmy] : []);
     if (!ids.length) return;
     const provinces = provincesRef.current ?? [];
     const current = armiesRef.current ?? [];
     const single = ids.length === 1 ? current.find(a => a.id === ids[0] && a.owner === playerCountryTag) : undefined;
-    if (single?.destination && single.location === provinceId) {
-      const stopped = stopArmyMovement(single);
+    if (!append && single?.destination && single.location === provinceId && !single.inCombat) {
+      const stopped = clearMovementPlan(single);
       if (stopped !== single) {
         armiesRef.current = current.map(a => a.id === single.id ? stopped : a);
         setArmies(armiesRef.current);
@@ -90,15 +91,25 @@ export function useArmyActions(params: Params) {
       }
       return;
     }
-    const result = orderArmyGroup(ids, current, playerCountryTag, provinceId, provinces, diplomaticRelationsRef.current ?? []);
+    const result = orderArmyGroup(ids, current, playerCountryTag, provinceId, provinces, diplomaticRelationsRef.current ?? [], append ? 'append' : 'move');
     if (!result.updates.size && !result.failures.length) return;
     if (result.updates.size) {
       armiesRef.current = result.armies;
       setArmies(prev => prev.map(a => result.updates.get(a.id) ?? a));
     }
-    const message = groupMovementFeedback(result.updates.size, provinces.find(p => p.id === provinceId)?.name ?? provinceId, result.failures);
+    const destination = provinces.find(p => p.id === provinceId)?.name ?? provinceId;
+    const message = append ? `Waypoint ${destination} adicionado para ${result.updates.size} exércitos.${result.failures.length ? ` ${result.failures.length} falharam: ${result.failures.map(f => `${f.name} (${f.reason})`).join('; ')}.` : ''}` : groupMovementFeedback(result.updates.size, destination, result.failures);
     addLog(message); addToast(message, result.failures.length ? 'warning' : 'info', 'Movimento');
   }, [params.selectedArmyIds, selectedArmy, playerCountryTag, addLog, addToast, armiesRef, diplomaticRelationsRef, provincesRef, setArmies]);
+
+  const handleClearRoutes = useCallback(() => {
+    const ids = params.selectedArmyIds ?? (selectedArmy ? [selectedArmy] : []);
+    const result = orderArmyGroup(ids, armiesRef.current ?? [], playerCountryTag, '', provincesRef.current ?? [], diplomaticRelationsRef.current ?? [], 'clear');
+    if (!result.updates.size) return;
+    armiesRef.current = result.armies;
+    setArmies(prev => prev.map(a => result.updates.get(a.id) ?? a));
+    addToast(`Rotas limpas para ${result.updates.size} exércitos.`, 'info', 'Movimento');
+  }, [params.selectedArmyIds, selectedArmy, playerCountryTag, armiesRef, provincesRef, diplomaticRelationsRef, setArmies, addToast]);
 
   const handleMergeArmies = useCallback((targetArmyId: string) => {
     if (!selectedArmy) return;
@@ -188,14 +199,15 @@ export function useArmyActions(params: Params) {
 
     if (!army) return;
 
-    const stopped = stopArmyMovement(army);
+    if (army.owner !== playerCountryTag || army.inCombat) return;
+    const stopped = clearMovementPlan(stopArmyMovement(army));
 
     setArmies(prev =>
       prev.map(a =>
         a.id === armyId ? stopped : a
       )
     );
-  }, [armiesRef, setArmies]);
+  }, [armiesRef, setArmies, playerCountryTag]);
 
   // NOVA FUNÇÃO: Destrava todos exércitos travados
   const handleUnstuckAll = useCallback(() => {
@@ -217,5 +229,5 @@ export function useArmyActions(params: Params) {
     addToast('Exércitos destravados!', 'success', 'Cheat');
   }, [setArmies, addLog, addToast]);
 
-  return { handleProvinceRightClick, handleMergeArmies, handleSplitHalf, handleSplitCustom, handleRetreatArmy, handleStopMovement, handleUnstuckAll };
+  return { handleProvinceRightClick, handleClearRoutes, handleMergeArmies, handleSplitHalf, handleSplitCustom, handleRetreatArmy, handleStopMovement, handleUnstuckAll };
 }

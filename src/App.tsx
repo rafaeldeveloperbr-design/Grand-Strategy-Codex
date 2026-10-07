@@ -13,6 +13,7 @@ import { WarPanel } from './components/WarPanel';
 import { BattleReportModal } from './components/BattleReportModal';
 import { BattleHistoryModal } from './components/BattleHistoryModal';
 import { ArmySelectionSummary } from './components/ArmySelectionSummary';
+import { ArmyMovementPlanPanel } from './components/ArmyMovementPlanPanel';
 import { FocusModal } from './components/FocusModal';
 import { ResearchModal } from './components/ResearchModal';
 import { EndGameModal } from './components/EndGameModal';
@@ -207,7 +208,7 @@ const App: React.FC = () => {
       />      <div className="game__main">
         <GameMap logistics={logistics} provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} wars={wars} diplomaticRelations={diplomaticRelations} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} selectedArmyIds={selection.selectedArmyIds} playerCountryTag={playerCountryTag} onToggleArmy={selection.toggleArmySelection} onToggleStack={selection.toggleStackSelection} onClearSelection={selection.clearArmySelection} onProvinceHover={selection.handleProvinceHover} onProvinceClick={selection.handleProvinceClick} onArmyClick={selection.handleArmyClick} onProvinceRightClick={armyActions.handleProvinceRightClick} />
         {selection.isPanelOpen && selectedProvinceData && <ProvincePanel selectedArmyIds={selection.selectedArmyIds} onSelectArmy={selection.toggleArmySelection} logistics={logistics} onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
-        {selection.selectedArmyIds.length > 1 && <ArmySelectionSummary armies={armies.filter(a => selection.selectedArmyIds.includes(a.id) && a.owner === playerCountryTag)} allArmies={armies} provinces={provinces} logistics={logistics} onClear={selection.clearArmySelection} />}
+        {selection.selectedArmyIds.length > 1 && <ArmySelectionSummary armies={armies.filter(a => selection.selectedArmyIds.includes(a.id) && a.owner === playerCountryTag)} allArmies={armies} provinces={provinces} logistics={logistics} onClear={selection.clearArmySelection} onClearRoutes={armyActions.handleClearRoutes} />}
         {selection.selectedArmyIds.length === 1 && selectedArmyData && (
           <div className="army-info-panel">
             <div className="army-info-panel__header"><h3>{selectedArmyData.name}</h3><button onClick={() => selection.setSelectedArmy(null)}>✕</button></div>
@@ -218,6 +219,7 @@ const App: React.FC = () => {
               {selectedArmyLogistics && <div className="army-info-panel__stat"><span>Logística:</span><span>{selectedArmyLogistics.connected ? 'Conectada' : 'Desconectada'} · Distância {selectedArmyLogistics.distance ?? '—'}</span></div>}
               {selectedArmyData.destination && <div className="army-info-panel__stat"><span>Destino:</span><span>{provinces.find(p => p.id === selectedArmyData.destination)?.name} ({Math.round(selectedArmyData.movementProgress * 100)}%)</span></div>}
               {selectedArmyData.path.length > 0 && <div className="army-info-panel__stat"><span>Rota:</span><span className="army-info-panel__path">{selectedArmyData.path.map(pid => provinces.find(p => p.id === pid)?.name).join(' → ')}</span></div>}
+              <ArmyMovementPlanPanel army={selectedArmyData} provinces={provinces} onClear={armyActions.handleClearRoutes} />
               <div className="army-info-panel__regiments">
                 <strong>Regimentos:</strong>
 

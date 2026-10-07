@@ -3,6 +3,7 @@
  * Movimentação + Correção de libertação rebelde
  */
 import { processArmyMovement } from '../../engine/military';
+import { advanceMovementPlans, clearMovementPlan, type MovementPlanInterruption } from '../../engine/military';
 import type { Army, Province, Country } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
 import { transferProvince } from '../../engine/territoryTransfer';
@@ -16,16 +17,33 @@ type Params = {
   countries: Country[];
   wars?: War[];
   addLog: (msg: string) => void;
+  playerCountryTag?: string;
+  addToast?: (msg: string, type?: 'warning') => void;
 };
 
 export function processMovementTick(p: Params) {
   let { armies, provinces, countries, relations } = p;
   const { addLog } = p;
+  const prepared = advanceMovementPlans(armies, provinces, relations);
+  armies = prepared.armies;
+  const interruptions: MovementPlanInterruption[] = [...prepared.interruptions];
 
   // PASSO B: MOVIMENTAÇÃO
   const logistics = buildLogisticsNetworks({countries,provinces,relations,wars: p.wars});
   const moveResult = processArmyMovement(armies, provinces, relations, logistics);
-  armies = moveResult.updatedArmies;
+  armies = moveResult.updatedArmies.map(army => {
+    const before = prepared.armies.find(a => a.id === army.id);
+    if (before?.movementPlan?.waypoints.length && before.destination && !army.destination && !army.inCombat) {
+      interruptions.push({ armyId: army.id, owner: army.owner, name: army.name, waypoint: before.movementPlan.waypoints[0] });
+      return clearMovementPlan(army);
+    }
+    return army;
+  });
+  const relevant = interruptions.filter(item => item.owner === p.playerCountryTag);
+  if (relevant.length) {
+    const message = `Rota interrompida: ${relevant.map(item => item.name).join(', ')}. Próximo waypoint sem rota ou acesso válido.`;
+    addLog(message); p.addToast?.(message, 'warning');
+  }
   const arrivedArmies = moveResult.arrivedArmies;
   provinces = moveResult.updatedProvinces;
 

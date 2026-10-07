@@ -9,6 +9,8 @@ export type ProposalKind = 'alliance' | 'nap' | 'access' | 'call';
 export interface DiplomaticProposal {
   id: string; kind: ProposalKind; from: string; to: string; createdAt: number;
   expiresAt: number; warId?: string;
+  /** Proactive AI offer to the player; refusals/silence get a longer retry. */
+  aiToPlayer?: boolean;
 }
 /** One canonical pair; opinion/trust and bilateral agreements are symmetric. */
 export interface DiplomaticRelation {

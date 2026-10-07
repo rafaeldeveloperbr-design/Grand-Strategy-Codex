@@ -14,6 +14,7 @@ export const DIPLOMACY_BALANCE = {
   napDuration: 365 * 5, cbDuration: 365 * 2, proposalDuration: 30,
   actionCooldown: 90, aiInterval: 90, aiMaintenanceInterval: 30, recentNapWindow: 365,
   aiMaxProposalsPerCycle: 3, aiProposalCooldown: 180,
+  aiRejectedProposalRetryDays: 5 * 365, aiExpiredProposalRetryDays: 3 * 365,
   aiAllianceMinOpinion: 60, aiAllianceMinTrust: 60,
   aiNapMinOpinion: 25, aiNapMinTrust: 45,
   aiAccessMinOpinion: 35, aiAccessMinTrust: 50,
@@ -21,7 +22,7 @@ export const DIPLOMACY_BALANCE = {
   aiProposalScore: {
     opinion: 1, trust: .5, neighbor: 30, commonEnemy: 50,
     strategicThreat: 40, politicalTie: 15, usefulRoute: 40,
-    alliance: 20, nap: 10, access: 0,
+    alliance: 20, nap: 0, access: 0,
   },
   aiPowerFloor: 1000, aiAllianceMinPowerRatio: .2, aiAllianceMaxPowerRatio: 5,
   aiMaxWars: 2, aiCallPowerRatio: .7, aiDefensiveCallTrust: 50, aiOffensiveCallTrust: 65,

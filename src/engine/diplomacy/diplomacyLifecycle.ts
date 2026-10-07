@@ -3,10 +3,15 @@ import { diplomacyDay, updateRelation } from './diplomacyRelations';
 import { areAtWar, canEnterTerritory, isDiplomaticCountry } from './diplomacySelectors';
 import { respondToWarCall } from './diplomacyWar';
 import type { DiplomacyContext } from './diplomacyTypes';
+import { DIPLOMACY_BALANCE as B } from './diplomacyBalance';
 
 export function processDiplomacyTick(ctx: DiplomacyContext): DiplomacyContext {
   const day = diplomacyDay(ctx.date);
   let next = ctx;
+  for (const p of ctx.relations.flatMap(r => r.proposals ?? []).filter(p => p.kind !== 'call' && p.aiToPlayer && p.expiresAt <= day)) {
+    next = {...next,relations: updateRelation(next.relations,p.from,p.to,r => ({...r,cooldowns: {...r.cooldowns,
+      [`${p.from}:aiProposalRetry:${p.kind}`]: Math.max(r.cooldowns?.[`${p.from}:aiProposalRetry:${p.kind}`] ?? -Infinity,p.expiresAt+B.aiExpiredProposalRetryDays)}}))};
+  }
   // Silence is refusal; expiration applies the same trust/opinion cost once.
   for (const p of ctx.relations.flatMap(r => r.proposals ?? []).filter(p => p.kind === 'call' && p.expiresAt <= day)) {
     const refused = respondToWarCall(next,p.id,false);

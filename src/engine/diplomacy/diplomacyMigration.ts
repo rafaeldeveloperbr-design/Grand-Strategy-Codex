@@ -30,7 +30,8 @@ export function migrateDiplomacy(raw: unknown,wars: War[],date: GameDate): Diplo
       const p = object(value);
       if (typeof p.id !== 'string' || typeof p.from !== 'string' || typeof p.to !== 'string' || !members.includes(p.from) || !members.includes(p.to) || p.from === p.to || !['alliance','nap','access','call'].includes(String(p.kind))
         || typeof p.createdAt !== 'number' || typeof p.expiresAt !== 'number' || p.expiresAt <= day || p.kind === 'call' && !wars.some(w => w.id === p.warId)) return [];
-      return [{id: p.id,kind: p.kind as DiplomaticProposal['kind'],from: p.from,to: p.to,createdAt: p.createdAt,expiresAt: p.expiresAt,warId: typeof p.warId === 'string' ? p.warId : undefined}];
+      return [{id: p.id,kind: p.kind as DiplomaticProposal['kind'],from: p.from,to: p.to,createdAt: p.createdAt,expiresAt: p.expiresAt,warId: typeof p.warId === 'string' ? p.warId : undefined,
+        ...(p.aiToPlayer === true && p.kind !== 'call' ? {aiToPlayer: true} : {})}];
     });
     r.cooldowns = Object.fromEntries(Object.entries(object(v.cooldowns)).filter(([key,value]) => members.some(t => key.startsWith(`${t}:`)) && typeof value === 'number' && Number.isFinite(value) && value > day).map(([key,value]) => [key,value as number]));
     if (typeof v.lastWarEndedAt === 'number') r.lastWarEndedAt = v.lastWarEndedAt;

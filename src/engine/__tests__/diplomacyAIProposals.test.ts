@@ -60,13 +60,75 @@ describe('Diplomacy V2 proactive AI rebalance', () => {
     expect(loaded.diplomacy.relations).toEqual(D.migrateDiplomacy(ctx.relations,[],ctx.date));
     expect(proposals(D.processDiplomacyAI({...ctx,relations: loaded.diplomacy.relations},'P'))).toHaveLength(0);
   });
-  it('does not repeat a rejected NAP after 90 days and permits it after 180', () => {
+  it('blocks a rejected NAP for five years, then permits it at the next cycle', () => {
     let ctx: DiplomacyContext = D.processDiplomacyAI(pair(30,50),'P');
     const p = proposals(ctx)[0]; expect(p.kind).toBe('nap');
     ctx = next(ctx,D.respondAgreement(ctx,p.from,p.to,'nap',false));
     const day = D.diplomacyDay(ctx.date);
     expect(proposals(D.processDiplomacyAI(D.processDiplomacyTick(onDay(ctx,day+90)),'P'))).toHaveLength(0);
-    expect(proposals(D.processDiplomacyAI(D.processDiplomacyTick(onDay(ctx,day+180)),'P'))).toHaveLength(1);
+    const until = day+B.aiRejectedProposalRetryDays;
+    expect(D.getRelation(ctx.relations,'A','P')?.cooldowns?.['A:aiProposalRetry:nap']).toBe(until);
+    for (const offset of [180,360,1800]) expect(proposals(D.processDiplomacyAI(D.processDiplomacyTick(onDay(ctx,day+offset)),'P'))).toHaveLength(0);
+    expect(D.collectProactiveProposalCandidates(onDay(ctx,until-1),'P')).toHaveLength(0);
+    expect(D.collectProactiveProposalCandidates(onDay(ctx,until),'P')).toHaveLength(1);
+    expect(proposals(D.processDiplomacyAI(D.processDiplomacyTick(onDay(ctx,day+1890)),'P'))).toHaveLength(1);
+  });
+  it('treats silence as refusal for three years from expiry, without renewing the deadline', () => {
+    const offered = D.processDiplomacyAI(pair(30,50),'P'),p = proposals(offered)[0];
+    const until = p.expiresAt+B.aiExpiredProposalRetryDays;
+    const ctx = D.processDiplomacyTick(onDay(offered,p.expiresAt));
+    expect(proposals(ctx)).toHaveLength(0);
+    expect(D.getRelation(ctx.relations,'A','P')?.cooldowns?.['A:aiProposalRetry:nap']).toBe(until);
+    const later = D.processDiplomacyTick(onDay(ctx,until-1));
+    expect(D.collectProactiveProposalCandidates(later,'P')).toHaveLength(0);
+    expect(D.getRelation(later.relations,'A','P')?.cooldowns?.['A:aiProposalRetry:nap']).toBe(until);
+    expect(D.collectProactiveProposalCandidates(D.processDiplomacyTick(onDay(ctx,until)),'P')).toHaveLength(1);
+    const cycle = until+((B.aiInterval-until%B.aiInterval)%B.aiInterval);
+    expect(proposals(D.processDiplomacyAI(D.processDiplomacyTick(onDay(ctx,cycle)),'P'))).toHaveLength(1);
+  });
+  it('limits retries to the country pair and action, leaving alliance opportunities available', () => {
+    let ctx: DiplomacyContext = D.processDiplomacyAI(pair(30,50),'P');
+    ctx = next(ctx,D.respondAgreement(ctx,'A','P','nap',false));
+    ctx.relations = D.setTrust(D.setOpinion(ctx.relations,'A','P',70),'A','P',70);
+    const candidates = D.collectProactiveProposalCandidates(onDay(ctx,D.diplomacyDay(ctx.date)+180),'P');
+    expect(candidates.some(p => p.kind === 'nap')).toBe(false);
+    expect(candidates.some(p => p.kind === 'alliance')).toBe(true);
+    const other = pair(30,50);
+    other.relations = [...other.relations,...ctx.relations.map(r => ({...r,countryA: 'B'}))];
+    expect(D.collectProactiveProposalCandidates(other,'P').some(p => p.from === 'A' && p.kind === 'nap')).toBe(true);
+  });
+  it('lets alliances and useful access outrank NAP without a fixed NAP bonus', () => {
+    expect(B.aiProposalScore.nap).toBe(0);
+    expect(proposals(D.processDiplomacyAI(pair(70,70),'P'))[0].kind).toBe('alliance');
+    const ctx = scenario([['A','P'],['P','E']], [['A','P',70,70]]);
+    ctx.wars = [{id: 'A-E',attacker: 'A',defender: 'E',startDate: ctx.date,warScore: 0,attackerCasualties: 0,defenderCasualties: 0,occupiedByAttacker: [],occupiedByDefender: []}];
+    const ranked = D.collectProactiveProposalCandidates(ctx,'P');
+    expect(ranked[0]).toMatchObject({from: 'A',to: 'P',kind: 'access'});
+    expect(ranked.find(p => p.kind === 'access')!.score).toBeGreaterThan(ranked.find(p => p.kind === 'nap')!.score);
+    expect(proposals(D.processDiplomacyAI(ctx,'P'))[0].kind).toBe('access');
+  });
+  it.each(['rejected','expired','pending'] as const)('preserves %s AI retry state through save/load', state => {
+    let ctx: DiplomacyContext = D.processDiplomacyAI(pair(30,50),'P');
+    const p = proposals(ctx)[0];
+    if (state === 'rejected') ctx = next(ctx,D.respondAgreement(ctx,'A','P','nap',false));
+    if (state === 'expired') ctx = D.processDiplomacyTick(onDay(ctx,p.expiresAt));
+    saveGame({dateRef: {current: ctx.date},countriesRef: {current: ctx.countries},provincesRef: {current: ctx.provinces!},armiesRef: {current: []},warsRef: {current: []},diplomaticRelationsRef: {current: ctx.relations},
+      recruitmentsRef: {current: []},buildingConstructionsRef: {current: []},activeBattlesRef: {current: []},playerTechStateRef: {current: createInitialTechState('P')},botTechStatesRef: {current: new Map()}},'retry-state');
+    ctx = {...ctx,relations: loadGame('retry-state')!.diplomacy.relations};
+    if (state === 'pending') {
+      expect(proposals(ctx)[0].aiToPlayer).toBe(true);
+      ctx = D.processDiplomacyTick(onDay(ctx,p.expiresAt));
+    }
+    const until = state === 'rejected' ? p.createdAt+B.aiRejectedProposalRetryDays : p.expiresAt+B.aiExpiredProposalRetryDays;
+    expect(D.getRelation(ctx.relations,'A','P')?.cooldowns?.['A:aiProposalRetry:nap']).toBe(until);
+    expect(D.collectProactiveProposalCandidates(onDay(ctx,until-1),'P')).toHaveLength(0);
+    expect(D.collectProactiveProposalCandidates(onDay(ctx,until),'P')).toHaveLength(1);
+  });
+  it('does not attach AI retry penalties to refused or ignored player offers', () => {
+    const ctx = pair(30,50),offered = next(ctx,D.offerAgreement(ctx,'P','A','nap'));
+    const refused = next(offered,D.respondAgreement(offered,'P','A','nap',false));
+    const expired = D.processDiplomacyTick(onDay(offered,proposals(offered)[0].expiresAt));
+    for (const outcome of [refused,expired]) expect(Object.keys(D.getRelation(outcome.relations,'P','A')?.cooldowns ?? {}).some(key => key.includes('aiProposalRetry'))).toBe(false);
   });
   it('has no monthly proactive spam: only day 0 and day 90 produce proposals', () => {
     let ctx = crowded(); const start = D.diplomacyDay(ctx.date),emitted: [number,number][] = [];

@@ -57,7 +57,10 @@ export function agreementResponseBlockReason(ctx: DiplomacyContext,from: string,
 export function respondAgreement(ctx: DiplomacyContext, from: string,to: string,kind: Exclude<ProposalKind,'call'>,accept: boolean): DiplomacyResult {
   const r = getRelation(ctx.relations,from,to),day = diplomacyDay(ctx.date);
   if (!r?.proposals?.some(p => p.from === from && p.to === to && p.kind === kind && p.expiresAt > day)) return result(ctx,false,'Proposta não existe ou expirou');
-  const clean = updateRelation(ctx.relations,from,to,r => ({...r,proposals: r.proposals?.filter(p => !(p.kind === kind && p.from === from && p.to === to))}));
+  const aiRefusal = !accept && r.proposals?.some(p => p.from === from && p.to === to && p.kind === kind && p.aiToPlayer);
+  const clean = updateRelation(ctx.relations,from,to,r => ({...r,
+    ...(aiRefusal ? {cooldowns: {...r.cooldowns,[`${from}:aiProposalRetry:${kind}`]: day+B.aiRejectedProposalRetryDays}} : {}),
+    proposals: r.proposals?.filter(p => !(p.kind === kind && p.from === from && p.to === to))}));
   if (!accept) return result({...ctx,relations: clean},true,`${to} recusou a proposta de ${kind === 'alliance' ? 'aliança' : kind === 'nap' ? 'pacto' : 'acesso'}.`);
   // Revalidate conditions, excluding the sender's offer cooldown.
   const reason = agreementResponseBlockReason({...ctx,relations: clean},from,to,kind);

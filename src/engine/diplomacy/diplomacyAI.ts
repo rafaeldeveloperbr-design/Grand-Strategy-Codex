@@ -101,6 +101,7 @@ export function collectProactiveProposalCandidates(ctx: DiplomacyContext,playerT
     const neighbor = areNeighbors(ctx,a.tag,b.tag),enemy = commonEnemy(ctx,a.tag,b.tag),political = hasPoliticalTie(ctx,a.tag,b.tag);
     const threat = hasStrategicThreat(ctx,a.tag,b.tag);
     for (const kind of ['alliance','nap','access'] as const) {
+      if ((r.cooldowns?.[`${a.tag}:aiProposalRetry:${kind}`] ?? -Infinity) > day) continue;
       const [opinion,trust] = requirements[kind];
       if (r.opinion < opinion || r.trust < trust || actionBlockReason(ctx,a.tag,b.tag,proposalAction[kind]) || !shouldAcceptAgreement(ctx,a.tag,b.tag,kind)) continue;
       const usefulRoute = kind === 'access' && hasUsefulMilitaryAccessRoute(ctx,a.tag,b.tag);
@@ -154,7 +155,8 @@ export function processDiplomacyAI(ctx: DiplomacyContext,playerTag: string) {
     const offer = offerAgreement(next,from,to,kind); if (!offer.ok) continue;
     const action = proposalAction[kind];
     offer.relations = updateRelation(offer.relations,from,to,r => ({...r,cooldowns: {...r.cooldowns,
-      [`${from}:${action}`]: day+B.aiProposalCooldown,[`${from}:aiProposal:${action}`]: cycleUntil}}));
+      [`${from}:${action}`]: day+B.aiProposalCooldown,[`${from}:aiProposal:${action}`]: cycleUntil},
+      proposals: r.proposals?.map(p => p.from === from && p.to === to && p.kind === kind && to === playerTag ? {...p,aiToPlayer: true} : p)}));
     apply(offer); selectedPairs.add(key); sent++;
   }
   return {...next,messages};

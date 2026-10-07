@@ -81,7 +81,9 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
     <div className="province-panel">
       {/* Cabeçalho */}
       <div className="province-panel__header">
-        <div><h2 className="province-panel__title">{province.name}</h2><p className="province-panel__identity">{ownerCountry?.flag} {ownerCountry?.name ?? province.owner} {'\u00b7'} {province.id}</p></div>
+        <div><h2 className="province-panel__title">{province.name}</h2><p className="province-panel__identity">
+          {ownerCountry?.flag} {ownerCountry?.name ?? province.owner}
+        </p></div>
         <button className="province-panel__close" aria-label={"Fechar painel da prov\u00edncia"} onClick={onClose}>✕</button>
       </div>
 
@@ -181,7 +183,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
       <div className="province-panel__footer">
         <div className="province-panel__color-swatch" style={{ backgroundColor: province.color }} />
         <span className="province-panel__footer-text">
-          {province.id} | Pop: {province.population.total.toLocaleString()}
+          {province.name} | Pop: {province.population.total.toLocaleString('pt-BR')}
         </span>
       </div>
     </div>

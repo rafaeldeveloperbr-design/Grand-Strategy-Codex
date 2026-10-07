@@ -185,7 +185,9 @@ export const ProvinceInfoTab: React.FC<ProvinceInfoTabProps> = ({
               style={{ borderLeftColor: neighbor.country?.color ?? '#666' }}
             >
               <span>{neighbor.country?.flag ?? '?'}</span>
-              <span className="province-panel__neighbor-id">{neighbor.id}</span>
+              <span className="province-panel__neighbor-id">
+                {provinces.find(p => p.id === neighbor.id)?.name ?? neighbor.id}
+              </span>
               <span className="province-panel__neighbor-country">
                 {neighbor.country?.adjective ?? '???'}
               </span>

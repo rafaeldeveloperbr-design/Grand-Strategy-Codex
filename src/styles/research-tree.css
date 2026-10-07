@@ -9,6 +9,8 @@
 .research-tree-viewport { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-color: #4a5869 #131d29; background: #141e2a; }
 .research-tree-canvas { position: relative; display: grid; box-sizing: border-box; margin-inline: auto; }
 .research-tree-connections { position: absolute; inset: 0; pointer-events: none; }
+.research-tree-lane { position: absolute; top: 12px; bottom: 12px; border-top: 1px solid #354151; pointer-events: none; }
+.research-tree-lane > span { display: inline-block; padding: 8px 0; color: var(--research-color); font-size: 11px; font-weight: 600; }
 .research-connection { fill: none; stroke: #526174; stroke-width: 1.5; stroke-linecap: round; }
 .research-connection--completed { stroke: #809883; }
 .research-connection--active { stroke: #ccb67c; stroke-width: 2; }

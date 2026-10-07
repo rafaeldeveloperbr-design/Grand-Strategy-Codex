@@ -5,14 +5,16 @@
 import { useCallback } from 'react';
 
 import {
-  mergeArmies,
-  splitArmy,
-  splitArmyHalf,
+  splitArmyByRegiments,
+  splitArmyByHalf,
+  transferRegiments,
+  mergeArmyGroup,
+  type ReorganizationResult,
   stopArmyMovement,
   clearMovementPlan,
 } from '../../engine/military';
 
-import { calculateArmySize, retreatArmyManually } from '../../engine/combat';
+import { retreatArmyManually } from '../../engine/combat';
 
 import type { ActiveBattle, Army, Province } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
@@ -73,7 +75,7 @@ type Params = {
 };
 
 export function useArmyActions(params: Params) {
-  const { activeBattlesRef, setActiveBattles, selectedArmy, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection, setSplitSelection, setShowSplitModal } = params;
+  const { activeBattlesRef, setActiveBattles, selectedArmy, setSelectedArmy, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection, setSplitSelection, setShowSplitModal } = params;
 
   const handleProvinceRightClick = useCallback((provinceId: string, append = false) => {
     const ids = params.selectedArmyIds ?? (selectedArmy ? [selectedArmy] : []);
@@ -111,67 +113,29 @@ export function useArmyActions(params: Params) {
     addToast(`Rotas limpas para ${result.updates.size} exércitos.`, 'info', 'Movimento');
   }, [params.selectedArmyIds, selectedArmy, playerCountryTag, armiesRef, provincesRef, diplomaticRelationsRef, setArmies, addToast]);
 
-  const handleMergeArmies = useCallback((targetArmyId: string) => {
-    if (!selectedArmy) return;
-    const army1 = armiesRef.current?.find(
-      a => a.id === selectedArmy
-    );
+  const applyReorganization = useCallback((result: ReorganizationResult) => {
+    if (!result.success) { addToast(result.reason, 'warning', 'Reorganizar'); return false; }
+    armiesRef.current = result.armies;
+    setArmies(result.armies);
+    setSelectedArmy(result.selectedArmyId);
+    setShowSplitModal(false); setSplitSelection(new Set());
+    addLog('Regimentos reorganizados.'); addToast('Regimentos reorganizados.', 'success', 'Reorganizar');
+    return true;
+  }, [addToast, addLog, armiesRef, setArmies, setSelectedArmy, setShowSplitModal, setSplitSelection]);
 
-    const army2 = armiesRef.current?.find(
-      a => a.id === targetArmyId
-    );
-    if (!army1 || !army2) return;
-    if (army1.owner !== playerCountryTag || army2.owner !== playerCountryTag) return;
-    if (army1.location !== army2.location) return;
-    if (army1.destination || army2.destination) return;
-    const merged = mergeArmies(army1, army2);
-    setArmies(prev => { const filtered = prev.filter(a => a.id !== army1.id && a.id !== army2.id); return [...filtered, merged]; });
-    addLog(`🤝 ${army1.name} + ${army2.name} fundidos (${calculateArmySize(merged).toLocaleString()} homens)`);
-  }, [selectedArmy, playerCountryTag, addLog, armiesRef, setArmies]);
+  const handleReorganize = useCallback((mode: 'split' | 'transfer' | 'merge', indices: number[] = [], targetId?: string, expected?: string) => {
+    const ctx = { armies: armiesRef.current ?? [], provinces: provincesRef.current ?? [], playerCountryTag, activeBattles: activeBattlesRef?.current };
+    if (mode === 'merge') return applyReorganization(mergeArmyGroup(targetId && selectedArmy ? [selectedArmy, targetId] : params.selectedArmyIds ?? [], ctx));
+    if (!selectedArmy) return false;
+    return applyReorganization(mode === 'split' ? splitArmyByRegiments(selectedArmy, indices, ctx, expected) : transferRegiments(selectedArmy, targetId ?? '', indices, ctx, expected));
+  }, [armiesRef, provincesRef, playerCountryTag, activeBattlesRef, selectedArmy, params.selectedArmyIds, applyReorganization]);
 
+  const handleMergeArmies = useCallback((targetArmyId: string) => handleReorganize('merge', [], targetArmyId), [handleReorganize]);
   const handleSplitHalf = useCallback(() => {
     if (!selectedArmy) return;
-    const army = armiesRef.current?.find(
-      a => a.id === selectedArmy
-    );
-    if (!army || army.owner !== playerCountryTag || army.destination) return;
-    const newArmy = splitArmyHalf(army, `${army.name} (Destacamento)`);
-    if (!newArmy) return;
-    const halfIndex = Math.floor(army.regiments.length / 2);
-    const remainingRegiments = army.regiments.slice(halfIndex);
-    setArmies(prev => { const filtered = prev.filter(a => a.id !== army.id); return [...filtered, { ...army, regiments: remainingRegiments }, newArmy]; });
-    addLog(`✂️ ${army.name} dividido. Novo: ${newArmy.name} (${calculateArmySize(newArmy).toLocaleString()} homens)`);
-  }, [selectedArmy, playerCountryTag, addLog, armiesRef, setArmies]);
-
-  const handleSplitCustom = useCallback(() => {
-    if (!selectedArmy || splitSelection.size === 0) return;
-    const army = armiesRef.current?.find(
-      a => a.id === selectedArmy
-    );
-    if (!army || army.owner !== playerCountryTag || army.destination) return;
-    const indices = Array.from(splitSelection);
-    const newArmy = splitArmy(army, indices, `${army.name} (Destacamento)`);
-    if (!newArmy) return;
-    const remainingRegiments = army.regiments.filter(
-      (_, idx) => !splitSelection.has(idx)
-    );
-    setArmies(prev => {
-      const filtered = prev.filter(
-        a => a.id !== army.id
-      );
-
-      return [
-        ...filtered,
-        {
-          ...army,
-          regiments: remainingRegiments,
-        },
-        newArmy,
-      ];
-    });
-    setShowSplitModal(false); setSplitSelection(new Set());
-    addLog(`✂️ ${army.name} dividido. Novo: ${newArmy.name} (${calculateArmySize(newArmy).toLocaleString()} homens)`);
-  }, [selectedArmy, splitSelection, playerCountryTag, addLog, armiesRef, setArmies, setShowSplitModal, setSplitSelection]);
+    applyReorganization(splitArmyByHalf(selectedArmy, { armies: armiesRef.current ?? [], provinces: provincesRef.current ?? [], playerCountryTag, activeBattles: activeBattlesRef?.current }));
+  }, [selectedArmy, applyReorganization, armiesRef, provincesRef, playerCountryTag, activeBattlesRef]);
+  const handleSplitCustom = useCallback(() => handleReorganize('split', [...splitSelection]), [handleReorganize, splitSelection]);
 
   const handleRetreatArmy = useCallback(
     (armyId: string, battleId: string) => {
@@ -229,5 +193,5 @@ export function useArmyActions(params: Params) {
     addToast('Exércitos destravados!', 'success', 'Cheat');
   }, [setArmies, addLog, addToast]);
 
-  return { handleProvinceRightClick, handleClearRoutes, handleMergeArmies, handleSplitHalf, handleSplitCustom, handleRetreatArmy, handleStopMovement, handleUnstuckAll };
+  return { handleReorganize, handleProvinceRightClick, handleClearRoutes, handleMergeArmies, handleSplitHalf, handleSplitCustom, handleRetreatArmy, handleStopMovement, handleUnstuckAll };
 }

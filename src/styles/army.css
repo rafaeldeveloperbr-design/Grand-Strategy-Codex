@@ -86,6 +86,21 @@
 .army-movement-plan ol { padding-left: 22px; max-height: 140px; overflow-y: auto; }
 .army-movement-plan small { display: block; color: var(--text-secondary); margin-top: 8px; line-height: 1.6; }
 
+.army-reorganization { margin: 10px 0; border-top: 1px solid var(--border-subtle); padding-top: 10px; }
+.army-reorganization h4 { margin: 0 0 8px; }
+.army-reorganization__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.army-reorganization p, .army-reorganization small { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.army-reorganization-modal { max-width: 650px; width: min(650px, 94vw); }
+.army-reorganization-modal__content { padding: 20px; overflow-y: auto; max-height: 75vh; }
+.army-reorganization-modal__content fieldset { border: 1px solid var(--border-subtle); margin: 12px 0; padding: 10px; }
+.army-reorganization-regiment { display: flex; gap: 10px; align-items: center; padding: 9px 4px; border-bottom: 1px solid var(--border-subtle); }
+.army-reorganization-regiment small { display: block; font-size: 11px; margin-top: 4px; }
+.army-reorganization-regiment input { accent-color: var(--gold); }
+.army-reorganization-preview { padding: 10px; margin: 10px 0; background: var(--bg-app); border: 1px solid var(--border-subtle); }
+.army-reorganization-modal button, .army-reorganization-modal select { background: var(--bg-app); color: var(--text-primary); border: 1px solid var(--border-subtle); padding: 8px; border-radius: 5px; }
+.army-reorganization-modal button:disabled { opacity: .5; cursor: not-allowed; }
+.army-reorganization-modal input:focus-visible, .army-reorganization-modal select:focus-visible, .army-reorganization-modal button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
 .unit-row{
   display: flex;
   align-items: center;

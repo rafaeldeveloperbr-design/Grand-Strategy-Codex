@@ -173,8 +173,10 @@ export function mergeArmies(army1: Army, army2: Army): Army {
 export function splitArmy(
   sourceArmy: Army,
   regimentsToTransfer: number[],
-  newName: string
+  newName: string,
+  existingIds: readonly string[] = []
 ): Army | null {
+  if (new Set(regimentsToTransfer).size !== regimentsToTransfer.length || regimentsToTransfer.some(index => !Number.isInteger(index))) return null;
   if (regimentsToTransfer.length === 0) return null;
   if (regimentsToTransfer.length >= sourceArmy.regiments.length) return null;
 
@@ -182,16 +184,17 @@ export function splitArmy(
     if (idx < 0 || idx >= sourceArmy.regiments.length) return null;
   }
 
-  const transferredRegiments = regimentsToTransfer.map((idx) => ({ ...sourceArmy.regiments[idx] }));
+  const transferredRegiments = sourceArmy.regiments.filter((_, index) => regimentsToTransfer.includes(index)).map(regiment => ({ ...regiment }));
 
   const newArmy: Army = {
-    id: generateArmyId(),
+    id: generateArmyId(existingIds),
     owner: sourceArmy.owner,
     rebellionFactionId: sourceArmy.rebellionFactionId,
     originalOwner: sourceArmy.originalOwner,
     separatistMode: sourceArmy.separatistMode,
     name: newName,
     regiments: transferredRegiments,
+    inCombat: false,
     location: sourceArmy.location,
     destination: null,
     targetDestination: null,

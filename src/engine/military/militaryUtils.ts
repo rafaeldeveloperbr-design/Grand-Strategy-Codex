@@ -2,8 +2,10 @@ import { Army, Regiment, UnitType } from '../../types';
 import { UNIT_DEFINITIONS } from '../../data/units';
 
 let armyIdCounter = 0;
-export function generateArmyId(): string {
-  return `army_${++armyIdCounter}`;
+export function generateArmyId(existingIds: readonly string[] = []): string {
+  let id: string;
+  do { id = `army_${++armyIdCounter}`; } while (existingIds.includes(id));
+  return id;
 }
 
 let recruitmentIdCounter = 0;

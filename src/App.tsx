@@ -13,6 +13,7 @@ import { WarPanel } from './components/WarPanel';
 import { BattleReportModal } from './components/BattleReportModal';
 import { BattleHistoryModal } from './components/BattleHistoryModal';
 import { ArmySelectionSummary } from './components/ArmySelectionSummary';
+import { ArmyReorganizationPanel } from './components/ArmyReorganizationPanel';
 import { ArmyMovementPlanPanel } from './components/ArmyMovementPlanPanel';
 import { FocusModal } from './components/FocusModal';
 import { ResearchModal } from './components/ResearchModal';
@@ -23,7 +24,7 @@ import { createInitialArmies } from './data/map/initialState';
 import { countries as initialCountries } from './data/countries';
 import { calculateArmySize } from './engine/combat';
 import { buildLogisticsNetworks, getProvinceLogistics } from './engine/logistics';
-import { getArmySupply, getFriendlyArmiesInProvince } from './engine/military';
+import { getArmySupply } from './engine/military';
 import { createInitialTechState } from './engine/technology';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { AILogProvider, useAILog } from './context/AILogContext';
@@ -208,7 +209,7 @@ const App: React.FC = () => {
       />      <div className="game__main">
         <GameMap logistics={logistics} provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} wars={wars} diplomaticRelations={diplomaticRelations} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} selectedArmyIds={selection.selectedArmyIds} playerCountryTag={playerCountryTag} onToggleArmy={selection.toggleArmySelection} onToggleStack={selection.toggleStackSelection} onToggleStackAdditive={selection.toggleStackAdditive} onClearSelection={selection.clearArmySelection} onProvinceHover={selection.handleProvinceHover} onProvinceClick={selection.handleProvinceClick} onArmyClick={selection.handleArmyClick} onProvinceRightClick={armyActions.handleProvinceRightClick} />
         {selection.isPanelOpen && selectedProvinceData && <ProvincePanel selectedArmyIds={selection.selectedArmyIds} onSelectArmy={selection.toggleArmySelection} logistics={logistics} onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
-        {selection.selectedArmyIds.length > 1 && <ArmySelectionSummary armies={armies.filter(a => selection.selectedArmyIds.includes(a.id) && a.owner === playerCountryTag)} allArmies={armies} provinces={provinces} logistics={logistics} onClear={selection.clearArmySelection} onClearRoutes={armyActions.handleClearRoutes} />}
+        {selection.selectedArmyIds.length > 1 && <ArmySelectionSummary armies={armies.filter(a => selection.selectedArmyIds.includes(a.id) && a.owner === playerCountryTag)} allArmies={armies} provinces={provinces} logistics={logistics} onClear={selection.clearArmySelection} onClearRoutes={armyActions.handleClearRoutes}><ArmyReorganizationPanel selectedIds={selection.selectedArmyIds} context={{armies, provinces, playerCountryTag, activeBattles}} onConfirm={armyActions.handleReorganize} /></ArmySelectionSummary>}
         {selection.selectedArmyIds.length === 1 && selectedArmyData && (
           <div className="army-info-panel">
             <div className="army-info-panel__header"><h3>{selectedArmyData.name}</h3><button onClick={() => selection.setSelectedArmy(null)}>✕</button></div>
@@ -239,33 +240,8 @@ const App: React.FC = () => {
                 })}
               </div>    {selectedArmyData.destination && selectedArmyData.owner === playerCountryTag && !selectedArmyData.inCombat && <div className="army-info-panel__actions-section">
                 <button className="army-info-panel__action-btn army-info-panel__action-btn--stop" onClick={() => armyActions.handleStopMovement(selectedArmyData.id)}>🛑 Parar Marcha</button></div>}
-              {selectedArmyData.location &&
-                !selectedArmyData.destination &&
-                (() => {
-                  const friends = getFriendlyArmiesInProvince(
-                    armies,
-                    selectedArmyData.location!,
-                    playerCountryTag
-                  ).filter(a => a.id !== selectedArmyData.id);
+              <ArmyReorganizationPanel selectedIds={selection.selectedArmyIds} context={{armies, provinces, playerCountryTag, activeBattles}} onConfirm={armyActions.handleReorganize} onHalf={armyActions.handleSplitHalf} />
 
-                  if (friends.length === 0) return null;
-
-                  return (
-                    <div className="army-info-panel__actions-section">
-                      <strong>🤝 Fundir:</strong>
-
-                      {friends.map(fa => (
-                        <button
-                          key={fa.id}
-                          className="army-info-panel__action-btn"
-                          onClick={() => armyActions.handleMergeArmies(fa.id)}
-                        >
-                          {fa.name}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
             </div>
           </div>
         )}

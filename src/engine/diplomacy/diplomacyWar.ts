@@ -1,3 +1,5 @@
+import { endCampaign } from './campaignEnd';
+import { getCampaign, getCampaignId } from './campaigns';
 import type { DiplomaticRelation, GameDate, War } from '../../types';
 import { DIPLOMACY_BALANCE as B } from './diplomacyBalance';
 import { changeOpinion, changeTrust, diplomacyDay, getRelation, relationKey, updateRelation } from './diplomacyRelations';
@@ -118,13 +120,8 @@ export function respondToWarCall(ctx: DiplomacyContext,proposalId: string,accept
 export function makePeace(ctx: DiplomacyContext,warId: string): DiplomacyResult {
   const war = ctx.wars.find(w => w.id === warId); if (!war) return result(ctx,false,'Guerra não encontrada');
   if ([war.attacker,war.defender].some(tag => tag.startsWith('rebel_'))) return result(ctx,false,'Guerra civil é resolvida pelos objetivos da rebelião');
-  const ended = ctx.wars.filter(w => (w.campaignId ?? w.id) === (war.campaignId ?? war.id));
-  const ids = new Set(ended.map(w => w.id));
-  const wars = ctx.wars.filter(w => !ids.has(w.id));
-  let relations = ctx.relations;
-  for (const w of ended) if (!wars.some(other => relationKey(other.attacker,other.defender) === relationKey(w.attacker,w.defender))) {
-    relations = updateRelation(relations,w.attacker,w.defender,r => ({...r,status: 'peace',lastWarEndedAt: diplomacyDay(ctx.date)}));
-  }
-  relations = relations.map(r => ({...r,proposals: r.proposals?.filter(p => !p.warId || !ids.has(p.warId))}));
-  return result({...ctx,relations,wars},true,'Paz branca assinada por todos os participantes da guerra.');
+  const campaign = getCampaign(ctx.wars,getCampaignId(war));
+  if (campaign?.civil || campaign?.inconsistent) return result(ctx,false,'Campanha civil ou inconsistente');
+  const closed = endCampaign(ctx,getCampaignId(war));
+  return result(closed,true,'Paz branca assinada por todos os participantes da guerra.');
 }

@@ -287,6 +287,8 @@
 
 .war-panel__war-header{
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
@@ -403,6 +405,11 @@
   background: var(--bg-secondary);
   border-radius: 4px;
 }
+
+.war-panel__war-card p { font-size: 12px; line-height: 1.5; }
+.war-panel__war-header h3 { margin: 0; font-size: 15px; }
+.war-panel__war-header > span { font-size: 11px; color: var(--text-muted); }
+.war-panel__occupied progress { width: 100%; height: 8px; accent-color: var(--accent-gold); }
 
 .war-panel__occupied-row{
   display: flex;

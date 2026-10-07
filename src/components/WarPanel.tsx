@@ -1,168 +1,46 @@
-/**
- * ============================================================
- * MÓDULO 4 - Painel de Guerra
- * ============================================================
- * Exibe guerras ativas e permite assinar tratados de paz
- */
-
 import React from 'react';
-import { Country } from '../types';
-import { War } from '../types/diplomacy';
+import type { Army, Country, GameDate, Province, War } from '../types';
+import { getCampaigns, getCampaignCasualties } from '../engine/diplomacy/campaigns';
+import { calculateCampaignWarScore, calculateSurrenderProgress, getTerritorialControl, isCapitalOccupied } from '../engine/diplomacy/warResolution';
+import { diplomacyDay } from '../engine/diplomacy/diplomacyRelations';
 
 interface WarPanelProps {
-  wars: War[];
-  playerCountry: Country;
-  allCountries: Country[];
-  onClose: () => void;
-  onMakePeace: (warId: string) => void;
+  wars: War[]; playerCountry: Country; allCountries: Country[];
+  provinces: Province[]; armies: Army[]; date: GameDate;
+  onClose: () => void; onMakePeace: (warId: string) => void;
 }
-
-/**
- * Painel de guerras ativas
- */
-export const WarPanel: React.FC<WarPanelProps> = ({
-  wars,
-  playerCountry,
-  allCountries,
-  onClose,
-  onMakePeace
-}) => {
-  // Filtra guerras que envolvem o jogador
-  const playerWars = wars.filter(
-    w => w.attacker === playerCountry.tag || w.defender === playerCountry.tag
-  );
-
-    const getCountryByTag = (tag: string): Country | undefined => {
-    const found = allCountries.find(c => c.tag === tag);
-    if (found) return found;
-    if (tag.startsWith('rebel_')) {
-      return { tag, name: 'Exército Rebelde', flag: '🏴‍️', color: '#808080' } as Country;
-    }
-    return undefined;
-  };
-
-  const formatDate = (date: { year: number; month: number; day: number }): string => {
-    return `${date.day}/${date.month}/${date.year}`;
-  };
-
-  if (playerWars.length === 0) {
-    return (
-      <div className="war-panel">
-        <div className="war-panel__header">
-          <h2>🕊️ Guerras Ativas</h2>
-          <button className="war-panel__close" onClick={onClose}>✕</button>
+export const WarPanel: React.FC<WarPanelProps> = ({wars,playerCountry,allCountries,provinces,armies,date,onClose,onMakePeace}) => {
+  const campaigns = getCampaigns(wars).filter(c => [...c.attackerParticipants,...c.defenderParticipants].includes(playerCountry.tag));
+  const name = (tag:string) => allCountries.find(c => c.tag === tag)?.name ?? (tag.startsWith('rebel_') ? 'Exército Rebelde' : 'País desconhecido');
+  return <div className="war-panel">
+    <div className="war-panel__header"><h2>Guerras Ativas</h2><button className="war-panel__close" aria-label="Fechar guerras" onClick={onClose}>×</button></div>
+    {!campaigns.length && <div className="war-panel__empty">Nenhuma guerra ativa no momento.</div>}
+    <div className="war-panel__wars">{campaigns.map(campaign => {
+      const score = campaign.civil ? campaign.root.warScore : calculateCampaignWarScore(campaign,provinces,allCountries);
+      const casualties = getCampaignCasualties(campaign);
+      const playerPair = campaign.pairs.find(w => [w.attacker,w.defender].includes(playerCountry.tag))!;
+      return <section key={campaign.id} className="war-panel__war-card" aria-label={`Guerra ${name(campaign.attackerLeader)} × ${name(campaign.defenderLeader)}`}>
+        <div className="war-panel__war-header"><h3>{name(campaign.attackerLeader)} × {name(campaign.defenderLeader)}</h3><span>{Math.max(0,diplomacyDay(date)-diplomacyDay(campaign.root.startDate))} dias de guerra</span></div>
+        <p>Atacantes: {campaign.attackerParticipants.map(name).join(', ')}</p>
+        <p>Defensores: {campaign.defenderParticipants.map(name).join(', ')}</p>
+        <div className="war-panel__war-score"><p>Pontuação de Guerra: {score > 0 ? '+' : ''}{Math.round(score)}</p>
+          <div className="war-panel__score-bar" role="meter" aria-label="War Score" aria-valuemin={-100} aria-valuemax={100} aria-valuenow={score}><div className="war-panel__score-fill" style={{width:`${(score+100)/2}%`,background:score >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}} /><div className="war-panel__score-marker" style={{left:'50%'}} /></div>
         </div>
-        <div className="war-panel__empty">
-          <p>Nenhuma guerra ativa no momento.</p>
-          <p className="war-panel__empty-subtitle">Seu país está em paz com todos.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="war-panel">
-      {/* Cabeçalho */}
-      <div className="war-panel__header">
-        <h2>⚔️ Guerras Ativas</h2>
-        <button className="war-panel__close" onClick={onClose}>✕</button>
-      </div>
-
-      {/* Lista de Guerras */}
-      <div className="war-panel__wars">
-        {playerWars.map(war => {
-          const attacker = getCountryByTag(war.attacker);
-          const defender = getCountryByTag(war.defender);
-          const isPlayerAttacker = war.attacker === playerCountry.tag;
-          const isCivilWar = [war.attacker,war.defender].some(tag => tag.startsWith('rebel_'));
-          const playerCasualties = isPlayerAttacker ? war.attackerCasualties : war.defenderCasualties;
-          const enemyCasualties = isPlayerAttacker ? war.defenderCasualties : war.attackerCasualties;
-
-          return (
-            <div key={war.id} className="war-panel__war-card">
-              {/* Cabeçalho da Guerra */}
-              <div className="war-panel__war-header">
-                <div className="war-panel__war-countries">
-                  <span className="war-panel__country">
-                    {attacker?.flag} {attacker?.name}
-                  </span>
-                  <span className="war-panel__vs">VS</span>
-                  <span className="war-panel__country">
-                    {defender?.flag} {defender?.name}
-                  </span>
-                </div>
-                <span className="war-panel__war-date">
-                  Desde {formatDate(war.startDate)}
-                </span>
-              </div>
-
-              {/* War Score */}
-              <div className="war-panel__war-score">
-                <div className="war-panel__score-header">
-                  <span className="war-panel__score-label">Pontuação de Guerra:</span>
-                  <span className={`war-panel__score-value ${war.warScore > 0 ? 'war-panel__score-value--positive' : war.warScore < 0 ? 'war-panel__score-value--negative' : ''}`}>
-                    {war.warScore > 0 ? '+' : ''}{war.warScore}
-                  </span>
-                </div>
-                <div className="war-panel__score-bar">
-                  <div 
-                    className="war-panel__score-fill"
-                    style={{ 
-                      width: `${Math.min(100, Math.max(0, 50 + war.warScore / 2))}%`,
-                      backgroundColor: war.warScore > 0 ? '#2ecc71' : war.warScore < 0 ? '#e74c3c' : '#95a5a6'
-                    }}
-                  />
-                  <div className="war-panel__score-marker" style={{ left: '50%' }} />
-                </div>
-                <div className="war-panel__score-labels">
-                  <span>{attacker?.name}</span>
-                  <span>{defender?.name}</span>
-                </div>
-              </div>
-
-              {/* Baixas */}
-              <div className="war-panel__casualties">
-                <div className="war-panel__casualty-row">
-                  <span className="war-panel__casualty-label">Suas Baixas:</span>
-                  <span className="war-panel__casualty-value">{playerCasualties.toLocaleString()}</span>
-                </div>
-                <div className="war-panel__casualty-row">
-                  <span className="war-panel__casualty-label">Baixas Inimigas:</span>
-                  <span className="war-panel__casualty-value">{enemyCasualties.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Províncias Ocupadas */}
-              {(war.occupiedByAttacker.length > 0 || war.occupiedByDefender.length > 0) && (
-                <div className="war-panel__occupied">
-                  {war.occupiedByAttacker.length > 0 && (
-                    <div className="war-panel__occupied-row">
-                      <span className="war-panel__occupied-label">{attacker?.flag} Ocupadas por {attacker?.name}:</span>
-                      <span className="war-panel__occupied-count">{war.occupiedByAttacker.length} províncias</span>
-                    </div>
-                  )}
-                  {war.occupiedByDefender.length > 0 && (
-                    <div className="war-panel__occupied-row">
-                      <span className="war-panel__occupied-label">{defender?.flag} Ocupadas por {defender?.name}:</span>
-                      <span className="war-panel__occupied-count">{war.occupiedByDefender.length} províncias</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Botão de Paz */}
-              <button
-                className="war-panel__peace-btn"
-                onClick={() => onMakePeace(war.id)}
-                disabled={isCivilWar}
-                title={isCivilWar ? 'Guerra civil é resolvida pelos objetivos da rebelião' : 'Encerra toda a campanha, incluindo aliados e garantidores'}
-              >
-                🕊️ Assinar Paz Branca da Campanha
-              </button>
-            </div>
-          );
+        {campaign.civil ? <p>Guerra civil: resolução pelos objetivos da rebelião.</p> : [campaign.attackerLeader,campaign.defenderLeader].map(tag => {
+          const country = allCountries.find(c => c.tag === tag);
+          const capital = provinces.find(p => p.id === (country?.capitalId ?? country?.capital));
+          const surrender = calculateSurrenderProgress(tag,campaign,provinces,allCountries,armies);
+          const territory = getTerritorialControl(tag,provinces);
+          return <div key={tag} className="war-panel__occupied">
+            <p>Rendição de {name(tag)}: {Math.round(surrender)}%</p>
+            <progress aria-label={`Rendição de ${name(tag)}`} max={100} value={surrender} />
+            <p>Capital de {name(tag)}: {capital?.name ?? 'Não definida'} — {isCapitalOccupied(country,provinces) ? 'ocupada' : capital ? 'controlada' : 'desconhecida'}</p>
+            <p>Território de {name(tag)}: {territory.controlled}/{territory.total} controladas; {Math.round(territory.lossRatio*100)}% perdido.</p>
+          </div>;
         })}
-      </div>
-    </div>
-  );
+        <div className="war-panel__casualties"><p>Baixas de {name(campaign.attackerLeader)} e aliados: {casualties.attacker.toLocaleString('pt-BR')}</p><p>Baixas de {name(campaign.defenderLeader)} e aliados: {casualties.defender.toLocaleString('pt-BR')}</p></div>
+        <button className="war-panel__peace-btn" disabled={campaign.civil || campaign.inconsistent} onClick={() => onMakePeace(playerPair.id)}>Assinar Paz Branca da Campanha</button>
+      </section>;
+    })}</div>
+  </div>;
 };

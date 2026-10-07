@@ -1,3 +1,5 @@
+import { shouldUseDefensiveWarPosture } from '../diplomacy/warResolution';
+import { WAR_RESOLUTION_BALANCE as WB } from '../diplomacy/warResolutionBalance';
 import { buildLogisticsNetworks, getProvinceLogistics, projectRouteLogistics, LOGISTICS_BALANCE as LB, type LogisticsSnapshot } from '../logistics';
 import { getTerrainDefinition } from '../terrain';
 import { Army, Province, Country } from '../../types';
@@ -859,6 +861,7 @@ export function processAI(
     return armies;
   }
   const logistics = suppliedLogistics ?? (countries.length ? buildLogisticsNetworks({countries,provinces,relations:diplomacy,wars}) : undefined);
+  const defensiveWar = shouldUseDefensiveWarPosture(botCountryId,wars,provinces,countries,armies);
   const reinforcementOrders = new Map<string, string>();
   const reservedReinforcements = new Set<string>();
 
@@ -1181,7 +1184,7 @@ export function processAI(
             // PRIORIDADE 4 — ESPERAR REFORÇOS
             // ===============================================
 
-            if (attackRatio < 1.20) {
+            if (attackRatio < (defensiveWar ? WB.aiCautiousAttackRatio : 1.20)) {
               console.log(
                 `⏸️ [IA CAUTELOSA] ${botCountryId} segurando posição contra ${bestEnemy.owner} (${attackRatio.toFixed(2)}:1)`
               );

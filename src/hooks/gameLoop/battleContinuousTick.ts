@@ -1,3 +1,4 @@
+import { recordBattleWarCasualties } from '../../engine/diplomacy/warResolution';
 import { politicalBattleOutcome } from '../../engine/politics';
 import { battleEndFeedback } from '../../components/militaryPresentation';
 /**
@@ -167,6 +168,17 @@ export function processBattleContinuous(p: Params) {
       return [country.tag, state ? calculateTechBonuses(state).fortificationMultiplier : 1];
     }));
     const result = processBattleDay(repaired, armies, province, provinces, combatMultipliers, fortificationMultipliers, logistics, unitBonuses);
+    // Statistics only: observe exact per-owner strength deltas already applied by Combat V2.
+    const casualtyLedger = {...(battle.warCasualtiesByCountry ?? {
+      [repaired.attackerCountryId]:repaired.attackerCasualties,
+      [repaired.defenderCountryId]:repaired.defenderCasualties,
+    })};
+    for (const before of armiesBeforeCombat.filter(a => result.battle.participantArmyIds.includes(a.id))) {
+      const after = result.armies.find(a => a.id === before.id);
+      const loss = Math.max(0,calculateArmySize(before)-(after ? calculateArmySize(after) : 0));
+      casualtyLedger[before.owner] = (casualtyLedger[before.owner] ?? 0)+loss;
+    }
+    result.battle = {...result.battle,warCasualtiesByCountry:casualtyLedger};
     armies = result.armies;
     provinces = applyMilitaryCasualties(provinces, armiesBeforeCombat, armies);
 
@@ -386,6 +398,9 @@ export function processBattleContinuous(p: Params) {
       retreatInfo,
       combatReport,
     };
+
+    const countryCasualties = {...fb.warCasualtiesByCountry};
+    wars = recordBattleWarCasualties(wars, fb.id, {...enrichedResult,countryCasualties});
 
     const updatedArmies = rawUpdatedArmies.filter(a => {
       if (!allPartIds.includes(a.id)) return true;

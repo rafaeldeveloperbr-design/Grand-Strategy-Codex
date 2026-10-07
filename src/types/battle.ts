@@ -13,6 +13,8 @@ import type { GameDate } from './date';
 export interface ActiveBattle {
   /** ID único da batalha */
   id: string;
+  /** Optional additive statistics cache, retained across active-battle save/load. */
+  warCasualtiesByCountry?: Record<string, number>;
   /** ID da província onde ocorre a batalha */
   provinceId: string;
   /** ID do exército atacante */

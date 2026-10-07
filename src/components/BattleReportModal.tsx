@@ -2,6 +2,7 @@ import { getUnitName } from '../utils/translations';
 import React from 'react';
 import { CombatResult, Country } from '../types';
 import { formatArmySize } from '../utils/formatters';
+import { useMilitaryDialog } from './useMilitaryDialog';
 
 interface BattleReportModalProps {
   battleResult: CombatResult;
@@ -16,6 +17,7 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
   allCountries,
   onClose,
 }) => {
+  const dialogRef = useMilitaryDialog(onClose);
   const { attackerOriginal, defenderOriginal, attacker, defender, winner, provinceName, duration } = battleResult;
   const playerWon = (winner === 'attacker' && attackerOriginal.owner === playerCountry.tag) || (winner === 'defender' && defenderOriginal.owner === playerCountry.tag);
   const attackerCountry = allCountries.find(c => c.tag === attackerOriginal.owner);
@@ -143,7 +145,7 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
 
   return (
     <div className="battle-report-overlay">
-      <div className="battle-report-modal">
+      <div ref={dialogRef} className="battle-report-modal" role="dialog" aria-modal="true" aria-label={`Relatório de batalha em ${provinceName}`}>
         <div className={`battle-report-header ${playerWon ? 'victory' : 'defeat'}`}>
           <div className="battle-report-icon">{playerWon ? '🏆' : '💀'}</div>
           <h2 className="battle-report-title">{playerWon ? 'VITÓRIA!' : 'DERROTA'}</h2>

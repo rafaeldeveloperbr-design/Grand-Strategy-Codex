@@ -48,7 +48,7 @@ describe('Logistics V2 map and tooltips',() => {
     const cache=network(),units=[army('BRA',province.id,20)];
     const view=render(<ProvinceMilitaryTab province={province} playerCountry={countries.find(c => c.tag==='BRA')!} armiesHere={units} technology={createInitialTechState('BRA')} onRecruit={vi.fn()} logistics={cache} />);
     expect(view.getByText('Logística: Desconectada · Distância: —')).toBeTruthy();
-    expect(view.getByText(/Supply \d+%/)).toBeTruthy();
+    expect(view.getByText(/Supply Crítico · \d+%/)).toBeTruthy();
   });
 });
 

@@ -12,6 +12,7 @@ import { DiplomacyPanel } from './components/DiplomacyPanel';
 import { WarPanel } from './components/WarPanel';
 import { BattleReportModal } from './components/BattleReportModal';
 import { BattleHistoryModal } from './components/BattleHistoryModal';
+import { ArmySelectionSummary } from './components/ArmySelectionSummary';
 import { FocusModal } from './components/FocusModal';
 import { ResearchModal } from './components/ResearchModal';
 import { EndGameModal } from './components/EndGameModal';
@@ -98,7 +99,7 @@ const App: React.FC = () => {
   const { gameLoopRef, provincesRef, countriesRef, armiesRef, recruitmentsRef, warsRef, diplomaticRelationsRef, dateRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, aiDifficultyRef, activeBattlesRef, ceilingLogRef } = useGameRefs({ provinces, allCountries, armies, recruitments, wars, diplomaticRelations, date, buildingConstructions, playerTechState, botTechStates, aiDifficulty, activeBattles });
 
   const modals = useGameModals();
-  const selection = useGameSelection(playerCountryTag, provincesRef, armiesRef, modals.handleOpenDiplomacy);
+  const selection = useGameSelection(playerCountryTag, provincesRef, armiesRef, modals.handleOpenDiplomacy, armies);
 
 
   const saveSystem = useSaveSystem(
@@ -135,7 +136,7 @@ const App: React.FC = () => {
     }
     addToast(result.reason, result.accepted ? 'success' : 'warning', 'Resposta à rebelião');
   };
-  const armyActions = useArmyActions({ activeBattlesRef, setActiveBattles, selectedArmy: selection.selectedArmy, setSelectedArmy: selection.setSelectedArmy, setSelectedProvince: selection.setSelectedProvince, setIsPanelOpen: selection.setIsPanelOpen, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection: selection.splitSelection, setSplitSelection: selection.setSplitSelection, setShowSplitModal: selection.setShowSplitModal });
+  const armyActions = useArmyActions({ activeBattlesRef, setActiveBattles, selectedArmy: selection.selectedArmy, selectedArmyIds: selection.selectedArmyIds, setSelectedArmy: selection.setSelectedArmy, setSelectedProvince: selection.setSelectedProvince, setIsPanelOpen: selection.setIsPanelOpen, provincesRef, armiesRef, diplomaticRelationsRef, playerCountryTag, setArmies, addLog, addToast, splitSelection: selection.splitSelection, setSplitSelection: selection.setSplitSelection, setShowSplitModal: selection.setShowSplitModal });
   const diplomacy = useDiplomacyActions({ diplomacyTarget: modals.diplomacyTarget, playerCountryTag, countriesRef, provincesRef, armiesRef, diplomaticRelationsRef, warsRef, dateRef, setDiplomaticRelations, setWars, setArmies, activeBattlesRef, setActiveBattles, addLog, addToast });
   const playerAtWar = wars.some(war => war.attacker === playerCountryTag || war.defender === playerCountryTag);
   const tech = useTechActions({ playerCountry, playerCountryTag, playerTechState, setPlayerTechState, allCountries, setAllCountries, addLog, addToast, playerTechStateRef, setAiDifficulty, setEndGameType, setGameStats, setGameSpeed, setIsPaused: modals.setIsPaused, countriesRef, dateRef, warsRef });
@@ -204,9 +205,10 @@ const App: React.FC = () => {
         onGovernmentClick={() => modals.setShowGovernmentModal(true)}
         onEconomyClick={() => setShowEconomyPanel(true)}
       />      <div className="game__main">
-        <GameMap logistics={logistics} provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} wars={wars} diplomaticRelations={diplomaticRelations} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} onProvinceHover={selection.handleProvinceHover} onProvinceClick={selection.handleProvinceClick} onArmyClick={selection.handleArmyClick} onProvinceRightClick={armyActions.handleProvinceRightClick} />
-        {selection.isPanelOpen && selectedProvinceData && <ProvincePanel logistics={logistics} onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
-        {selectedArmyData && (
+        <GameMap logistics={logistics} provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} wars={wars} diplomaticRelations={diplomaticRelations} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} selectedArmyIds={selection.selectedArmyIds} playerCountryTag={playerCountryTag} onToggleArmy={selection.toggleArmySelection} onToggleStack={selection.toggleStackSelection} onClearSelection={selection.clearArmySelection} onProvinceHover={selection.handleProvinceHover} onProvinceClick={selection.handleProvinceClick} onArmyClick={selection.handleArmyClick} onProvinceRightClick={armyActions.handleProvinceRightClick} />
+        {selection.isPanelOpen && selectedProvinceData && <ProvincePanel selectedArmyIds={selection.selectedArmyIds} onSelectArmy={selection.toggleArmySelection} logistics={logistics} onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
+        {selection.selectedArmyIds.length > 1 && <ArmySelectionSummary armies={armies.filter(a => selection.selectedArmyIds.includes(a.id) && a.owner === playerCountryTag)} allArmies={armies} provinces={provinces} logistics={logistics} onClear={selection.clearArmySelection} />}
+        {selection.selectedArmyIds.length === 1 && selectedArmyData && (
           <div className="army-info-panel">
             <div className="army-info-panel__header"><h3>{selectedArmyData.name}</h3><button onClick={() => selection.setSelectedArmy(null)}>✕</button></div>
             <div className="army-info-panel__content">
@@ -311,7 +313,7 @@ const App: React.FC = () => {
         <div className="game__bottom-info"><span className="game__bottom-label">Províncias:</span><span className="game__bottom-value">{playerCountry.provinces.length}</span></div>
         <div className="game__bottom-info"><span className="game__bottom-label">Exércitos:</span><span className="game__bottom-value">{armies.filter(a => a.owner === playerCountryTag).length}</span></div>
         <div className="game__bottom-info"><span className="game__bottom-label">Tropas:</span><span className="game__bottom-value">{armies.filter(a => a.owner === playerCountryTag).reduce((s, a) => s + calculateArmySize(a), 0).toLocaleString()}</span></div>
-        <div className="game__bottom-info"><span className="game__bottom-label">Histórico:</span><button className="game__bottom-history-btn" onClick={() => modals.setShowBattleHistory(true)}>📜 {battleHistory.length}</button></div>
+        <div className="game__bottom-info"><span className="game__bottom-label">Histórico:</span><button className="game__bottom-history-btn" aria-label="Abrir histórico de batalhas" onClick={() => modals.setShowBattleHistory(true)}>📜 Batalhas ({battleHistory.length})</button></div>
         <div className="game__bottom-info"><span className="game__bottom-label">Avisos:</span><button className="game__bottom-notifications-btn" onClick={() => { modals.setShowNotificationModal(true); markAllAsRead(); }}>🔔 {unreadCount > 0 ? <span className="game__bottom-notifications-badge">{unreadCount}</span> : notificationHistory.length}</button></div>
         <div className="game__bottom-info"><span className="game__bottom-label">Log IA:</span><button className="game__bottom-ai-log-btn" onClick={() => modals.setShowAILogModal(true)}>🤖 IA</button></div>
         <div className="game__bottom-info"><span className="game__bottom-label">Guerras:</span><button className="game__bottom-war-btn" onClick={() => modals.setShowWarPanel(true)}>{wars.filter(w => w.attacker === playerCountryTag || w.defender === playerCountryTag).length > 0 ? `⚔️ ${wars.filter(w => w.attacker === playerCountryTag || w.defender === playerCountryTag).length}` : '🕊️ Paz'}</button></div>

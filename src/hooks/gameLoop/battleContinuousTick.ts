@@ -1,4 +1,5 @@
 import { politicalBattleOutcome } from '../../engine/politics';
+import { battleEndFeedback } from '../../components/militaryPresentation';
 /**
  * battleContinuousTick.ts - FIX RECUO - TYPED
  */
@@ -138,7 +139,7 @@ function buildBattleSideReport(
 
 export function processBattleContinuous(p: Params) {
   let { armies, provinces, countries, wars, currentActiveBattles, recruitments, buildingConstructions } = p;
-  const { snapshot, playerCountryTag, addLog, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef } = p;
+  const { snapshot, playerCountryTag, addLog, setActiveBattles, setArmies, setBattleHistory, activeBattlesRef } = p;
 
   const finishedBattles: Array<{
     battle: BattleExtended;
@@ -419,16 +420,14 @@ export function processBattleContinuous(p: Params) {
       addLog(`⚔️ ${attacker.owner} conquistou ${province.name} de ${oldOwner}! ${retreatInfo?.retreated ? `Inimigo recuou para ${retreatInfo.toName} com ${retreatInfo.troops}` : ''}`);
       setBattleHistory((prev) => [updatedFinalResult, ...prev]);
       if (attacker.owner === playerCountryTag || defender.owner === playerCountryTag) {
-        setBattleReport(updatedFinalResult);
-        setIsPaused(true);
+        p.addToast(battleEndFeedback(updatedFinalResult, playerCountryTag, true), updatedFinalResult.winner === (attacker.owner === playerCountryTag ? 'attacker' : 'defender') ? 'success' : 'warning', 'Fim de batalha');
       }
     } else {
       if (enrichedResult.winner === 'defender') addLog(`🛡️ ${defender.owner} defendeu ${province.name}!`);
       else addLog(`🛡️ ${attacker.owner} venceu, mas ${defender.owner} ainda tem tropas em ${province.name}!`);
       setBattleHistory((prev) => [enrichedResult, ...prev]);
       if (attacker.owner === playerCountryTag || defender.owner === playerCountryTag) {
-        setBattleReport(enrichedResult);
-        setIsPaused(true);
+        p.addToast(battleEndFeedback(enrichedResult, playerCountryTag), enrichedResult.winner === (attacker.owner === playerCountryTag ? 'attacker' : 'defender') ? 'success' : 'warning', 'Fim de batalha');
       }
     }
 

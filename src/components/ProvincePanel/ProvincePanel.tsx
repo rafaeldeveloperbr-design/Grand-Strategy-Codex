@@ -13,6 +13,8 @@ import type { CountryTechState } from '../../types/technology';
 export interface ProvincePanelProps {
   logistics?: LogisticsSnapshot;
   onRebellionAction?: (provinceId: string, action: RebellionAction) => void;
+  selectedArmyIds?: string[];
+  onSelectArmy?: (id: string) => void;
   province: Province;
   provinces: Province[];
   countries: Country[];
@@ -50,6 +52,8 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
   onCancelRecruitment,
   onCancelBuilding,
   onRebellionAction,
+  selectedArmyIds,
+  onSelectArmy,
 }) => {
   const [activeTab, setActiveTab] = useState<PanelTab>('info');
   const ownerCountry = countries.find(c => c.tag === province.owner);
@@ -142,6 +146,12 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
                 playerCountry={playerCountry}
                 armiesHere={armiesHere}
                 technology={playerTechState}
+                allArmies={armies}
+                countries={countries}
+                selectedArmyIds={selectedArmyIds}
+                onSelectArmy={onSelectArmy}
+                recruitments={recruitmentsHere}
+                onCancelRecruitment={onCancelRecruitment}
                 onRecruit={onRecruit}
               />
             )}
@@ -160,7 +170,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
         {isPlayerOwned && (
           <ProvinceSidebar
             provinceConstructions={provinceConstructions}
-            recruitmentsHere={recruitmentsHere}
+            recruitmentsHere={activeTab === 'military' ? [] : recruitmentsHere}
             onCancelBuilding={onCancelBuilding}
             onCancelRecruitment={onCancelRecruitment}
           />

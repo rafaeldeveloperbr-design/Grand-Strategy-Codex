@@ -8,6 +8,7 @@ interface ArmyMovementLayerProps {
   presentation: ArmyPresentation;
   countries: Map<string, Country>;
   selectedArmy: string | null;
+  selectedArmyIds?: string[];
   hoveredArmyId: string | null;
   openStackKey: string | null;
   onArmyClick: (armyId: string) => void;
@@ -15,11 +16,12 @@ interface ArmyMovementLayerProps {
   onStackOpen: (group: ArmyVisualGroup, x: number, y: number) => void;
 }
 
-export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = ({ presentation, countries, selectedArmy, hoveredArmyId, openStackKey, onArmyClick, onArmyHover, onStackOpen }) => {
+export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = ({ presentation, countries, selectedArmy, selectedArmyIds, hoveredArmyId, openStackKey, onArmyClick, onArmyHover, onStackOpen }) => {
+  const selectedIds = useMemo(() => new Set(selectedArmyIds ?? (selectedArmy ? [selectedArmy] : [])), [selectedArmyIds, selectedArmy]);
   const arrowId = useId().replace(/:/g, '');
-  const groups = useMemo(() => [...presentation.groups].sort((a, b) => Number(a.armies.some(army => army.id === selectedArmy)) - Number(b.armies.some(army => army.id === selectedArmy)) || Number(a.armies.some(army => army.id === hoveredArmyId)) - Number(b.armies.some(army => army.id === hoveredArmyId))), [presentation.groups, selectedArmy, hoveredArmyId]);
+  const groups = useMemo(() => [...presentation.groups].sort((a, b) => Number(a.armies.some(army => selectedIds.has(army.id))) - Number(b.armies.some(army => selectedIds.has(army.id))) || Number(a.armies.some(army => army.id === hoveredArmyId)) - Number(b.armies.some(army => army.id === hoveredArmyId))), [presentation.groups, selectedIds, hoveredArmyId]);
   const routes = useMemo(() => {
-    const relevant = new Set([selectedArmy, hoveredArmyId]);
+    const relevant = new Set([...selectedIds, hoveredArmyId]);
     const open = presentation.groups.find(group => group.key === openStackKey);
     open?.armies.forEach(army => relevant.add(army.id));
     return [...relevant].flatMap(id => {
@@ -34,27 +36,27 @@ export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = ({ presentati
       if (!steps.length) return [];
       return [{ army, start, steps, final: steps[steps.length - 1] }];
     });
-  }, [presentation, selectedArmy, hoveredArmyId, openStackKey]);
+  }, [presentation, selectedIds, hoveredArmyId, openStackKey]);
   const selected = selectedArmy ? presentation.armyById.get(selectedArmy) : undefined;
-  const selectedGroup = selectedArmy ? presentation.groups.find(group => group.armies.some(army => army.id === selectedArmy)) : undefined;
+  const selectedGroup = selectedArmy ? presentation.groups.find(group => group.armies.some(army => selectedIds.has(army.id))) : undefined;
   const stats = selectedArmy ? presentation.readouts.get(selectedArmy) : undefined;
   return <g className="army-movement-layer">
     <defs><marker id={arrowId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" /></marker></defs>
     <g className="army-routes" pointerEvents="none">
       {routes.map(({ army, start, steps, final }) => <g key={army.id} data-route-army={army.id}>
-        <polyline points={[start, ...steps].map(point => `${point.x},${point.y}`).join(' ')} fill="none" stroke={army.id === selectedArmy ? 'var(--gold)' : 'var(--accent)'} strokeWidth={army.id === selectedArmy ? 3 : 1.5} strokeDasharray="7 4" vectorEffect="non-scaling-stroke" opacity={army.id === selectedArmy ? 1 : .55} markerEnd={`url(#${arrowId})`} />
-        <circle cx={final.x} cy={final.y} r="8" fill="none" stroke={army.id === selectedArmy ? 'var(--gold)' : 'var(--accent)'} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-        {army.id === selectedArmy && <text x={final.x} y={final.y - 12} textAnchor="middle" className="army-route-label">Destino</text>}
+        <polyline points={[start, ...steps].map(point => `${point.x},${point.y}`).join(' ')} fill="none" stroke={selectedIds.has(army.id) ? 'var(--gold)' : 'var(--accent)'} strokeWidth={selectedIds.has(army.id) ? 3 : 1.5} strokeDasharray="7 4" vectorEffect="non-scaling-stroke" opacity={selectedIds.has(army.id) ? 1 : .55} markerEnd={`url(#${arrowId})`} />
+        <circle cx={final.x} cy={final.y} r="8" fill="none" stroke={selectedIds.has(army.id) ? 'var(--gold)' : 'var(--accent)'} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        {selectedIds.has(army.id) && <text x={final.x} y={final.y - 12} textAnchor="middle" className="army-route-label">Destino</text>}
       </g>)}
     </g>
     {groups.map(group => {
       const army = group.armies[0];
-      const selectedInGroup = group.armies.some(item => item.id === selectedArmy);
+      const selectedInGroup = group.armies.some(item => selectedIds.has(item.id));
       const effectiveOwner = army.owner.startsWith('rebel_') && army.originalOwner ? army.originalOwner : army.owner;
       if (group.armies.length > 1) return <ArmyStackMarker key={group.key} group={group} country={countries.get(group.owner)} selected={selectedInGroup} expanded={group.key === openStackKey} onOpen={onStackOpen} />;
       return <ArmyMarker key={army.id} army={army} countries={[]} provinces={[]} resolvedCountry={countries.get(effectiveOwner)} resolvedProvince={army.location ? presentation.provinceById.get(army.location) : undefined} markerPosition={{ x: group.x + group.offsetX, y: group.y + group.offsetY }} isSelected={selectedInGroup} isHovered={army.id === hoveredArmyId} offsetX={0} offsetY={0} onClick={onArmyClick} onHover={onArmyHover} />;
     })}
-    {selected && selectedGroup && stats && <g className="army-mini-status" pointerEvents="none" transform={`translate(${selectedGroup.x + selectedGroup.offsetX}, ${selectedGroup.y + selectedGroup.offsetY + 36})`}>
+    {selectedIds.size === 1 && selected && selectedGroup && stats && <g className="army-mini-status" pointerEvents="none" transform={`translate(${selectedGroup.x + selectedGroup.offsetX}, ${selectedGroup.y + selectedGroup.offsetY + 36})`}>
       <rect x="-70" y="-9" width="140" height={selected.destination ? 35 : 25} rx="4" fill="var(--bg-app)" stroke="var(--border-subtle)" />
       <text y="0" textAnchor="middle">{stats.troops.toLocaleString('pt-BR')} · Org {Math.round(stats.organization)} · Moral {Math.round(stats.morale)}</text>
       <text y="10" textAnchor="middle">Supply {SUPPLY_LABELS[stats.supply]} · {Math.round(stats.supplyRatio * 100)}%</text>

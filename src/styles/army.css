@@ -125,3 +125,82 @@
   color: var(--accent-red);
   font-weight: 600;
 }
+
+/* === Resumo de múltiplos exércitos selecionados === */
+.army-info-panel__header > div {
+  min-width: 0;
+}
+
+.army-info-panel__header h3 {
+  margin: 0;
+}
+
+.army-info-panel__header > div > span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.army-info-panel__stats {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.army-info-panel__stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.army-info-panel__stat span {
+  color: var(--text-secondary);
+}
+
+.army-info-panel__stat strong {
+  margin-left: auto;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.army-info-panel__regiments {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.army-info-panel__regiments h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.army-info-panel__group-command {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.army-info-panel__group-command strong {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.army-info-panel__group-command span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.army-info-panel__group-command small {
+  font-size: 11px;
+  color: var(--text-muted);
+}

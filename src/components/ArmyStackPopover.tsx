@@ -5,7 +5,7 @@ import { compositionText } from './militaryPresentation';
 
 export function ArmyStackPopover({ group, province, countries, presentation, selectedArmy, selectedArmyIds, playerCountryTag, onToggleStack, onClearSelection, anchor, onSelect, onClose }: {
   group: ArmyVisualGroup; province?: Province; countries: Map<string, Country>; presentation: ArmyPresentation;
-  selectedArmy: string | null; anchor: { x: number; y: number }; onSelect: (id: string) => void; onClose: () => void;
+  selectedArmy: string | null; anchor: { x: number; y: number }; onSelect: (id: string, additive: boolean) => void; onClose: () => void;
   selectedArmyIds?: string[]; playerCountryTag?: string; onToggleStack?: (ids: string[]) => void; onClearSelection?: () => void;
 }) {
   const selected = new Set(selectedArmyIds ?? (selectedArmy ? [selectedArmy] : []));
@@ -28,26 +28,29 @@ export function ArmyStackPopover({ group, province, countries, presentation, sel
         const stats = presentation.readouts.get(army.id)!;
         const country = countries.get(army.owner);
         return (
-  <button
-    type="button"
-    key={army.id}
-    data-army-choice={army.id}
-    className={`army-stack-popover__army ${
-      selected.has(army.id)
-        ? 'army-stack-popover__army--selected'
-        : ''
-    }`}
-    style={{
-      '--army-country-color':
-        country?.color ?? 'var(--border-subtle)',
-    } as CSSProperties} aria-pressed={selected.has(army.id)} disabled={playerCountryTag !== undefined && army.owner !== playerCountryTag} onClick={() => onSelect(army.id)}>
-          <strong>{army.name}</strong><span>{country?.flag ?? '🏴'} {country?.name ?? army.owner} · {stats.status}</span>
-          <span className="army-stack-popover__stats"><span>{stats.troops.toLocaleString('pt-BR')} tropas</span><span>Org {Math.round(stats.organization)}%</span><span>Moral {Math.round(stats.morale)}%</span><span>Supply {SUPPLY_LABELS[stats.supply]} ({Math.round(stats.supplyRatio * 100)}%)</span></span>
-          {stats.logistics && <span>Logística: {stats.logistics.connected ? 'Conectada' : 'Desconectada'} · Distância: {stats.logistics.distance ?? '—'}</span>}
-          <span className="military-composition">{compositionText([army])}</span>
-        </button>);
+          <button
+            type="button"
+            key={army.id}
+            data-army-choice={army.id}
+            className={`army-stack-popover__army ${selected.has(army.id)
+              ? 'army-stack-popover__army--selected'
+              : ''
+              }`}
+            style={{
+              '--army-country-color':
+                country?.color ?? 'var(--border-subtle)',
+            } as CSSProperties} aria-pressed={selected.has(army.id)} disabled={playerCountryTag !== undefined && army.owner !== playerCountryTag} onClick={(event) =>
+              onSelect(army.id, event.ctrlKey || event.metaKey)
+            }>
+            <strong>{army.name}</strong><span>{country?.flag ?? '🏴'} {country?.name ?? army.owner} · {stats.status}</span>
+            <span className="army-stack-popover__stats"><span>{stats.troops.toLocaleString('pt-BR')} tropas</span><span>Org {Math.round(stats.organization)}%</span><span>Moral {Math.round(stats.morale)}%</span><span>Supply {SUPPLY_LABELS[stats.supply]} ({Math.round(stats.supplyRatio * 100)}%)</span></span>
+            {stats.logistics && <span>Logística: {stats.logistics.connected ? 'Conectada' : 'Desconectada'} · Distância: {stats.logistics.distance ?? '—'}</span>}
+            <span className="military-composition">{compositionText([army])}</span>
+          </button>);
       })}
     </div>
-    <footer>Selecione um ou vários exércitos; clique direito no mapa para ordenar movimento. Escape limpa a seleção.</footer>
+    <footer>
+      Clique para selecionar · Ctrl + clique para seleção múltipla · Clique direito para mover · Escape para limpar
+    </footer>
   </div>;
 }

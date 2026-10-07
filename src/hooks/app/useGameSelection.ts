@@ -44,10 +44,22 @@ export function useGameSelection(
     setSelectedProvince(null); setIsPanelOpen(false);
   }, [armiesRef, playerCountryTag]);
   const toggleStackSelection = useCallback((ids: string[]) => {
-    const valid = [...new Set(ids)].filter(id => armiesRef.current?.some(a => a.id === id && controllable(a, playerCountryTag)));
+    const valid = [...new Set(ids)].filter(id =>
+      armiesRef.current?.some(
+        a => a.id === id && controllable(a, playerCountryTag)
+      )
+    );
+
     if (!valid.length) return;
-    setSelectedArmyIds(prev => valid.every(id => prev.includes(id)) ? prev.filter(id => !valid.includes(id)) : [...new Set([...prev, ...valid])]);
-    setSelectedProvince(null); setIsPanelOpen(false);
+
+    setSelectedArmyIds(prev =>
+      valid.every(id => prev.includes(id))
+        ? prev.filter(id => !valid.includes(id))
+        : valid
+    );
+
+    setSelectedProvince(null);
+    setIsPanelOpen(false);
   }, [armiesRef, playerCountryTag]);
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [splitSelection, setSplitSelection] = useState<Set<number>>(new Set());

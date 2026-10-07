@@ -68,7 +68,7 @@ export const GameMap: React.FC<MapProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [mapMode, setMapMode] = useState<MapMode>('political');
   const [openStack, setOpenStack] = useState<{ key: string; anchor: { x: number; y: number } } | null>(null);
-  const networks = useMemo(() => logistics ?? buildLogisticsNetworks({countries,provinces,wars,relations: diplomaticRelations}),[logistics,countries,provinces,wars,diplomaticRelations]);
+  const networks = useMemo(() => logistics ?? buildLogisticsNetworks({ countries, provinces, wars, relations: diplomaticRelations }), [logistics, countries, provinces, wars, diplomaticRelations]);
   const presentation = useMemo(() => buildArmyPresentation(armies, provinces, networks), [armies, provinces, networks]);
   const countryByTag = useMemo(() => new Map(countries.map(country => [country.tag, country])), [countries]);
   const mapValues = useMemo(() => buildMapValues(provinces, mapMode, networks), [provinces, mapMode, networks]);
@@ -196,8 +196,8 @@ export const GameMap: React.FC<MapProps> = ({
         />
         <OperationalOverlay provinces={provinces} war={war} selectedArmyLocation={selectedArmy ? presentation.armyById.get(selectedArmy)?.location : null} />
         {mapMode === 'logistics' && provinces.filter(p => mapValues.origins.has(p.id)).map(p => <g key={`logistics-${p.id}`} aria-label={`Origem logística: ${p.name}`} pointerEvents="none">
-          <circle cx={p.center.x} cy={p.center.y-15} r="10" fill="none" stroke="#ffe088" strokeWidth="2" />
-          <text x={p.center.x+14} y={p.center.y-15} fontSize="9" fill="#ffe088">★</text>
+          <circle cx={p.center.x} cy={p.center.y - 15} r="10" fill="none" stroke="#ffe088" strokeWidth="2" />
+          <text x={p.center.x + 14} y={p.center.y - 15} fontSize="9" fill="#ffe088">★</text>
         </g>)}
 
         {/* === Marcadores de capitais === */}
@@ -260,7 +260,18 @@ export const GameMap: React.FC<MapProps> = ({
 
       {/* === Tooltip === */}
       {!openGroup && <GameMapTooltip tooltip={tooltip} countries={countryByTag} presentation={presentation} war={war} logistics={networks} />}
-      {openGroup && openStack && <ArmyStackPopover group={openGroup} province={openGroup.provinceId ? presentation.provinceById.get(openGroup.provinceId) : undefined} countries={countryByTag} presentation={presentation} selectedArmy={selectedArmy} selectedArmyIds={selectedArmyIds} playerCountryTag={playerCountryTag} onToggleStack={onToggleStack} onClearSelection={onClearSelection} anchor={openStack.anchor} onSelect={onToggleArmy ?? selectArmy} onClose={closeStack} />}
+      {openGroup && openStack && <ArmyStackPopover group={openGroup} province={openGroup.provinceId ? presentation.provinceById.get(openGroup.provinceId) : undefined} countries={countryByTag} presentation={presentation} selectedArmy={selectedArmy} selectedArmyIds={selectedArmyIds} playerCountryTag={playerCountryTag} onToggleStack={onToggleStack} onClearSelection={onClearSelection} anchor={openStack.anchor}
+        onSelect={(id, additive) => {
+          if (additive) {
+            if (onToggleArmy) {
+              onToggleArmy(id);
+            } else {
+              selectArmy(id);
+            }
+          } else {
+            selectArmy(id);
+          }
+        }} onClose={closeStack} />}
     </div>
   );
 };

@@ -830,3 +830,84 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(230, 126, 34, 0.4);
 }
+
+/* === Painel de seleção múltipla === */
+.army-info-panel--multi{
+  width: 280px;
+}
+
+.army-info-panel--multi .army-info-panel__header > div{
+  min-width: 0;
+}
+
+.army-info-panel--multi .army-info-panel__header h3{
+  margin: 0;
+}
+
+.army-info-panel--multi .army-info-panel__header > div > span{
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.army-info-panel--multi .army-info-panel__stats{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.army-info-panel--multi .army-info-panel__stat{
+  align-items: center;
+  gap: 12px;
+}
+
+.army-info-panel--multi .army-info-panel__stat strong{
+  margin-left: auto;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.army-info-panel--multi .army-info-panel__regiments{
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.army-info-panel--multi .army-info-panel__regiments h4{
+  margin: 0 0 7px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.army-info-panel__group-command{
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.army-info-panel__group-command strong{
+  font-size: 10px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.army-info-panel__group-command span{
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.army-info-panel__group-command small{
+  font-size: 10px;
+  color: var(--text-muted);
+}

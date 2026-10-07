@@ -9,6 +9,8 @@ import type { Recruitment, BuildingConstruction } from '../../types';
 import type { ToastType } from '../../types/toast';
 import { transferProvince } from '../../engine/territoryTransfer';
 import { checkRebelTerritoryReturn } from '../../engine/rebellions';
+import { buildLogisticsNetworks } from '../../engine/logistics';
+import type { DiplomaticRelation } from '../../types';
 
 type Params = {
   arrivedArmies: Army[];
@@ -16,6 +18,7 @@ type Params = {
   provinces: Province[];
   countries: Country[];
   wars: War[];
+  relations?: DiplomaticRelation[];
   recruitments: Recruitment[];
   buildingConstructions: BuildingConstruction[];
   currentActiveBattles: ActiveBattle[];
@@ -121,7 +124,8 @@ export function processBattleArrival(p: Params) {
   // 2. Agora SIM verifica combate em todas as províncias com TODO MUNDO já no mapa
   // Usa o ref mais atualizado
   const battlesToCheck = activeBattlesRef.current.length > 0 ? activeBattlesRef.current : currentActiveBattles;
-  const autoCombatResult = checkAllProvinceCombats(armies, provinces, wars, snapshot.date, battlesToCheck);
+  const logistics = buildLogisticsNetworks({countries,provinces,wars,relations: p.relations ?? []});
+  const autoCombatResult = checkAllProvinceCombats(armies, provinces, wars, snapshot.date, battlesToCheck,undefined,logistics);
 
   armies = autoCombatResult.armies.map(army => army.inCombat ? {
     ...army, destination: null, targetDestination: null, path: [], movementProgress: 0, position: null,

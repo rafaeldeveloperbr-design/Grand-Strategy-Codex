@@ -1,5 +1,6 @@
 import { TERRAIN_DEFINITIONS } from '../../engine/terrain';
 import { MAP_MODES, numericMapColor, type MapMode } from './mapPresentation';
+import { LOGISTICS_CATEGORIES } from '../../engine/logistics';
 
 export function MapModeBar({ mode, onChange, max }: { mode: MapMode; onChange: (mode: MapMode) => void; max: number }) {
   const definition = MAP_MODES.find(item => item.id === mode)!;
@@ -9,7 +10,8 @@ export function MapModeBar({ mode, onChange, max }: { mode: MapMode; onChange: (
       {MAP_MODES.map(item => <button key={item.id} type="button" aria-pressed={mode === item.id} aria-label={`Modo ${item.label}`} title={item.description} onClick={() => onChange(item.id)}>{item.label}</button>)}
     </div>
     {mode === 'terrain' && <div className="map-modes__legend" aria-label="Legenda Terreno">{Object.entries(TERRAIN_DEFINITIONS).map(([id, terrain]) => <span key={id} title={terrain.description}><span style={{ display: 'inline-block', width: 12, height: 12, backgroundColor: terrain.color, marginRight: 4 }} />{terrain.label}</span>)}</div>}
-    {mode !== 'political' && mode !== 'terrain' && <div className="map-modes__legend" aria-label={`Legenda ${definition.label}`}>
+    {mode === 'logistics' && <div className="map-modes__legend" aria-label="Legenda Logística">{LOGISTICS_CATEGORIES.map(category => <span key={category.id}><span style={{display: 'inline-block',width: 12,height: 12,backgroundColor: category.color,marginRight: 4}} />{category.label}</span>)}<small>★ Origem logística · rede do controlador atual</small></div>}
+    {mode !== 'political' && mode !== 'terrain' && mode !== 'logistics' && <div className="map-modes__legend" aria-label={`Legenda ${definition.label}`}>
       <span>{format(0)}</span><span className="map-modes__scale" style={{ background: `linear-gradient(90deg, ${numericMapColor(0, max, mode)}, ${numericMapColor(max / 2, max, mode)}, ${numericMapColor(max, max, mode)})` }} /><span>{format(max)}</span>
       <small>{mode === 'supply' ? 'Capacidade base · sem demanda/acesso' : mode === 'unrest' ? 'Agitação / organização rebelde' : definition.label}</small>
     </div>}

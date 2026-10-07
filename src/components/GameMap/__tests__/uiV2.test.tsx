@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { getTerrainDefinition } from '../../../engine/terrain';
+import { buildLogisticsNetworks, logisticsCategory } from '../../../engine/logistics';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
@@ -182,9 +183,10 @@ describe('UI V2 routes, map modes and operational information', () => {
   it.each(MAP_MODES.filter(mode => mode.id !== 'political'))('renders $id with correct values, legend and preserved clicks', mode => {
     const data = props(); const before = JSON.stringify(data.provinces); const view = render(<GameMap {...data} />);
     fireEvent.click(view.getByRole('button', { name: `Modo ${mode.label}` }));
-    const values = buildMapValues(data.provinces, mode.id);
+    const network = buildLogisticsNetworks({provinces:data.provinces,countries:data.countries,relations:[],wars:[]});
+    const values = buildMapValues(data.provinces, mode.id, network);
     const path = view.container.querySelector(`[data-province-id="${capital.id}"]`)!;
-    expect(path.getAttribute('fill')).toBe(mode.id === 'terrain' ? getTerrainDefinition(capital).color : numericMapColor(values.values.get(capital.id)!, values.max, mode.id));
+    expect(path.getAttribute('fill')).toBe(mode.id === 'logistics' ? logisticsCategory(values.logisticsByProvince.get(capital.id)).color : mode.id === 'terrain' ? getTerrainDefinition(capital).color : numericMapColor(values.values.get(capital.id)!, values.max, mode.id));
     expect(view.getByLabelText(`Legenda ${mode.label}`)).toBeTruthy();
     fireEvent.click(path); expect(data.onProvinceClick).toHaveBeenCalledWith(capital.id);
     fireEvent.contextMenu(path); expect(data.onProvinceRightClick).toHaveBeenCalledWith(capital.id);

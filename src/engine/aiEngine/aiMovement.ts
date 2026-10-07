@@ -1,3 +1,4 @@
+import { buildLogisticsNetworks, getProvinceLogistics, projectRouteLogistics, LOGISTICS_BALANCE as LB, type LogisticsSnapshot } from '../logistics';
 import { getTerrainDefinition } from '../terrain';
 import { Army, Province, Country } from '../../types';
 import { DiplomaticRelation, War } from '../../types/diplomacy';
@@ -60,6 +61,7 @@ function calculateEffectiveArmyPower(
   province: Province,
   allArmies: Army[],
   defending = false,
+  logistics?: LogisticsSnapshot,
 ): number {
   const stats = calculateArmyCombatStats(army);
   const size = calculateArmySize(army);
@@ -78,7 +80,8 @@ function calculateEffectiveArmyPower(
   const supply = getArmySupply(
     army,
     province,
-    friendlyArmies.length > 0 ? friendlyArmies : [army]
+    friendlyArmies.length > 0 ? friendlyArmies : [army],
+    logistics
   );
 
   const readiness =
@@ -123,7 +126,8 @@ function chooseDefensiveProvince(
   botCountryId: string,
   provinces: Province[],
   armies: Army[],
-  diplomacy: DiplomaticRelation[]
+  diplomacy: DiplomaticRelation[],
+  logistics?: LogisticsSnapshot,
 ): Province | null {
   const homeProvinces = provinces.filter(
     province => province.owner === botCountryId
@@ -173,6 +177,13 @@ function chooseDefensiveProvince(
     let score = 0;
 
     // Posição militar
+    const connection = getProvinceLogistics(logistics,botCountryId,province.id);
+    if (connection) {
+      if (!connection.connected) continue;
+      const projected = getArmySupply({...army,location:province.id},province,armies.filter(a => a.id !== army.id),logistics);
+      score += projected.ratio*LB.aiDefenseSupplyWeight + connection.efficiency*LB.aiLogisticsScoreWeight;
+      score += LB.aiCorridorDefenseBonus*Math.min(1,connection.dependentProvinces/LB.aiCorridorReferenceProvinces);
+    }
     score += fortressLevel * 30;
     score += province.defense * 10;
 
@@ -281,7 +292,8 @@ function scoreEnemyArmyTarget(
   provinces: Province[],
   armies: Army[],
   botCountryId: string,
-  diplomacy: DiplomaticRelation[]
+  diplomacy: DiplomaticRelation[],
+  logistics?: LogisticsSnapshot,
 ): number {
   if (!aiArmy.location || !enemyArmy.location) {
     return -Infinity;
@@ -317,7 +329,8 @@ function scoreEnemyArmyTarget(
       botCountryId,
       provinces,
       armies,
-      diplomacy
+      diplomacy,
+      logistics,
     )
   ) {
     return -Infinity;
@@ -343,20 +356,28 @@ function scoreEnemyArmyTarget(
     aiArmy,
     aiProvince,
     armies,
-    aiProvince.owner === botCountryId
+    aiProvince.owner === botCountryId,
+    logistics,
   );
 
   const enemyPower = calculateEffectiveArmyPower(
     enemyArmy,
     enemyProvince,
     armies,
-    enemyProvince.owner === enemyArmy.owner
+    enemyProvince.owner === enemyArmy.owner,
+    logistics,
   );
 
   const powerRatio =
     aiPower / Math.max(1, enemyPower);
 
   let score = 0;
+  if (logistics) {
+    const projected = projectedSupply(aiArmy,path,provinces,armies,logistics);
+    if (!projected || projected.ratio < LB.aiMinimumOffensiveSupplyRatio) return -Infinity;
+    score += projected.ratio*LB.aiLogisticsScoreWeight;
+    if (!getProvinceLogistics(logistics,enemyArmy.owner,enemyProvince.id)?.connected) score += LB.aiDisconnectedEnemyBonus;
+  }
 
   // Prefere inimigos que consegue derrotar.
   score += Math.min(60, powerRatio * 30);
@@ -399,7 +420,8 @@ function findBestEnemyArmyTarget(
   provinces: Province[],
   armies: Army[],
   botCountryId: string,
-  diplomacy: DiplomaticRelation[]
+  diplomacy: DiplomaticRelation[],
+  logistics?: LogisticsSnapshot,
 ): Army | null {
   let bestTarget: Army | null = null;
   let bestScore = -Infinity;
@@ -411,7 +433,8 @@ function findBestEnemyArmyTarget(
       provinces,
       armies,
       botCountryId,
-      diplomacy
+      diplomacy,
+      logistics,
     );
 
     if (score > bestScore) {
@@ -492,7 +515,9 @@ function findBestProvinceTarget(
   provinces: Province[],
   armies: Army[],
   diplomacy: DiplomaticRelation[],
-  countries: Country[]
+  countries: Country[],
+  logistics?: LogisticsSnapshot,
+  movingArmy?: Army,
 ): Province | null {
   const candidates = provinces
     .filter((province): province is Province => {
@@ -533,6 +558,12 @@ function findBestProvinceTarget(
     );
 
     if (path.length === 0) continue;
+    if (logistics && movingArmy) {
+      if (!isOffensiveRouteSafe(movingArmy,path,botCountryId,provinces,armies,diplomacy,logistics)) continue;
+      const projected = projectedSupply(movingArmy,path,provinces,armies,logistics);
+      if (!projected || projected.ratio < LB.aiMinimumOffensiveSupplyRatio) continue;
+      score += projected.ratio*LB.aiLogisticsScoreWeight;
+    }
 
     const routeDanger = calculateRouteDanger(
       path,
@@ -611,7 +642,8 @@ function calculateCapitalDefenseRequirement(
   capital: Province,
   botCountryId: string,
   armies: Army[],
-  diplomacy: DiplomaticRelation[]
+  diplomacy: DiplomaticRelation[],
+  logistics?: LogisticsSnapshot,
 ): {
   enemyThreat: number;
   friendlyDefense: number;
@@ -644,7 +676,8 @@ function calculateCapitalDefenseRequirement(
         army,
         capital,
         armies,
-        true
+        true,
+        logistics,
       );
 
       continue;
@@ -662,7 +695,8 @@ function calculateCapitalDefenseRequirement(
       army,
       enemyProvince,
       armies,
-      false
+      false,
+      logistics,
     );
   }
 
@@ -741,9 +775,14 @@ function isOffensiveRouteSafe(
   botCountryId: string,
   provinces: Province[],
   armies: Army[],
-  diplomacy: DiplomaticRelation[]
+  diplomacy: DiplomaticRelation[],
+  logistics?: LogisticsSnapshot,
 ): boolean {
   if (!army.location) return false;
+  if (logistics && path.some((_,i) => {
+    const projected = projectedSupply(army,path.slice(0,i+1),provinces,armies,logistics);
+    return !projected || projected.ratio < LB.aiMinimumOffensiveSupplyRatio;
+  })) return false;
 
   const currentProvince = provinces.find(
     province => province.id === army.location
@@ -755,7 +794,8 @@ function isOffensiveRouteSafe(
     army,
     currentProvince,
     armies,
-    currentProvince.owner === botCountryId
+    currentProvince.owner === botCountryId,
+    logistics,
   );
 
   // Não verifica o último nó:
@@ -791,7 +831,8 @@ function isOffensiveRouteSafe(
           hostileArmy,
           province,
           armies,
-          province.owner === hostileArmy.owner
+          province.owner === hostileArmy.owner,
+          logistics,
         ),
       0
     );
@@ -811,11 +852,13 @@ export function processAI(
   provinces: Province[],
   diplomacy: DiplomaticRelation[],
   wars: War[] = [],
-  countries: Country[] = []
+  countries: Country[] = [],
+  suppliedLogistics?: LogisticsSnapshot
 ): Army[] {
   if (!botCountryId || !Array.isArray(armies) || !Array.isArray(provinces) || !Array.isArray(diplomacy)) {
     return armies;
   }
+  const logistics = suppliedLogistics ?? (countries.length ? buildLogisticsNetworks({countries,provinces,relations:diplomacy,wars}) : undefined);
   const reinforcementOrders = new Map<string, string>();
   const reservedReinforcements = new Set<string>();
 
@@ -861,7 +904,8 @@ export function processAI(
       provinces,
       armies,
       botCountryId,
-      diplomacy
+      diplomacy,
+      logistics,
     );
 
     if (!bestEnemy?.location) continue;
@@ -876,14 +920,16 @@ export function processAI(
       army,
       armyProvince,
       armies,
-      armyProvince.owner === botCountryId
+      armyProvince.owner === botCountryId,
+      logistics,
     );
 
     const enemyPower = calculateEffectiveArmyPower(
       bestEnemy,
       enemyProvince,
       armies,
-      enemyProvince.owner === bestEnemy.owner
+      enemyProvince.owner === bestEnemy.owner,
+      logistics,
     );
 
     const ratio =
@@ -931,7 +977,8 @@ export function processAI(
         threatenedCapital,
         botCountryId,
         armies,
-        diplomacy
+        diplomacy,
+        logistics,
       )
       : null;
 
@@ -978,7 +1025,8 @@ export function processAI(
             army,
             armyProvince,
             armies,
-            false
+            false,
+            logistics,
           );
 
         const routed = createArmyWithRoute(army, threatenedCapital.id, provinces, botCountryId, diplomacy);
@@ -1032,6 +1080,13 @@ export function processAI(
       return army;
     }
 
+    const connection = getProvinceLogistics(logistics,army.owner,currentProv.id);
+    const currentSupply = getArmySupply(army,currentProv,armies,logistics);
+    if (connection && (!connection.connected || currentSupply.ratio < LB.aiRetreatSupplyRatio)) {
+      const refuge = chooseDefensiveProvince(army,botCountryId,provinces,armies,diplomacy,logistics);
+      return refuge && refuge.id !== army.location ? createArmyWithRoute(army,refuge.id,provinces,botCountryId,diplomacy) : army;
+    }
+
     const isAtWar = diplomacy.some(relation => relation.status === 'war' &&
       (relation.countryA === botCountryId || relation.countryB === botCountryId));
 
@@ -1055,7 +1110,8 @@ export function processAI(
           provinces,
           armies,
           botCountryId,
-          diplomacy
+          diplomacy,
+          logistics,
         );
 
         if (bestEnemy?.location) {
@@ -1069,7 +1125,8 @@ export function processAI(
                 army,
                 currentProv,
                 armies,
-                currentProv.owner === botCountryId
+                currentProv.owner === botCountryId,
+                logistics,
               );
 
             const enemyArmyPower =
@@ -1077,7 +1134,8 @@ export function processAI(
                 bestEnemy,
                 enemyProvince,
                 armies,
-                enemyProvince.owner === bestEnemy.owner
+                enemyProvince.owner === bestEnemy.owner,
+                logistics,
               );
 
             const attackRatio =
@@ -1095,7 +1153,8 @@ export function processAI(
                   botCountryId,
                   provinces,
                   armies,
-                  diplomacy
+                  diplomacy,
+                  logistics,
                 );
 
               if (
@@ -1160,7 +1219,9 @@ export function processAI(
           provinces,
           armies,
           diplomacy,
-          countries
+          countries,
+          logistics,
+          army,
         );
 
       if (bestProvinceTarget) {
@@ -1199,10 +1260,18 @@ export function processAI(
     const frontier = provinces.filter(province => province.owner === botCountryId &&
       isBorderProvince(province.id, provinces, botCountryId))
       .map(province => ({ province, path: findPath(currentProv.id, province.id, provinces, botCountryId, diplomacy) }))
-      .filter(candidate => candidate.path.length > 0)
-      .sort((a, b) => a.path.length - b.path.length || a.province.id.localeCompare(b.province.id))[0];
+      .filter(candidate => candidate.path.length > 0 && (!logistics || getProvinceLogistics(logistics,botCountryId,candidate.province.id)?.connected))
+      .sort((a, b) => (getProvinceLogistics(logistics,botCountryId,b.province.id)?.efficiency ?? 1) - (getProvinceLogistics(logistics,botCountryId,a.province.id)?.efficiency ?? 1) || a.path.length - b.path.length || a.province.id.localeCompare(b.province.id))[0];
     if (frontier) return createArmyWithRoute(army, frontier.province.id, provinces, botCountryId, diplomacy);
 
     return army;
   });
+}
+function projectedSupply(army: Army,path: string[],provinces: Province[],armies: Army[],logistics: LogisticsSnapshot) {
+  if (!army.location) return;
+  const connection = projectRouteLogistics(logistics,army.owner,army.location,path);
+  if (!connection?.connected) return;
+  const destination = provinces.find(p => p.id === (path[path.length-1] ?? army.location));
+  if (!destination) return;
+  return getArmySupply({...army,location:destination.id},destination,armies.filter(a => a.id !== army.id),logistics,connection);
 }

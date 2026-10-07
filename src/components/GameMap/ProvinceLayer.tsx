@@ -5,6 +5,7 @@ import { UNIT_DEFINITIONS } from '../../data/units';
 import { getProvinceRebellion, REBEL_TYPE_LABELS } from '../../engine/rebellion';
 import { getTerrainDefinition } from '../../engine/terrain';
 import { numericMapColor, buildMapValues, type MapMode } from './mapPresentation';
+import { logisticsCategory } from '../../engine/logistics';
 
 interface ProvinceLayerProps {
   provinces: Province[];
@@ -80,7 +81,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
       {provinces.map((province) => {
         const isHovered = province.id === hoveredProvince;
         const isSelected = province.id === selectedProvince;
-        const fillColor = mapMode === 'terrain' ? getTerrainDefinition(province).color : mapMode !== 'political' ? numericMapColor(values.values.get(province.id) ?? 0, values.max, mapMode) : isHovered || isSelected
+        const fillColor = mapMode === 'logistics' ? logisticsCategory(values.logisticsByProvince.get(province.id)).color : mapMode === 'terrain' ? getTerrainDefinition(province).color : mapMode !== 'political' ? numericMapColor(values.values.get(province.id) ?? 0, values.max, mapMode) : isHovered || isSelected
           ? getProvinceLightColor(province)
           : getProvinceColor(province);
 

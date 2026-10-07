@@ -10,6 +10,7 @@ import { buildArmyPresentation, buildMapValues, buildWarPresentation, type MapMo
 import { MapModeBar } from './MapModeBar';
 import { ArmyStackPopover } from '../ArmyStackPopover';
 import { OperationalOverlay } from './OperationalOverlay';
+import { buildLogisticsNetworks, type LogisticsSnapshot } from '../../engine/logistics';
 
 const NO_WARS: War[] = [];
 const NO_RELATIONS: DiplomaticRelation[] = [];
@@ -23,6 +24,7 @@ export interface MapProps {
   activeBattles: ActiveBattle[];
   wars?: War[];
   diplomaticRelations?: DiplomaticRelation[];
+  logistics?: LogisticsSnapshot;
   selectedProvince: string | null;
   hoveredProvince: string | null;
   selectedArmy: string | null;
@@ -41,6 +43,7 @@ export const GameMap: React.FC<MapProps> = ({
   activeBattles,
   wars = NO_WARS,
   diplomaticRelations = NO_RELATIONS,
+  logistics,
   selectedProvince,
   hoveredProvince,
   selectedArmy,
@@ -55,9 +58,10 @@ export const GameMap: React.FC<MapProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [mapMode, setMapMode] = useState<MapMode>('political');
   const [openStack, setOpenStack] = useState<{ key: string; anchor: { x: number; y: number } } | null>(null);
-  const presentation = useMemo(() => buildArmyPresentation(armies, provinces), [armies, provinces]);
+  const networks = useMemo(() => logistics ?? buildLogisticsNetworks({countries,provinces,wars,relations: diplomaticRelations}),[logistics,countries,provinces,wars,diplomaticRelations]);
+  const presentation = useMemo(() => buildArmyPresentation(armies, provinces, networks), [armies, provinces, networks]);
   const countryByTag = useMemo(() => new Map(countries.map(country => [country.tag, country])), [countries]);
-  const mapValues = useMemo(() => buildMapValues(provinces, mapMode), [provinces, mapMode]);
+  const mapValues = useMemo(() => buildMapValues(provinces, mapMode, networks), [provinces, mapMode, networks]);
   const war = useMemo(() => buildWarPresentation(provinces, countries, wars, diplomaticRelations, activeBattles), [provinces, countries, wars, diplomaticRelations, activeBattles]);
   const closeStack = useCallback(() => setOpenStack(null), []);
   const openGroup = openStack ? presentation.groups.find(group => group.key === openStack.key && group.armies.length > 1) : undefined;
@@ -181,6 +185,10 @@ export const GameMap: React.FC<MapProps> = ({
           onMouseLeave={handleMouseLeave}
         />
         <OperationalOverlay provinces={provinces} war={war} selectedArmyLocation={selectedArmy ? presentation.armyById.get(selectedArmy)?.location : null} />
+        {mapMode === 'logistics' && provinces.filter(p => mapValues.origins.has(p.id)).map(p => <g key={`logistics-${p.id}`} aria-label={`Origem logística: ${p.name}`} pointerEvents="none">
+          <circle cx={p.center.x} cy={p.center.y-15} r="10" fill="none" stroke="#ffe088" strokeWidth="2" />
+          <text x={p.center.x+14} y={p.center.y-15} fontSize="9" fill="#ffe088">★</text>
+        </g>)}
 
         {/* === Marcadores de capitais === */}
         {provinces
@@ -240,7 +248,7 @@ export const GameMap: React.FC<MapProps> = ({
       </svg>
 
       {/* === Tooltip === */}
-      {!openGroup && <GameMapTooltip tooltip={tooltip} countries={countryByTag} presentation={presentation} war={war} />}
+      {!openGroup && <GameMapTooltip tooltip={tooltip} countries={countryByTag} presentation={presentation} war={war} logistics={networks} />}
       {openGroup && openStack && <ArmyStackPopover group={openGroup} province={openGroup.provinceId ? presentation.provinceById.get(openGroup.provinceId) : undefined} countries={countryByTag} presentation={presentation} selectedArmy={selectedArmy} anchor={openStack.anchor} onSelect={selectArmy} onClose={closeStack} />}
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { loadGame, saveGame, getSaveCompatibilityError, isAutoSaveEnabled, setAutoSaveEnabled, listSaves, deleteSave } from '../../engine/saveSystem';
 import { isSaveCompatibleWithActiveMap } from '../../data/map/saveCompatibility';
 import { mapMetadata } from '../../data/map';
@@ -45,39 +45,6 @@ export function useSaveSystem(
   const [saves, setSaves] = useState(() => listSaves());
   const refreshSaves = useCallback(() => setSaves(listSaves()), []);
 
-  // Load autosave - já usando V2
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('newgame') === '1') {
-      window.history.replaceState({}, '', window.location.pathname);
-      return;
-    }
-    const saved = loadGame('autosave');
-    if (!saved && getSaveCompatibilityError()) addToast(getSaveCompatibilityError()!, 'error');
-    if (saved) {
-      if (!isSaveCompatibleWithActiveMap(saved)) {
-        addToast(`Autosave de outro mapa. ${mapMetadata.name} iniciou uma nova partida.`, 'info');
-        return;
-      }
-      setters.setPlayerCountryTag?.(saved.world.countries.some(country => country.tag === saved.technology.player.countryTag)
-        ? saved.technology.player.countryTag : mapMetadata.defaultPlayerCountry);
-      // V2 PURO - agrupado por domínio
-      setters.setProvinces(saved.world.provinces);
-      setters.setAllCountries(saved.world.countries);
-      setters.setArmies(saved.military.armies);
-      setters.setWars(saved.military.wars);
-      setters.setActiveBattles(saved.military.activeBattles);
-      setters.setRecruitments(saved.military.recruitments);
-      setters.setDiplomaticRelations(saved.diplomacy.relations);
-      setters.setBuildingConstructions(saved.economy.constructions);
-      setters.setPlayerTechState(saved.technology.player);
-      setters.setBotTechStates(saved.technology.bots);
-      setters.setDate(saved.date);
-      addToast('💾 Autosave V2 carregado!', 'success');
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handleManualSave = useCallback((customName: string) => {
     const slot = Date.now().toString();
     if (!saveGame(refs, slot, customName)) { addToast(getSaveCompatibilityError() ?? 'Save incompatível', 'error'); return; }
@@ -95,8 +62,12 @@ export function useSaveSystem(
       addToast(`Este save pertence a outro mapa e não pode ser carregado em ${mapMetadata.name}.`, 'error');
       return;
     }
-    setters.setPlayerCountryTag?.(saved.world.countries.some(country => country.tag === saved.technology.player.countryTag)
-      ? saved.technology.player.countryTag : mapMetadata.defaultPlayerCountry);
+    const playerTag = saved.technology.player.countryTag;
+    if (!saved.world.countries.some(country => country.tag === playerTag)) {
+      addToast('País do jogador ausente ou inválido no save.', 'error');
+      return;
+    }
+    setters.setPlayerCountryTag?.(playerTag);
     // V2 PURO
     setters.setProvinces(saved.world.provinces);
     setters.setAllCountries(saved.world.countries);

@@ -1,8 +1,9 @@
 import { useState, type RefObject } from 'react';
 import { mapMetadata } from '../../data/map';
+import type { MapViewBox } from '../../data/map/types';
 
-export function useMapControls(svgRef?: RefObject<SVGSVGElement>) {
-  const [viewBox, setViewBox] = useState({ ...mapMetadata.initialViewBox });
+export function useMapControls(svgRef?: RefObject<SVGSVGElement>, initialViewBox: MapViewBox = mapMetadata.initialViewBox) {
+  const [viewBox, setViewBox] = useState({ ...initialViewBox });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 

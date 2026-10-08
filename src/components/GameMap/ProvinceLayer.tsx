@@ -13,6 +13,7 @@ interface ProvinceLayerProps {
   buildingConstructions: BuildingConstruction[];
   recruitments: Recruitment[];
   selectedProvince: string | null;
+  selectedCountryTag?: string;
   hoveredProvince: string | null;
   mapMode?: MapMode;
   mapValues?: ReturnType<typeof buildMapValues>;
@@ -28,6 +29,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
   buildingConstructions,
   recruitments,
   selectedProvince,
+  selectedCountryTag,
   hoveredProvince,
   mapMode = 'political',
   mapValues,
@@ -57,7 +59,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
 
   const getProvinceClass = (province: Province): string => {
     const classes = ['map__province'];
-    if (province.id === selectedProvince) classes.push('map__province--selected');
+    if (province.id === selectedProvince || province.owner === selectedCountryTag) classes.push('map__province--selected');
     if (province.id === hoveredProvince) classes.push('map__province--hovered');
     return classes.join(' ');
   };
@@ -82,7 +84,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
     <g className="provinces-layer">
       {provinces.map((province) => {
         const isHovered = province.id === hoveredProvince;
-        const isSelected = province.id === selectedProvince;
+        const isSelected = province.id === selectedProvince || province.owner === selectedCountryTag;
         const fillColor = mapMode === 'logistics' ? logisticsCategory(values.logisticsByProvince.get(province.id)).color : mapMode === 'terrain' ? getTerrainDefinition(province).color : mapMode !== 'political' ? numericMapColor(values.values.get(province.id) ?? 0, values.max, mapMode) : isHovered || isSelected
           ? getProvinceLightColor(province)
           : getProvinceColor(province);

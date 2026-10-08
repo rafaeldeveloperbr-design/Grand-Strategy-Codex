@@ -19,7 +19,7 @@ import { FocusModal } from './components/FocusModal';
 import { ResearchModal } from './components/ResearchModal';
 import { EndGameModal } from './components/EndGameModal';
 import { SettingsModal } from './components/SettingsModal';
-import { provincesData, mapMetadata } from './data/map';
+import { provincesData } from './data/map';
 import { createInitialArmies } from './data/map/initialState';
 import { countries as initialCountries } from './data/countries';
 import { calculateArmySize } from './engine/combat';
@@ -58,17 +58,19 @@ import { useCheats } from './hooks/app/useCheats';
 import { CheatPanel } from './components/CheatPanel';
 import { UNIT_DEFINITIONS } from './data/units';
 import { useSaveSystem } from './hooks/app/useSaveSystem';
+import { CampaignEntry, type CampaignStart } from './components/CampaignEntry';
+import { getCountryInitialView } from './engine/countrySelection';
 
 
-const App: React.FC = () => {
+export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlayerTag, saved }) => {
   const { addToast, notificationHistory, unreadCount, markAllAsRead } = useToast();
   const { addAILog } = useAILog();
-  const [playerCountryTag, setPlayerCountryTag] = useState(mapMetadata.defaultPlayerCountry);
-  const [date, setDate] = useState<GameDate>({ year: 1444, month: 11, day: 11 });
+  const [playerCountryTag, setPlayerCountryTag] = useState(initialPlayerTag);
+  const [date, setDate] = useState<GameDate>(saved?.date ?? { year: 1444, month: 11, day: 11 });
   const [gameSpeed, setGameSpeed] = useState(0);
-  const [provinces, setProvinces] = useState<Province[]>(() => structuredClone(provincesData));
+  const [provinces, setProvinces] = useState<Province[]>(() => saved?.world.provinces ?? structuredClone(provincesData));
   const [allCountries, setAllCountries] = useState<Country[]>(() =>
-    initialCountries.map((c): Country => initializePolitics({
+    saved?.world.countries ?? initialCountries.map((c): Country => initializePolitics({
       ...c,
       provinces: [...c.provinces],
       activeLaws: { ...c.activeLaws },
@@ -76,17 +78,17 @@ const App: React.FC = () => {
       economy: { ...c.economy },
     }))
   );
-  const [armies, setArmies] = useState<Army[]>(() => createInitialArmies(initialCountries));
-  const [recruitments, setRecruitments] = useState<Recruitment[]>([]);
-  const [buildingConstructions, setBuildingConstructions] = useState<BuildingConstruction[]>([]);
-  const [diplomaticRelations, setDiplomaticRelations] = useState<DiplomaticRelation[]>(() => createInitialDiplomacy(initialCountries, provincesData));
-  const [wars, setWars] = useState<War[]>([]);
-  const [playerTechState, setPlayerTechState] = useState<CountryTechState>(() => createInitialTechState(playerCountryTag));
-  const [botTechStates, setBotTechStates] = useState<Map<string, CountryTechState>>(() => { const m = new Map<string, CountryTechState>(); initialCountries.forEach(c => { if (c.tag !== playerCountryTag) m.set(c.tag, createInitialTechState(c.tag)); }); return m; });
+  const [armies, setArmies] = useState<Army[]>(() => saved?.military.armies ?? createInitialArmies(initialCountries));
+  const [recruitments, setRecruitments] = useState<Recruitment[]>(saved?.military.recruitments ?? []);
+  const [buildingConstructions, setBuildingConstructions] = useState<BuildingConstruction[]>(saved?.economy.constructions ?? []);
+  const [diplomaticRelations, setDiplomaticRelations] = useState<DiplomaticRelation[]>(() => saved?.diplomacy.relations ?? createInitialDiplomacy(initialCountries, provincesData));
+  const [wars, setWars] = useState<War[]>(saved?.military.wars ?? []);
+  const [playerTechState, setPlayerTechState] = useState<CountryTechState>(() => saved?.technology.player ?? createInitialTechState(playerCountryTag));
+  const [botTechStates, setBotTechStates] = useState<Map<string, CountryTechState>>(() => { if (saved) return saved.technology.bots; const m = new Map<string, CountryTechState>(); initialCountries.forEach(c => { if (c.tag !== playerCountryTag) m.set(c.tag, createInitialTechState(c.tag)); }); return m; });
   const [endGameType, setEndGameType] = useState<EndGameType>(null);
   const [hasTriggeredEndGame, setHasTriggeredEndGame] = useState(false);
   const [gameStats, setGameStats] = useState<GameStats | null>(null);
-  const [activeBattles, setActiveBattles] = useState<ActiveBattle[]>([]);
+  const [activeBattles, setActiveBattles] = useState<ActiveBattle[]>(saved?.military.activeBattles ?? []);
   const [battleHistory, setBattleHistory] = useState<CombatResult[]>([]);
   const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('medium');
   const [showCheatPanel, setShowCheatPanel] = useState(false);
@@ -114,6 +116,7 @@ const App: React.FC = () => {
 
 
   const playerCountry = useMemo(() => allCountries.find(c => c.tag === playerCountryTag)!, [allCountries, playerCountryTag]);
+  const initialMapView = useMemo(() => getCountryInitialView(playerCountry, provinces), [playerCountry, provinces]);
   const selectedProvinceData = useMemo(() => provinces.find(p => p.id === selection.selectedProvince) ?? null, [provinces, selection.selectedProvince]);
   const selectedArmyData = useMemo(() => armies.find(a => a.id === selection.selectedArmy) ?? null, [armies, selection.selectedArmy]);
   const logistics = useMemo(() => buildLogisticsNetworks({ provinces, countries: allCountries, relations: diplomaticRelations, wars }), [provinces, allCountries, diplomaticRelations, wars]);
@@ -188,7 +191,7 @@ const App: React.FC = () => {
         onGovernmentClick={() => modals.setShowGovernmentModal(true)}
         onEconomyClick={() => setShowEconomyPanel(true)}
       />      <div className="game__main">
-        <GameMap logistics={logistics} provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} wars={wars} diplomaticRelations={diplomaticRelations} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} selectedArmyIds={selection.selectedArmyIds} playerCountryTag={playerCountryTag} onToggleArmy={selection.toggleArmySelection} onToggleStack={selection.toggleStackSelection} onToggleStackAdditive={selection.toggleStackAdditive} onClearSelection={selection.clearArmySelection} onProvinceHover={selection.handleProvinceHover} onProvinceClick={selection.handleProvinceClick} onArmyClick={selection.handleArmyClick} onProvinceRightClick={armyActions.handleProvinceRightClick} />
+        <GameMap key={playerCountryTag} initialViewBox={initialMapView} logistics={logistics} provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} wars={wars} diplomaticRelations={diplomaticRelations} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} selectedArmyIds={selection.selectedArmyIds} playerCountryTag={playerCountryTag} onToggleArmy={selection.toggleArmySelection} onToggleStack={selection.toggleStackSelection} onToggleStackAdditive={selection.toggleStackAdditive} onClearSelection={selection.clearArmySelection} onProvinceHover={selection.handleProvinceHover} onProvinceClick={selection.handleProvinceClick} onArmyClick={selection.handleArmyClick} onProvinceRightClick={armyActions.handleProvinceRightClick} />
         {selection.isPanelOpen && selectedProvinceData && <ProvincePanel selectedArmyIds={selection.selectedArmyIds} onSelectArmy={selection.toggleArmySelection} logistics={logistics} onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
         {selection.selectedArmyIds.length > 1 && <ArmySelectionSummary armies={armies.filter(a => selection.selectedArmyIds.includes(a.id) && a.owner === playerCountryTag)} allArmies={armies} provinces={provinces} logistics={logistics} onClear={selection.clearArmySelection} onClearRoutes={armyActions.handleClearRoutes}><ArmyReorganizationPanel selectedIds={selection.selectedArmyIds} context={{armies, provinces, playerCountryTag, activeBattles}} onConfirm={armyActions.handleReorganize} /></ArmySelectionSummary>}
         {selection.selectedArmyIds.length === 1 && selectedArmyData && (
@@ -285,5 +288,5 @@ const App: React.FC = () => {
   );
 };
 
-const AppWithProviders: React.FC = () => <ToastProvider><AILogProvider><App /></AILogProvider></ToastProvider>;
+const AppWithProviders: React.FC = () => <ToastProvider><AILogProvider><CampaignEntry renderGame={campaign => <GameApp {...campaign} />} /></AILogProvider></ToastProvider>;
 export default AppWithProviders;

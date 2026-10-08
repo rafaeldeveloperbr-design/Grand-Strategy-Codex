@@ -1,6 +1,7 @@
 import type { Country, DiplomaticRelation, Province, War } from '../../types';
 import { getBuildingLevel } from '../../data/buildings';
 import { hasMilitaryAccess } from '../diplomacy/diplomacySelectors';
+import { indexRelations, relationKey } from '../diplomacy/diplomacyRelations';
 import { isTerrainType } from '../terrain';
 import { LOGISTICS_BALANCE as B } from './balance';
 export { LOGISTICS_BALANCE } from './balance';
@@ -79,12 +80,19 @@ export function buildLogisticsNetworks(ctx: LogisticsContext): LogisticsSnapshot
     for (const id of war.occupiedByDefender) if (provinceById.get(id)?.owner === war.defender) occupied.add(id);
   }
   const networks = new Map<string,CountryLogisticsNetwork>(),allowedOwners = new Map<string,Set<string>>();
+  const networkTags = new Set(ctx.countries.map(c => c.tag));
+  // A scoped snapshot never looks up pairs without a requested visitor.
+  // Filtering before indexing avoids sorting/allocating all distant pairs for
+  // a two-country battle, while retaining canonical first-record semantics.
+  const relationIndex = indexRelations(ctx.relations.filter(r => networkTags.has(r.countryA) || networkTags.has(r.countryB)));
   const owners = [...new Set(provinces.map(p => p.owner))];
   for (const country of [...ctx.countries].sort((a,b) => a.tag.localeCompare(b.tag))) {
     if (country.tag.startsWith('rebel_')) continue;
     const origin = resolveLogisticsOrigin(country,provinces),network: CountryLogisticsNetwork = {tag: country.tag,originId: origin?.id ?? null,provinces: new Map()};
     networks.set(country.tag,network);
-    const allowed = new Set(owners.filter(tag => !tag.startsWith('rebel_') && !hostile.get(country.tag)?.has(tag) && hasMilitaryAccess(ctx.relations,country.tag,tag)));
+    // Canonical access rules consume the first pair row from this scoped snapshot.
+    const allowed = new Set(owners.filter(tag => !tag.startsWith('rebel_') && !hostile.get(country.tag)?.has(tag)
+      && hasMilitaryAccess(relationIndex.get(relationKey(country.tag,tag)) ?? [],country.tag,tag)));
     allowedOwners.set(country.tag,allowed);
     if (!origin) continue;
     const queue = [origin.id],parents = new Map<string,string>();

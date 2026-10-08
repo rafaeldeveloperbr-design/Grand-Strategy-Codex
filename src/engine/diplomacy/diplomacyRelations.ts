@@ -4,7 +4,18 @@ export const diplomacyDay = (date: GameDate): number => Math.floor(Date.UTC(date
 export const clampOpinion = (n: number): number => Math.max(-100, Math.min(100, Number.isFinite(n) ? n : 0));
 export const clampTrust = (n: number): number => Math.max(0, Math.min(100, Number.isFinite(n) ? n : 50));
 export function getRelation(relations: DiplomaticRelation[], a: string, b: string): DiplomaticRelation | undefined {
-  const key = relationKey(a,b); return relations.find(r => relationKey(r.countryA,r.countryB) === key);
+  // The growing world calls this inside logistics/trade loops. Compare the
+  // unordered pair directly instead of allocating/sorting JSON for every row.
+  return relations.find(r => r.countryA === a && r.countryB === b || r.countryA === b && r.countryB === a);
+}
+/** Scoped snapshot lookup; preserves the canonical first record for duplicate pairs. */
+export function indexRelations(relations: DiplomaticRelation[]): Map<string,DiplomaticRelation[]> {
+  const index = new Map<string,DiplomaticRelation[]>();
+  for (const relation of relations) {
+    const key = relationKey(relation.countryA,relation.countryB);
+    if (!index.has(key)) index.set(key,[relation]);
+  }
+  return index;
 }
 export function createRelation(a: string, b: string): DiplomaticRelation {
   if (a === b) throw new Error('Two distinct countries required.');
@@ -15,7 +26,9 @@ export function updateRelation(relations: DiplomaticRelation[], a: string, b: st
   const relation = getRelation(relations,a,b) ?? createRelation(a,b);
   const [countryA,countryB] = [a,b].sort();
   const next = update(relation);
-  return [...relations.filter(r => relationKey(r.countryA,r.countryB) !== relationKey(a,b)),
+  // Global declaration penalties update many pairs. Compare tags directly,
+  // preserving removal of both orientations without per-row JSON allocations.
+  return [...relations.filter(r => !(r.countryA === a && r.countryB === b || r.countryA === b && r.countryB === a)),
     { ...next,countryA,countryB,opinion: clampOpinion(next.opinion),trust: clampTrust(next.trust) }];
 }
 export const getOpinion = (rs: DiplomaticRelation[], a: string, b: string): number => getRelation(rs,a,b)?.opinion ?? 0;

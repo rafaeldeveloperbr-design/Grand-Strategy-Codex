@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { countries, provincesData, validateMapTopology } from '../../data/map';
+import { assembleMap, provincesData, validateMapTopology } from '../../data/map';
+import { southAmerica } from '../../data/map/regions/southAmerica';
 import { canMoveToProvince, findPath, moveArmy } from '../military/movementEngine';
 import { transferProvince } from '../territoryTransfer';
 import { access, army, relation, world } from './helpers/southAmericaAudit';
@@ -15,7 +16,8 @@ function validRoute(start: string, end: string, path: string[], map = provincesD
 }
 
 describe('South America routing audit', () => {
-  it('checks the complete topology and all 3136 ordered pairs independently of SVG geometry', () => {
+  it('checks the preserved South America topology and all 3136 ordered pairs independently of SVG geometry', () => {
+    const {countries,provincesData} = assembleMap([southAmerica]);
     expect(validateMapTopology(provincesData, countries)).toMatchObject({ valid: true, issues: [], components: [expect.any(Array)] });
     const graph = provincesData.map(p => ({ ...p, owner: 'BRA', path: '', center: { x: NaN, y: Infinity } }));
     for (const start of provincesData) for (const end of provincesData) {

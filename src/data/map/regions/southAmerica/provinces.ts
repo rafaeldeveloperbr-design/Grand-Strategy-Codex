@@ -1,4 +1,4 @@
-import type { Building, ProvinceMarket } from '../../../../types';
+import { createProvinceGameplay } from '../../provinceGameplay';
 import type { ProvinceGameplay } from '../../types';
 import { SOUTH_AMERICA_TERRAIN } from './terrain';
 import { countries } from './countries';
@@ -63,30 +63,6 @@ const definitions: [id: string, name: string, owner: string, population: number,
   ["sa_guf_caiena", "Caiena", "GUF", 14000, 5],
 ];
 
-function initialMarket(population: number): ProvinceMarket {
-  const good = (stock: number, price: number) => ({ stock, price, production: 0, demand: 0, consumption: 0, shortage: 0, imported: 0, exported: 0 });
-  return {
-    goods: { food: good(population / 1000 * 15, 1), wood: good(100, 2), iron: good(60, 4), tools: good(45, 8) },
-    purchasingPower: 50,
-  };
-}
-
-export const provinceGameplay: ProvinceGameplay[] = definitions.map(([id, name, owner, total, development]) => {
-  const buildings: Building[] = [
-    { type: 'farm', level: total >= 24000 ? 5 : total >= 16000 ? 4 : 3, daysRemaining: 0 },
-    { type: 'lumber_mill', level: 1, daysRemaining: 0 },
-    { type: 'iron_mine', level: 1, daysRemaining: 0 },
-    { type: 'workshop', level: 1, daysRemaining: 0 },
-  ];
-  if (development >= 6) buildings.push(
-    { type: 'market', level: 1, daysRemaining: 0 },
-    { type: 'infrastructure', level: development >= 7 ? 2 : 1, daysRemaining: 0 },
-  );
-  return {
-    terrain: SOUTH_AMERICA_TERRAIN[id],
-    id, name, owner, originalOwner: owner, color: countries.find(country => country.tag === owner)!.color,
-    population: { total, growthRate: .002, employed: Math.round(total * .5), unemployed: Math.round(total * .1), satisfaction: 65 },
-    maxPopulation: total * 2, development, buildings, defense: development >= 7 ? 4 : 2,
-    unrest: 0, market: initialMarket(total),
-  };
-});
+export const provinceGameplay: ProvinceGameplay[] = definitions.map(definition =>
+  createProvinceGameplay(definition,SOUTH_AMERICA_TERRAIN[definition[0]],countries.find(country => country.tag === definition[2])!.color),
+);

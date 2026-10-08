@@ -29,8 +29,8 @@ describe('Internal Politics V1 government and migration',() => {
       expect(Number.isFinite(g.legitimacyModifier)).toBe(true);expect(g.label.length).toBeGreaterThan(3);
     }
   });
-  it('initializes all 13 countries without replacing existing laws/stability',() => {
-    expect(countries).toHaveLength(13);
+  it('initializes all 201 countries without replacing existing laws/stability',() => {
+    expect(countries).toHaveLength(201);
     for(const country of countries) {
       const next=initializePolitics(country);expect(GOVERNMENT_DEFINITIONS[next.politics!.governmentType]).toBeDefined();
       expect(next.activeLaws).toEqual(country.activeLaws);expect(next.resources.stability).toBe(country.resources.stability);

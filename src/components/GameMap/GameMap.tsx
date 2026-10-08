@@ -171,7 +171,7 @@ export const GameMap: React.FC<MapProps> = ({
         }}
       >
         {/* Fundo do mar */}
-        <rect x={mapMetadata.initialViewBox.x} y={mapMetadata.initialViewBox.y} width={mapMetadata.initialViewBox.w} height={mapMetadata.initialViewBox.h} fill="#1a3a5c" />
+        <rect x={mapMetadata.bounds.x} y={mapMetadata.bounds.y} width={mapMetadata.bounds.w} height={mapMetadata.bounds.h} fill="#1a3a5c" />
 
         {/* Grid decorativo */}
         <defs>
@@ -179,7 +179,7 @@ export const GameMap: React.FC<MapProps> = ({
             <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#1e4060" strokeWidth="0.5" />
           </pattern>
         </defs>
-        <rect x={mapMetadata.initialViewBox.x} y={mapMetadata.initialViewBox.y} width={mapMetadata.initialViewBox.w} height={mapMetadata.initialViewBox.h} fill="url(#grid)" />
+        <rect x={mapMetadata.bounds.x} y={mapMetadata.bounds.y} width={mapMetadata.bounds.w} height={mapMetadata.bounds.h} fill="url(#grid)" />
 
         {/* === Províncias === */}
         <ProvinceLayer

@@ -1,0 +1,564 @@
+[
+  {
+    "tag": "PRT",
+    "id": "eu_prt_lisbon",
+    "name": "Lisboa",
+    "longitude": -9.1,
+    "latitude": 38.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "PRT",
+    "id": "eu_prt_porto",
+    "name": "Porto",
+    "longitude": -8.6,
+    "latitude": 41.2,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "ESP",
+    "id": "eu_esp_madrid",
+    "name": "Madrid",
+    "longitude": -3.7,
+    "latitude": 40.4,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "ESP",
+    "id": "eu_esp_galicia",
+    "name": "Galícia",
+    "longitude": -7.5,
+    "latitude": 42.5,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "ESP",
+    "id": "eu_esp_catalonia",
+    "name": "Catalunha",
+    "longitude": 1.5,
+    "latitude": 41.5,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "ESP",
+    "id": "eu_esp_andalusia",
+    "name": "Andaluzia",
+    "longitude": -4.5,
+    "latitude": 37.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "FRA",
+    "id": "eu_fra_paris",
+    "name": "Paris",
+    "longitude": 2.3,
+    "latitude": 48.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "FRA",
+    "id": "eu_fra_brittany",
+    "name": "Bretanha",
+    "longitude": -2.0,
+    "latitude": 48.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "FRA",
+    "id": "eu_fra_aquitaine",
+    "name": "Aquitânia",
+    "longitude": 0.0,
+    "latitude": 44.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "FRA",
+    "id": "eu_fra_lyon",
+    "name": "Lyon",
+    "longitude": 5.0,
+    "latitude": 46.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "FRA",
+    "id": "eu_fra_provence",
+    "name": "Provença",
+    "longitude": 5.8,
+    "latitude": 43.5,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "GBR",
+    "id": "eu_gbr_london",
+    "name": "Londres",
+    "longitude": 0.0,
+    "latitude": 51.5,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "GBR",
+    "id": "eu_gbr_midlands",
+    "name": "Midlands",
+    "longitude": -1.5,
+    "latitude": 53.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "GBR",
+    "id": "eu_gbr_wales",
+    "name": "País de Gales",
+    "longitude": -4.0,
+    "latitude": 52.2,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "GBR",
+    "id": "eu_gbr_scotland",
+    "name": "Escócia",
+    "longitude": -4.0,
+    "latitude": 57.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "IRL",
+    "id": "eu_irl_dublin",
+    "name": "Dublin",
+    "longitude": -6.3,
+    "latitude": 53.3,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "BEL",
+    "id": "eu_bel_brussels",
+    "name": "Bruxelas",
+    "longitude": 4.4,
+    "latitude": 50.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "NLD",
+    "id": "eu_nld_amsterdam",
+    "name": "Amsterdã",
+    "longitude": 4.9,
+    "latitude": 52.4,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "DEU",
+    "id": "eu_deu_berlin",
+    "name": "Berlim",
+    "longitude": 13.4,
+    "latitude": 52.5,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "DEU",
+    "id": "eu_deu_rhine",
+    "name": "Renânia",
+    "longitude": 7.0,
+    "latitude": 50.7,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "DEU",
+    "id": "eu_deu_hamburg",
+    "name": "Hamburgo",
+    "longitude": 9.9,
+    "latitude": 53.5,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "DEU",
+    "id": "eu_deu_saxony",
+    "name": "Saxônia",
+    "longitude": 13.5,
+    "latitude": 50.8,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "DEU",
+    "id": "eu_deu_bavaria",
+    "name": "Baviera",
+    "longitude": 11.6,
+    "latitude": 48.1,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "DNK",
+    "id": "eu_dnk_copenhagen",
+    "name": "Copenhague",
+    "longitude": 12.4,
+    "latitude": 55.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains",
+    "outlinePart": 1
+  },
+  {
+    "tag": "DNK",
+    "id": "eu_dnk_jutland",
+    "name": "Jutlândia",
+    "longitude": 9.2,
+    "latitude": 56.3,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains",
+    "outlinePart": 0
+  },
+  {
+    "tag": "NOR",
+    "id": "eu_nor_oslo",
+    "name": "Oslo",
+    "longitude": 10.7,
+    "latitude": 59.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "NOR",
+    "id": "eu_nor_northern_norway",
+    "name": "Norte da Noruega",
+    "longitude": 20.0,
+    "latitude": 69.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "SWE",
+    "id": "eu_swe_stockholm",
+    "name": "Estocolmo",
+    "longitude": 18.1,
+    "latitude": 59.3,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "SWE",
+    "id": "eu_swe_northern_sweden",
+    "name": "Norte da Suécia",
+    "longitude": 20.5,
+    "latitude": 66.5,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "FIN",
+    "id": "eu_fin_helsinki",
+    "name": "Helsinque",
+    "longitude": 24.9,
+    "latitude": 60.2,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "FIN",
+    "id": "eu_fin_lapland",
+    "name": "Lapônia",
+    "longitude": 26.0,
+    "latitude": 67.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "POL",
+    "id": "eu_pol_warsaw",
+    "name": "Varsóvia",
+    "longitude": 21.0,
+    "latitude": 52.2,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "POL",
+    "id": "eu_pol_poznan",
+    "name": "Poznań",
+    "longitude": 16.9,
+    "latitude": 52.4,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "POL",
+    "id": "eu_pol_krakow",
+    "name": "Cracóvia",
+    "longitude": 19.9,
+    "latitude": 50.1,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "CZE",
+    "id": "eu_cze_prague",
+    "name": "Praga",
+    "longitude": 14.4,
+    "latitude": 50.1,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "AUT",
+    "id": "eu_aut_vienna",
+    "name": "Viena",
+    "longitude": 16.4,
+    "latitude": 48.2,
+    "population": 30000,
+    "development": 7,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "CHE",
+    "id": "eu_che_bern",
+    "name": "Berna",
+    "longitude": 7.4,
+    "latitude": 46.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "ITA",
+    "id": "eu_ita_rome",
+    "name": "Roma",
+    "longitude": 12.5,
+    "latitude": 41.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "ITA",
+    "id": "eu_ita_lombardy",
+    "name": "Lombardia",
+    "longitude": 9.2,
+    "latitude": 45.5,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "ITA",
+    "id": "eu_ita_piedmont",
+    "name": "Piemonte",
+    "longitude": 7.5,
+    "latitude": 45.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "ITA",
+    "id": "eu_ita_southern_italy",
+    "name": "Sul da Itália",
+    "longitude": 16.0,
+    "latitude": 39.5,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "HUN",
+    "id": "eu_hun_budapest",
+    "name": "Budapeste",
+    "longitude": 19.0,
+    "latitude": 47.5,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "ROU",
+    "id": "eu_rou_bucharest",
+    "name": "Bucareste",
+    "longitude": 26.1,
+    "latitude": 44.4,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "ROU",
+    "id": "eu_rou_transylvania",
+    "name": "Transilvânia",
+    "longitude": 23.6,
+    "latitude": 46.8,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "BGR",
+    "id": "eu_bgr_sofia",
+    "name": "Sófia",
+    "longitude": 23.3,
+    "latitude": 42.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "GRC",
+    "id": "eu_grc_athens",
+    "name": "Atenas",
+    "longitude": 23.7,
+    "latitude": 38.0,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "GRC",
+    "id": "eu_grc_macedonia",
+    "name": "Macedônia Grega",
+    "longitude": 22.5,
+    "latitude": 40.7,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "SRB",
+    "id": "eu_srb_belgrade",
+    "name": "Belgrado",
+    "longitude": 20.5,
+    "latitude": 44.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "HRV",
+    "id": "eu_hrv_zagreb",
+    "name": "Zagreb",
+    "longitude": 16.0,
+    "latitude": 45.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "UKR",
+    "id": "eu_ukr_kyiv",
+    "name": "Kyiv",
+    "longitude": 30.5,
+    "latitude": 50.5,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "UKR",
+    "id": "eu_ukr_lviv",
+    "name": "Lviv",
+    "longitude": 24.0,
+    "latitude": 49.8,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "UKR",
+    "id": "eu_ukr_eastern_ukraine",
+    "name": "Leste da Ucrânia",
+    "longitude": 36.0,
+    "latitude": 49.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "BLR",
+    "id": "eu_blr_minsk",
+    "name": "Minsk",
+    "longitude": 27.6,
+    "latitude": 53.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "LTU",
+    "id": "eu_ltu_vilnius",
+    "name": "Vilnius",
+    "longitude": 25.3,
+    "latitude": 54.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "LVA",
+    "id": "eu_lva_riga",
+    "name": "Riga",
+    "longitude": 24.1,
+    "latitude": 57.0,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "EST",
+    "id": "eu_est_tallinn",
+    "name": "Tallinn",
+    "longitude": 24.8,
+    "latitude": 59.4,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  }
+]

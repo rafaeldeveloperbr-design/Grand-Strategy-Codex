@@ -37,20 +37,22 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
   onMouseLeave,
 }) => {
   const values = useMemo(() => mapValues ?? buildMapValues(provinces, mapMode), [mapValues, provinces, mapMode]);
+  const countriesByTag = useMemo(() => new Map(countries.map(c => [c.tag, c])), [countries]);
+  const provincesById = useMemo(() => new Map(provinces.map(p => [p.id, p])), [provinces]);
   const getProvinceColor = useCallback(
     (province: Province): string => {
-      const country = countries.find((c) => c.tag === province.owner);
+      const country = countriesByTag.get(province.owner);
       return country?.color ?? '#555555';
     },
-    [countries]
+    [countriesByTag]
   );
 
   const getProvinceLightColor = useCallback(
     (province: Province): string => {
-      const country = countries.find((c) => c.tag === province.owner);
+      const country = countriesByTag.get(province.owner);
       return country?.colorLight ?? '#888888';
     },
-    [countries]
+    [countriesByTag]
   );
 
   const getProvinceClass = (province: Province): string => {
@@ -217,7 +219,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
 
             {faction && <g aria-label={`Província envolvida na revolta de ${REBEL_TYPE_LABELS[faction.type]} em ${province.name}`}>
               <text x={province.center.x - 35} y={province.center.y - 25} fontSize="12" pointerEvents="none">🏴</text>
-              <title>{`Revolta de ${REBEL_TYPE_LABELS[faction.type]} ativa. Origem: ${provinces.find(p => p.id === faction.originProvince)?.name ?? faction.originProvince}. As tropas podem estar em outra província da região.`}</title>
+              <title>{`Revolta de ${REBEL_TYPE_LABELS[faction.type]} ativa. Origem: ${provincesById.get(faction.originProvince)?.name ?? 'origem desconhecida'}. As tropas podem estar em outra província da região.`}</title>
             </g>}
 
             {/* Indicador de agitação provincial (unrest) */}

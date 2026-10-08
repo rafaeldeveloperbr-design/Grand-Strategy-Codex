@@ -1,6 +1,7 @@
 import type { Country, DiplomaticRelation, GameDate, GoodId, Province, War } from '../../types';
 import type { TradeGoodMetrics } from '../../types/economy';
 import { areAtWar, diplomacyDay, isDiplomaticCountry } from '../diplomacy';
+import { indexRelations, relationKey } from '../diplomacy/diplomacyRelations';
 import { ALL_GOODS, GOODS, getStorageCapacity, normalizeMarket, refreshProvinceMarket } from '../market';
 import { calculateLawModifiers } from '../government';
 import { ECONOMY_V2_BALANCE as B } from './balance';
@@ -19,10 +20,13 @@ export interface BilateralTransfer {
   amount: number; price: number; value: number; tariff: number;
 }
 /** One eligibility boundary for future optional diplomatic trade policies. */
-export function canCountriesTrade(from: Country, to: Country, ctx: InternationalTradeContext): boolean {
+export function canCountriesTrade(from: Country, to: Country, ctx: InternationalTradeContext,
+  membership?: { countryTags: ReadonlySet<string>; ownerTags: ReadonlySet<string> }): boolean {
   return from.tag !== to.tag && isDiplomaticCountry(from) && isDiplomaticCountry(to)
-    && ctx.countries.some(c => c.tag === from.tag) && ctx.countries.some(c => c.tag === to.tag)
-    && ctx.provinces.some(p => p.owner === from.tag) && ctx.provinces.some(p => p.owner === to.tag)
+    && (membership ? membership.countryTags.has(from.tag) && membership.countryTags.has(to.tag)
+      : ctx.countries.some(c => c.tag === from.tag) && ctx.countries.some(c => c.tag === to.tag))
+    && (membership ? membership.ownerTags.has(from.tag) && membership.ownerTags.has(to.tag)
+      : ctx.provinces.some(p => p.owner === from.tag) && ctx.provinces.some(p => p.owner === to.tag))
     && !areAtWar(ctx.relations,from.tag,to.tag)
     && !ctx.wars.some(w => w.attacker === from.tag && w.defender === to.tag || w.attacker === to.tag && w.defender === from.tag);
 }
@@ -66,6 +70,11 @@ export function processInternationalTrade(ctx: InternationalTradeContext) {
   for (const c of countries.filter(c => !validTags.has(c.tag))) c.trade = normalizeNationalTrade({tariffRate: c.trade!.tariffRate});
   if (day%B.tradeTickInterval !== 0 || valid.every(c => c.trade!.lastTradeDay === day)) return {countries,provinces: ctx.provinces,transfers};
   const participants = valid.filter(c => c.trade!.lastTradeDay !== day).sort((a,b) => a.tag.localeCompare(b.tag));
+  // Per-tick lookup; still delegates eligibility to the canonical validator.
+  const relationIndex = indexRelations(ctx.relations);
+  // Membership is immutable during transfers; avoid repeated world scans in
+  // each commodity/partner check while keeping the canonical eligibility rule.
+  const membership = {countryTags:new Set(ctx.countries.map(c=>c.tag)),ownerTags:new Set(ctx.provinces.map(p=>p.owner))};
   const provinces = ctx.provinces.map(p => validTags.has(p.owner) ? {...p,market: normalizeMarket(p.market)} : p);
   const owned = new Map(participants.map(c => [c.tag,provinces.filter(p => p.owner === c.tag).sort((a,b) => a.id.localeCompare(b.id))]));
   const markets = new Map(participants.map(c => [c.tag,aggregateNationalMarket(c,owned.get(c.tag)!)]));
@@ -84,10 +93,15 @@ export function processInternationalTrade(ctx: InternationalTradeContext) {
       .sort((a,b) => markets.get(a.tag)!.goods[id].price-markets.get(b.tag)!.goods[id].price
         || markets.get(b.tag)!.goods[id].exportable-markets.get(a.tag)!.goods[id].exportable || a.tag.localeCompare(b.tag));
     for (const importer of importers) for (const exporter of exporters) {
-      if (!canCountriesTrade(exporter,importer,ctx)) continue;
       const supply = markets.get(exporter.tag)!.goods[id],need = markets.get(importer.tag)!.goods[id];
-      const sources = sourceOrder(owned.get(exporter.tag)!,id),destinations = destinationOrder(owned.get(importer.tag)!,id);
+      // Earlier partners may have exhausted these mutable amounts. A transfer
+      // below the existing minimum can never occur; avoid repeating eligibility
+      // and provincial sorting for an already satisfied importer/exporter.
+      if (volume(supply.exportable) < B.minimumTradeVolume || volume(need.importNeed) < B.minimumTradeVolume) continue;
       const price = calculateBilateralPrice(id,supply.price,need.price),tariffRate = importer.trade!.tariffRate;
+      if (volume(budgets.get(importer.tag)!/(price*(1+tariffRate))) < B.minimumTradeVolume) continue;
+      if (!canCountriesTrade(exporter,importer,{...ctx,relations:relationIndex.get(relationKey(exporter.tag,importer.tag)) ?? []},membership)) continue;
+      const sources = sourceOrder(owned.get(exporter.tag)!,id),destinations = destinationOrder(owned.get(importer.tag)!,id);
       const amount = volume(Math.min(supply.exportable,need.importNeed,
         sources.reduce((sum,p) => sum+surplus(p,id),0),destinations.reduce((sum,p) => sum+deficit(p,id),0),
         budgets.get(importer.tag)!/(price*(1+tariffRate))));

@@ -1,0 +1,352 @@
+[
+  {
+    "tag": "CAN",
+    "id": "na_can_british_columbia",
+    "name": "Colúmbia Britânica",
+    "longitude": -124,
+    "latitude": 54,
+    "population": 24000,
+    "development": 5,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "CAN",
+    "id": "na_can_prairies",
+    "name": "Pradarias",
+    "longitude": -106,
+    "latitude": 52,
+    "population": 26000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "CAN",
+    "id": "na_can_ontario",
+    "name": "Ontário (Ottawa)",
+    "longitude": -80,
+    "latitude": 47,
+    "population": 38000,
+    "development": 8,
+    "terrain": "forest"
+  },
+  {
+    "tag": "CAN",
+    "id": "na_can_quebec",
+    "name": "Quebec",
+    "longitude": -71,
+    "latitude": 51,
+    "population": 30000,
+    "development": 6,
+    "terrain": "forest"
+  },
+  {
+    "tag": "CAN",
+    "id": "na_can_atlantic",
+    "name": "Canadá Atlântico",
+    "longitude": -64,
+    "latitude": 46,
+    "population": 20000,
+    "development": 4,
+    "terrain": "hills"
+  },
+  {
+    "tag": "CAN",
+    "id": "na_can_northern_canada",
+    "name": "Norte do Canadá",
+    "longitude": -115,
+    "latitude": 65,
+    "population": 12000,
+    "development": 2,
+    "terrain": "forest"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_pacific_northwest",
+    "name": "Noroeste do Pacífico",
+    "longitude": -121,
+    "latitude": 46,
+    "population": 30000,
+    "development": 6,
+    "terrain": "forest"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_california",
+    "name": "Califórnia",
+    "longitude": -120,
+    "latitude": 37,
+    "population": 40000,
+    "development": 8,
+    "terrain": "hills"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_mountain_west",
+    "name": "Montanhas do Oeste",
+    "longitude": -111,
+    "latitude": 42,
+    "population": 24000,
+    "development": 4,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_southwest",
+    "name": "Sudoeste",
+    "longitude": -111,
+    "latitude": 34,
+    "population": 26000,
+    "development": 4,
+    "terrain": "desert"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_texas",
+    "name": "Texas",
+    "longitude": -99,
+    "latitude": 31,
+    "population": 38000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_great_plains",
+    "name": "Grandes Planícies",
+    "longitude": -101,
+    "latitude": 43,
+    "population": 30000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_midwest",
+    "name": "Centro-Oeste",
+    "longitude": -95,
+    "latitude": 39,
+    "population": 36000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_great_lakes",
+    "name": "Grandes Lagos",
+    "longitude": -85,
+    "latitude": 43,
+    "population": 36000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_deep_south",
+    "name": "Sul Profundo",
+    "longitude": -87,
+    "latitude": 33,
+    "population": 36000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_florida",
+    "name": "Flórida",
+    "longitude": -82,
+    "latitude": 28,
+    "population": 28000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_washington",
+    "name": "Atlântico Médio (Washington)",
+    "longitude": -77,
+    "latitude": 38,
+    "population": 40000,
+    "development": 8,
+    "terrain": "hills"
+  },
+  {
+    "tag": "USA",
+    "id": "na_usa_new_england",
+    "name": "Nova Inglaterra",
+    "longitude": -71,
+    "latitude": 43,
+    "population": 32000,
+    "development": 6,
+    "terrain": "forest"
+  },
+  {
+    "tag": "MEX",
+    "id": "na_mex_baja_california",
+    "name": "Baixa Califórnia",
+    "longitude": -114,
+    "latitude": 28,
+    "population": 16000,
+    "development": 3,
+    "terrain": "desert"
+  },
+  {
+    "tag": "MEX",
+    "id": "na_mex_northern_mexico",
+    "name": "Norte do México",
+    "longitude": -105,
+    "latitude": 28,
+    "population": 28000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "MEX",
+    "id": "na_mex_central_mexico",
+    "name": "Centro (Cidade do México)",
+    "longitude": -100,
+    "latitude": 20,
+    "population": 40000,
+    "development": 8,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "MEX",
+    "id": "na_mex_gulf_coast",
+    "name": "Costa do Golfo",
+    "longitude": -97,
+    "latitude": 24,
+    "population": 28000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "MEX",
+    "id": "na_mex_yucatan",
+    "name": "Yucatán",
+    "longitude": -89,
+    "latitude": 20,
+    "population": 22000,
+    "development": 4,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "MEX",
+    "id": "na_mex_southern_mexico",
+    "name": "Sul do México",
+    "longitude": -94,
+    "latitude": 17,
+    "population": 26000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "GTM",
+    "id": "na_gtm_guatemala",
+    "name": "Cidade da Guatemala",
+    "longitude": -90.5,
+    "latitude": 14.6,
+    "population": 26000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "BLZ",
+    "id": "na_blz_belize",
+    "name": "Belmopan",
+    "longitude": -88.8,
+    "latitude": 17.2,
+    "population": 14000,
+    "development": 5,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "HND",
+    "id": "na_hnd_honduras",
+    "name": "Tegucigalpa",
+    "longitude": -87.2,
+    "latitude": 14.1,
+    "population": 24000,
+    "development": 6,
+    "terrain": "hills"
+  },
+  {
+    "tag": "SLV",
+    "id": "na_slv_el_salvador",
+    "name": "San Salvador",
+    "longitude": -89.2,
+    "latitude": 13.7,
+    "population": 20000,
+    "development": 6,
+    "terrain": "hills"
+  },
+  {
+    "tag": "NIC",
+    "id": "na_nic_nicaragua",
+    "name": "Managua",
+    "longitude": -86.3,
+    "latitude": 12.1,
+    "population": 22000,
+    "development": 6,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "CRI",
+    "id": "na_cri_costa_rica",
+    "name": "San José",
+    "longitude": -84.1,
+    "latitude": 9.9,
+    "population": 22000,
+    "development": 6,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "PAN",
+    "id": "na_pan_panama",
+    "name": "Cidade do Panamá",
+    "longitude": -79.5,
+    "latitude": 9,
+    "population": 20000,
+    "development": 6,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "CUB",
+    "id": "na_cub_cuba",
+    "name": "Cuba (Havana)",
+    "longitude": -80,
+    "latitude": 22,
+    "population": 28000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "HTI",
+    "id": "na_hti_haiti",
+    "name": "Haiti (Porto Príncipe)",
+    "longitude": -72.3,
+    "latitude": 18.5,
+    "population": 20000,
+    "development": 6,
+    "terrain": "hills"
+  },
+  {
+    "tag": "DOM",
+    "id": "na_dom_dominican_republic",
+    "name": "República Dominicana (Santo Domingo)",
+    "longitude": -69.9,
+    "latitude": 18.5,
+    "population": 24000,
+    "development": 6,
+    "terrain": "hills"
+  },
+  {
+    "tag": "JAM",
+    "id": "na_jam_jamaica",
+    "name": "Jamaica (Kingston)",
+    "longitude": -76.8,
+    "latitude": 18,
+    "population": 18000,
+    "development": 5,
+    "terrain": "hills"
+  }
+]

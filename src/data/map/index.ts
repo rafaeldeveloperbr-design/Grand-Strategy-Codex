@@ -1,9 +1,23 @@
 import type { Country, Province } from '../../types';
-import type { MapRegion } from './types';
-import { southAmerica, southAmericaMetadata } from './regions/southAmerica';
+import type { MapRegion, Landmass, MapValidationOptions, TopologyProvince, TopologyCountry } from './types';
+import { southAmerica } from './regions/southAmerica';
+import { northAmerica } from './regions/northAmerica';
+import { europe } from './regions/europe';
+import { africa } from './regions/africa';
+import { asia } from './regions/asia';
+import { oceania } from './regions/oceania';
+import { worldMapMetadata } from './worldMetadata';
+import { crossRegionConnections } from './crossRegionConnections';
+import { validateMapTopology as auditTopology } from './validation';
+import { withCompleteness, completenessConnections } from './completeness';
 
-export const mapRegions: readonly MapRegion[] = [southAmerica];
-export const mapMetadata = southAmericaMetadata;
+export const mapRegions: readonly MapRegion[] = [southAmerica,northAmerica,europe,africa,asia,oceania].map(withCompleteness);
+export const mapMetadata = worldMapMetadata;
+export const mapConnections = [...crossRegionConnections,...completenessConnections];
+const landmassIds = [...new Set(mapRegions.flatMap(r => r.landmasses?.map(l => l.id) ?? []))];
+export const mapLandmasses: readonly Landmass[] = landmassIds.map(id => ({
+  id,provinceIds:mapRegions.flatMap(r => r.landmasses?.filter(l => l.id === id).flatMap(l => l.provinceIds) ?? []),
+}));
 
 // Join all regions globally so future cross-region edges use the same IDs.
 // Fail on missing/duplicate definitions instead of silently dropping map data.
@@ -16,11 +30,17 @@ function indexById<T extends { id: string }>(items: readonly T[]): Map<string, T
   return index;
 }
 
-export function assembleMap(regions: readonly MapRegion[]): { provincesData: Province[]; countries: Country[] } {
+export function assembleMap(regions: readonly MapRegion[], connections: readonly (readonly [string,string])[] = []): { provincesData: Province[]; countries: Country[] } {
   const gameplay = regions.flatMap(region => region.provinces);
   const topology = indexById(regions.flatMap(region => region.topology));
   const geometry = indexById(regions.flatMap(region => region.geometry));
   const gameplayIndex = indexById(gameplay);
+  const countries = regions.flatMap(region => region.countries).map(c => ({...c, provinces:[...c.provinces]}));
+  const tags = new Set<string>();
+  for (const country of countries) {
+    if (tags.has(country.tag)) throw new Error(`Duplicate country definition: ${country.tag}`);
+    tags.add(country.tag);
+  }
   for (const id of [...topology.keys(), ...geometry.keys()]) {
     if (!gameplayIndex.has(id)) throw new Error(`Missing gameplay definition: ${id}`);
   }
@@ -30,15 +50,35 @@ export function assembleMap(regions: readonly MapRegion[]): { provincesData: Pro
     if (!edges || !shape) throw new Error(`Missing topology or geometry: ${province.id}`);
     return { ...province, neighbors: [...edges.neighbors], center: { ...shape.center }, path: shape.path };
   });
-  return { provincesData, countries: regions.flatMap(region => region.countries) };
+  const byId = new Map(provincesData.map(p => [p.id,p]));
+  for (const region of regions) {
+    for (const [tag, ids] of Object.entries(region.additionalHoldings ?? {})) {
+      const country = countries.find(c => c.tag === tag);
+      if (!country) throw new Error(`Missing holdings country: ${tag}`);
+      for (const id of ids) {
+        if (byId.get(id)?.owner !== tag || country.provinces.includes(id)) throw new Error(`Invalid additional holding: ${tag} / ${id}`);
+        country.provinces.push(id);
+        byId.get(id)!.color = country.color;
+      }
+    }
+  }
+  for (const [a,b] of connections) {
+    if (a === b || !byId.has(a) || !byId.has(b)) throw new Error(`Invalid cross-region connection: ${a} / ${b}`);
+    byId.get(a)!.neighbors = [...new Set([...byId.get(a)!.neighbors,b])];
+    byId.get(b)!.neighbors = [...new Set([...byId.get(b)!.neighbors,a])];
+  }
+  return { provincesData, countries };
 }
 
-export const { provincesData, countries } = assembleMap(mapRegions);
+export const { provincesData, countries } = assembleMap(mapRegions,mapConnections);
 export const mapCapitals: Readonly<Record<string, string>> = Object.assign({}, ...mapRegions.map(region => region.capitals));
 
 export function getCountryByTag(tag: string): Country | undefined {
   return countries.find(country => country.tag === tag);
 }
 
-export { validateMapTopology } from './validation';
+/** Active-world defaults; pass explicit options for a different authored scenario. */
+export function validateMapTopology(provinces: readonly TopologyProvince[], countries: readonly TopologyCountry[], options: MapValidationOptions = {expectedLandmasses:mapLandmasses}) {
+  return auditTopology(provinces,countries,options);
+}
 export type * from './types';

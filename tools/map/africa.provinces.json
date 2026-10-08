@@ -1,0 +1,492 @@
+[
+  {
+    "tag": "MAR",
+    "id": "af_mar_rabat",
+    "name": "Rabat",
+    "longitude": -6.8,
+    "latitude": 34.0,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "MAR",
+    "id": "af_mar_atlas",
+    "name": "Atlas",
+    "longitude": -6.0,
+    "latitude": 31.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "DZA",
+    "id": "af_dza_algiers",
+    "name": "Argel",
+    "longitude": 3.0,
+    "latitude": 36.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "DZA",
+    "id": "af_dza_western_sahara",
+    "name": "Saara Argelino Ocidental",
+    "longitude": -2.0,
+    "latitude": 28.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "DZA",
+    "id": "af_dza_eastern_sahara",
+    "name": "Saara Argelino Oriental",
+    "longitude": 7.0,
+    "latitude": 26.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "TUN",
+    "id": "af_tun_tunis",
+    "name": "Túnis",
+    "longitude": 10.2,
+    "latitude": 36.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "LBY",
+    "id": "af_lby_tripoli",
+    "name": "Trípoli",
+    "longitude": 13.2,
+    "latitude": 32.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "desert"
+  },
+  {
+    "tag": "LBY",
+    "id": "af_lby_cyrenaica",
+    "name": "Cirenaica",
+    "longitude": 22.0,
+    "latitude": 29.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "EGY",
+    "id": "af_egy_cairo",
+    "name": "Cairo",
+    "longitude": 31.2,
+    "latitude": 30.0,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "EGY",
+    "id": "af_egy_upper_egypt",
+    "name": "Alto Egito",
+    "longitude": 32.5,
+    "latitude": 24.5,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "MRT",
+    "id": "af_mrt_nouakchott",
+    "name": "Nouakchott",
+    "longitude": -15.9,
+    "latitude": 18.1,
+    "population": 30000,
+    "development": 7,
+    "terrain": "desert"
+  },
+  {
+    "tag": "MLI",
+    "id": "af_mli_bamako",
+    "name": "Bamako",
+    "longitude": -8.0,
+    "latitude": 12.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "MLI",
+    "id": "af_mli_timbuktu",
+    "name": "Timbuktu",
+    "longitude": -3.0,
+    "latitude": 19.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "SEN",
+    "id": "af_sen_dakar",
+    "name": "Dacar",
+    "longitude": -17.4,
+    "latitude": 14.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "GIN",
+    "id": "af_gin_conakry",
+    "name": "Conacri",
+    "longitude": -13.7,
+    "latitude": 9.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "CIV",
+    "id": "af_civ_yamoussoukro",
+    "name": "Yamoussoukro",
+    "longitude": -5.3,
+    "latitude": 6.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "GHA",
+    "id": "af_gha_accra",
+    "name": "Acra",
+    "longitude": -0.2,
+    "latitude": 5.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "BFA",
+    "id": "af_bfa_ouagadougou",
+    "name": "Ouagadougou",
+    "longitude": -1.5,
+    "latitude": 12.4,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "NER",
+    "id": "af_ner_niamey",
+    "name": "Niamey",
+    "longitude": 2.1,
+    "latitude": 13.5,
+    "population": 30000,
+    "development": 7,
+    "terrain": "desert"
+  },
+  {
+    "tag": "NGA",
+    "id": "af_nga_abuja",
+    "name": "Abuja",
+    "longitude": 7.5,
+    "latitude": 9.0,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "NGA",
+    "id": "af_nga_lagos",
+    "name": "Lagos",
+    "longitude": 3.4,
+    "latitude": 6.5,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "CMR",
+    "id": "af_cmr_yaounde",
+    "name": "Yaoundé",
+    "longitude": 11.5,
+    "latitude": 3.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  },
+  {
+    "tag": "TCD",
+    "id": "af_tcd_ndjamena",
+    "name": "N’Djamena",
+    "longitude": 15.0,
+    "latitude": 12.1,
+    "population": 30000,
+    "development": 7,
+    "terrain": "desert"
+  },
+  {
+    "tag": "CAF",
+    "id": "af_caf_bangui",
+    "name": "Bangui",
+    "longitude": 18.6,
+    "latitude": 4.4,
+    "population": 30000,
+    "development": 7,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "SDN",
+    "id": "af_sdn_khartoum",
+    "name": "Cartum",
+    "longitude": 32.5,
+    "latitude": 15.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "SDN",
+    "id": "af_sdn_darfur",
+    "name": "Darfur",
+    "longitude": 25.0,
+    "latitude": 13.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "ETH",
+    "id": "af_eth_addis_ababa",
+    "name": "Adis Abeba",
+    "longitude": 38.7,
+    "latitude": 9.0,
+    "population": 30000,
+    "development": 7,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "ETH",
+    "id": "af_eth_eastern_ethiopia",
+    "name": "Leste da Etiópia",
+    "longitude": 43.0,
+    "latitude": 7.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "ERI",
+    "id": "af_eri_asmara",
+    "name": "Asmara",
+    "longitude": 38.9,
+    "latitude": 15.3,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "SOM",
+    "id": "af_som_mogadishu",
+    "name": "Mogadíscio",
+    "longitude": 45.3,
+    "latitude": 2.0,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "KEN",
+    "id": "af_ken_nairobi",
+    "name": "Nairóbi",
+    "longitude": 36.8,
+    "latitude": -1.3,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "UGA",
+    "id": "af_uga_kampala",
+    "name": "Kampala",
+    "longitude": 32.6,
+    "latitude": 0.3,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "TZA",
+    "id": "af_tza_dodoma",
+    "name": "Dodoma",
+    "longitude": 35.7,
+    "latitude": -6.2,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "TZA",
+    "id": "af_tza_northern_tanzania",
+    "name": "Norte da Tanzânia",
+    "longitude": 33.5,
+    "latitude": -3.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "COD",
+    "id": "af_cod_kinshasa",
+    "name": "Kinshasa",
+    "longitude": 15.3,
+    "latitude": -4.3,
+    "population": 30000,
+    "development": 7,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "COD",
+    "id": "af_cod_congo_basin",
+    "name": "Bacia do Congo",
+    "longitude": 24.0,
+    "latitude": 0.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "COD",
+    "id": "af_cod_katanga",
+    "name": "Katanga",
+    "longitude": 27.5,
+    "latitude": -10.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "COG",
+    "id": "af_cog_brazzaville",
+    "name": "Brazzaville",
+    "longitude": 15.3,
+    "latitude": -4.2,
+    "population": 30000,
+    "development": 7,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "AGO",
+    "id": "af_ago_luanda",
+    "name": "Luanda",
+    "longitude": 13.3,
+    "latitude": -8.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "AGO",
+    "id": "af_ago_southern_angola",
+    "name": "Sul de Angola",
+    "longitude": 17.0,
+    "latitude": -15.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "ZMB",
+    "id": "af_zmb_lusaka",
+    "name": "Lusaka",
+    "longitude": 28.3,
+    "latitude": -15.4,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "ZWE",
+    "id": "af_zwe_harare",
+    "name": "Harare",
+    "longitude": 31.0,
+    "latitude": -17.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "MOZ",
+    "id": "af_moz_maputo",
+    "name": "Maputo",
+    "longitude": 32.6,
+    "latitude": -25.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "NAM",
+    "id": "af_nam_windhoek",
+    "name": "Windhoek",
+    "longitude": 17.1,
+    "latitude": -22.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "desert"
+  },
+  {
+    "tag": "BWA",
+    "id": "af_bwa_gaborone",
+    "name": "Gaborone",
+    "longitude": 25.9,
+    "latitude": -24.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "ZAF",
+    "id": "af_zaf_pretoria",
+    "name": "Pretória",
+    "longitude": 28.2,
+    "latitude": -25.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "ZAF",
+    "id": "af_zaf_cape",
+    "name": "Cabo",
+    "longitude": 20.0,
+    "latitude": -32.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "ZAF",
+    "id": "af_zaf_eastern_cape",
+    "name": "Cabo Oriental",
+    "longitude": 29.0,
+    "latitude": -31.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "MDG",
+    "id": "af_mdg_antananarivo",
+    "name": "Antananarivo",
+    "longitude": 47.5,
+    "latitude": -18.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "forest"
+  }
+]

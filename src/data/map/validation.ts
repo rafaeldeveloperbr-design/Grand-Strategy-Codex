@@ -1,12 +1,13 @@
-import type { MapValidationIssue, MapValidationResult, TopologyCountry, TopologyProvince } from './types';
+import type { MapValidationIssue, MapValidationResult, TopologyCountry, TopologyProvince, MapValidationOptions } from './types';
 
 /** Pure initial-map audit. Connectivity is diagnosed, never repaired.
- * Multiple land components are reported even when intentional (future islands).
+ * Expected landmasses must be explicitly declared; accidental splits remain errors.
  * This is not a validator for rebel occupation or mutable saved game state.
  */
 export function validateMapTopology(
   provinces: readonly TopologyProvince[],
   countries: readonly TopologyCountry[],
+  options: MapValidationOptions = {},
 ): MapValidationResult {
   const issues: MapValidationIssue[] = [];
   const provinceIndex = new Map<string, TopologyProvince>();
@@ -69,8 +70,13 @@ export function validateMapTopology(
   }
   const components: string[][] = [];
   const visited = new Set<string>();
+  const expected = new Map(options.expectedLandmasses?.flatMap(l => l.provinceIds.map(id => [id,l.id] as const)) ?? []);
+  const islands = new Set(options.expectedLandmasses?.filter(l => l.provinceIds.length === 1).flatMap(l => l.provinceIds) ?? []);
   for (const [id, neighbors] of land) {
-    if (neighbors.size === 0) issues.push({ type: 'isolated-province', provinceId: id, message: `Province ${id} has no valid land connection.` });
+    for (const neighbor of neighbors) if (id < neighbor && expected.has(id) && expected.has(neighbor) && expected.get(id) !== expected.get(neighbor)) {
+      issues.push({type:'unexpected-landmass-connection',provinceId:id,neighborId:neighbor,message:`Unexpected land edge between declared landmasses: ${id} / ${neighbor}.`});
+    }
+    if (neighbors.size === 0 && !islands.has(id)) issues.push({ type: 'isolated-province', provinceId: id, message: `Province ${id} has no valid land connection.` });
     if (visited.has(id)) continue;
     const component = [id];
     visited.add(id);
@@ -81,6 +87,12 @@ export function validateMapTopology(
     }
     components.push(component);
   }
-  if (components.length > 1) issues.push({ type: 'disconnected-components', message: `Land graph has ${components.length} disconnected components.` });
+  const represented = new Set<string>();
+  const intentional = components.every(component => {
+    const id = expected.get(component[0]);
+    if (!id || represented.has(id) || component.some(p => expected.get(p) !== id)) return false;
+    represented.add(id); return true;
+  });
+  if (components.length > 1 && !intentional) issues.push({ type: 'disconnected-components', message: `Land graph has ${components.length} unexpected disconnected components.` });
   return { valid: issues.length === 0, issues, components };
 }

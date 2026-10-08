@@ -157,7 +157,9 @@ export function processEconomyTick(p: Params) {
   });
   // Recovery happens once, after production/trade, and consumes canonical
   // manpower, gold and the local iron/tools stocks.
-  const logistics = buildLogisticsNetworks({countries,provinces,relations: p.relations ?? [],wars: p.wars});
+  // Only army recovery consumes this snapshot; all transit data remains global.
+  const armyOwners = new Set(armies.map(army => army.owner));
+  const logistics = buildLogisticsNetworks({countries:countries.filter(country => armyOwners.has(country.tag)),provinces,relations: p.relations ?? [],wars: p.wars});
   for (const originalArmy of armies) {
     const armyIndex = armies.findIndex(army => army.id === originalArmy.id);
     const countryIndex = countries.findIndex(country => country.tag === originalArmy.owner);

@@ -860,7 +860,14 @@ export function processAI(
   if (!botCountryId || !Array.isArray(armies) || !Array.isArray(provinces) || !Array.isArray(diplomacy)) {
     return armies;
   }
-  const logistics = suppliedLogistics ?? (countries.length ? buildLogisticsNetworks({countries,provinces,relations:diplomacy,wars}) : undefined);
+  // Only armies consume this snapshot; retain every army owner's network so
+  // enemy power and allied reinforcement estimates remain identical.
+  const armyOwners = new Set([botCountryId,...armies.map(army => army.owner)]);
+  const logistics = suppliedLogistics ?? (countries.length ? buildLogisticsNetworks({countries:countries.filter(country => armyOwners.has(country.tag)),provinces,relations:diplomacy,wars}) : undefined);
+  // All tactical access/hostility queries below use this bot as the visitor.
+  // Preserve row order/duplicates, but skip unrelated world pairs in those scans.
+  // Logistics above still receives the complete relations for other army owners.
+  diplomacy = diplomacy.filter(r => r.countryA === botCountryId || r.countryB === botCountryId);
   const defensiveWar = shouldUseDefensiveWarPosture(botCountryId,wars,provinces,countries,armies);
   const reinforcementOrders = new Map<string, string>();
   const reservedReinforcements = new Set<string>();

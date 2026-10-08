@@ -1,0 +1,84 @@
+[
+  {
+    "tag": "AUS",
+    "id": "oc_aus_new_south_wales",
+    "name": "Nova Gales do Sul (Canberra)",
+    "longitude": 149.1,
+    "latitude": -35.3,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "AUS",
+    "id": "oc_aus_queensland",
+    "name": "Queensland",
+    "longitude": 145.0,
+    "latitude": -23.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "AUS",
+    "id": "oc_aus_victoria",
+    "name": "Victoria",
+    "longitude": 144.0,
+    "latitude": -37.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "AUS",
+    "id": "oc_aus_south_australia",
+    "name": "Sul da Austrália",
+    "longitude": 135.0,
+    "latitude": -30.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "AUS",
+    "id": "oc_aus_western_australia",
+    "name": "Oeste da Austrália",
+    "longitude": 120.0,
+    "latitude": -25.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "AUS",
+    "id": "oc_aus_northern_territory",
+    "name": "Território do Norte",
+    "longitude": 133.0,
+    "latitude": -19.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "NZL",
+    "id": "oc_nzl_north_island",
+    "name": "Ilha Norte (Wellington)",
+    "longitude": 174.8,
+    "latitude": -41.1,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills",
+    "outlinePart": 0
+  },
+  {
+    "tag": "NZL",
+    "id": "oc_nzl_south_island",
+    "name": "Ilha Sul",
+    "longitude": 170.7,
+    "latitude": -44.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains",
+    "outlinePart": 1
+  }
+]

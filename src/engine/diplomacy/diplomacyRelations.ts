@@ -8,6 +8,15 @@ export function getRelation(relations: DiplomaticRelation[], a: string, b: strin
   // unordered pair directly instead of allocating/sorting JSON for every row.
   return relations.find(r => r.countryA === a && r.countryB === b || r.countryA === b && r.countryB === a);
 }
+/** Scoped snapshot lookup; preserves the canonical first record for duplicate pairs. */
+export function indexRelations(relations: DiplomaticRelation[]): Map<string,DiplomaticRelation[]> {
+  const index = new Map<string,DiplomaticRelation[]>();
+  for (const relation of relations) {
+    const key = relationKey(relation.countryA,relation.countryB);
+    if (!index.has(key)) index.set(key,[relation]);
+  }
+  return index;
+}
 export function createRelation(a: string, b: string): DiplomaticRelation {
   if (a === b) throw new Error('Two distinct countries required.');
   const [countryA,countryB] = [a,b].sort();

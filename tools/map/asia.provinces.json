@@ -1,0 +1,707 @@
+[
+  {
+    "tag": "RUS",
+    "id": "as_rus_moscow",
+    "name": "Moscou",
+    "longitude": 37.6,
+    "latitude": 55.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "RUS",
+    "id": "as_rus_karelia",
+    "name": "Carélia",
+    "longitude": 33.0,
+    "latitude": 64.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "RUS",
+    "id": "as_rus_western_russia",
+    "name": "Rússia Ocidental",
+    "longitude": 30.0,
+    "latitude": 57.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "RUS",
+    "id": "as_rus_southern_russia",
+    "name": "Sul da Rússia",
+    "longitude": 43.0,
+    "latitude": 47.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "RUS",
+    "id": "as_rus_urals",
+    "name": "Urais",
+    "longitude": 60.0,
+    "latitude": 59.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "RUS",
+    "id": "as_rus_western_siberia",
+    "name": "Sibéria Ocidental",
+    "longitude": 78.0,
+    "latitude": 58.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "RUS",
+    "id": "as_rus_central_siberia",
+    "name": "Sibéria Central",
+    "longitude": 100.0,
+    "latitude": 60.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "RUS",
+    "id": "as_rus_baikal",
+    "name": "Baikal",
+    "longitude": 110.0,
+    "latitude": 51.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "RUS",
+    "id": "as_rus_yakutia",
+    "name": "Yakutia",
+    "longitude": 133.0,
+    "latitude": 65.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "RUS",
+    "id": "as_rus_far_east",
+    "name": "Extremo Oriente",
+    "longitude": 135.0,
+    "latitude": 47.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "TUR",
+    "id": "as_tur_ankara",
+    "name": "Ancara",
+    "longitude": 32.8,
+    "latitude": 39.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills",
+    "outlinePart": 0
+  },
+  {
+    "tag": "TUR",
+    "id": "as_tur_thrace",
+    "name": "Trácia",
+    "longitude": 27.5,
+    "latitude": 41.4,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains",
+    "outlinePart": 1
+  },
+  {
+    "tag": "TUR",
+    "id": "as_tur_eastern_anatolia",
+    "name": "Anatólia Oriental",
+    "longitude": 41.0,
+    "latitude": 39.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains",
+    "outlinePart": 0
+  },
+  {
+    "tag": "GEO",
+    "id": "as_geo_tbilisi",
+    "name": "Tbilisi",
+    "longitude": 44.8,
+    "latitude": 41.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "ARM",
+    "id": "as_arm_yerevan",
+    "name": "Yerevan",
+    "longitude": 44.5,
+    "latitude": 40.2,
+    "population": 30000,
+    "development": 7,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "AZE",
+    "id": "as_aze_baku",
+    "name": "Baku",
+    "longitude": 49.8,
+    "latitude": 40.4,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "IRN",
+    "id": "as_irn_tehran",
+    "name": "Teerã",
+    "longitude": 51.4,
+    "latitude": 35.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "IRN",
+    "id": "as_irn_zagros",
+    "name": "Zagros",
+    "longitude": 47.0,
+    "latitude": 33.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "IRN",
+    "id": "as_irn_eastern_iran",
+    "name": "Leste do Irã",
+    "longitude": 59.0,
+    "latitude": 30.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "IRQ",
+    "id": "as_irq_baghdad",
+    "name": "Bagdá",
+    "longitude": 44.4,
+    "latitude": 33.3,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "SYR",
+    "id": "as_syr_damascus",
+    "name": "Damasco",
+    "longitude": 36.3,
+    "latitude": 33.5,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "ISR",
+    "id": "as_isr_jerusalem",
+    "name": "Jerusalém",
+    "longitude": 35.15,
+    "latitude": 31.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "JOR",
+    "id": "as_jor_amman",
+    "name": "Amã",
+    "longitude": 35.9,
+    "latitude": 31.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "desert"
+  },
+  {
+    "tag": "SAU",
+    "id": "as_sau_riyadh",
+    "name": "Riad",
+    "longitude": 46.7,
+    "latitude": 24.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "desert"
+  },
+  {
+    "tag": "SAU",
+    "id": "as_sau_hejaz",
+    "name": "Hejaz",
+    "longitude": 40.0,
+    "latitude": 22.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "YEM",
+    "id": "as_yem_sanaa",
+    "name": "Sanaá",
+    "longitude": 44.2,
+    "latitude": 15.4,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "OMN",
+    "id": "as_omn_muscat",
+    "name": "Mascate",
+    "longitude": 58.4,
+    "latitude": 23.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "desert"
+  },
+  {
+    "tag": "KAZ",
+    "id": "as_kaz_astana",
+    "name": "Astana",
+    "longitude": 71.4,
+    "latitude": 51.2,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "KAZ",
+    "id": "as_kaz_western_kazakhstan",
+    "name": "Oeste do Cazaquistão",
+    "longitude": 54.0,
+    "latitude": 47.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "UZB",
+    "id": "as_uzb_tashkent",
+    "name": "Tashkent",
+    "longitude": 69.2,
+    "latitude": 41.3,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "TKM",
+    "id": "as_tkm_ashgabat",
+    "name": "Ashgabat",
+    "longitude": 58.4,
+    "latitude": 37.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "desert"
+  },
+  {
+    "tag": "KGZ",
+    "id": "as_kgz_bishkek",
+    "name": "Bishkek",
+    "longitude": 74.6,
+    "latitude": 42.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "TJK",
+    "id": "as_tjk_dushanbe",
+    "name": "Dushanbe",
+    "longitude": 68.8,
+    "latitude": 38.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "AFG",
+    "id": "as_afg_kabul",
+    "name": "Cabul",
+    "longitude": 69.2,
+    "latitude": 34.5,
+    "population": 30000,
+    "development": 7,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "PAK",
+    "id": "as_pak_islamabad",
+    "name": "Islamabad",
+    "longitude": 73.1,
+    "latitude": 33.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "PAK",
+    "id": "as_pak_baluchistan",
+    "name": "Baluchistão",
+    "longitude": 66.0,
+    "latitude": 29.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "IND",
+    "id": "as_ind_delhi",
+    "name": "Nova Délhi",
+    "longitude": 77.2,
+    "latitude": 28.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "IND",
+    "id": "as_ind_punjab",
+    "name": "Punjab",
+    "longitude": 74.7,
+    "latitude": 30.5,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "IND",
+    "id": "as_ind_gangetic_plain",
+    "name": "Planície do Ganges",
+    "longitude": 84.0,
+    "latitude": 26.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "IND",
+    "id": "as_ind_western_india",
+    "name": "Oeste da Índia",
+    "longitude": 73.0,
+    "latitude": 22.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "IND",
+    "id": "as_ind_deccan",
+    "name": "Decão",
+    "longitude": 78.0,
+    "latitude": 17.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "IND",
+    "id": "as_ind_eastern_india",
+    "name": "Leste da Índia",
+    "longitude": 93.0,
+    "latitude": 25.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "NPL",
+    "id": "as_npl_kathmandu",
+    "name": "Kathmandu",
+    "longitude": 85.3,
+    "latitude": 27.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "BGD",
+    "id": "as_bgd_dhaka",
+    "name": "Dhaka",
+    "longitude": 90.4,
+    "latitude": 23.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "LKA",
+    "id": "as_lka_colombo",
+    "name": "Colombo",
+    "longitude": 79.9,
+    "latitude": 6.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "CHN",
+    "id": "as_chn_beijing",
+    "name": "Pequim",
+    "longitude": 116.4,
+    "latitude": 39.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "CHN",
+    "id": "as_chn_manchuria",
+    "name": "Manchúria",
+    "longitude": 126.0,
+    "latitude": 46.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "forest"
+  },
+  {
+    "tag": "CHN",
+    "id": "as_chn_xinjiang",
+    "name": "Xinjiang",
+    "longitude": 85.0,
+    "latitude": 41.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "desert"
+  },
+  {
+    "tag": "CHN",
+    "id": "as_chn_tibet",
+    "name": "Tibete",
+    "longitude": 88.0,
+    "latitude": 31.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "CHN",
+    "id": "as_chn_sichuan",
+    "name": "Sichuan",
+    "longitude": 103.0,
+    "latitude": 30.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "CHN",
+    "id": "as_chn_central_china",
+    "name": "China Central",
+    "longitude": 112.0,
+    "latitude": 32.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "CHN",
+    "id": "as_chn_southern_china",
+    "name": "Sul da China",
+    "longitude": 108.0,
+    "latitude": 23.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "CHN",
+    "id": "as_chn_coastal_china",
+    "name": "Costa da China",
+    "longitude": 119.0,
+    "latitude": 28.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "plains"
+  },
+  {
+    "tag": "MNG",
+    "id": "as_mng_ulaanbaatar",
+    "name": "Ulaanbaatar",
+    "longitude": 106.9,
+    "latitude": 47.9,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "PRK",
+    "id": "as_prk_pyongyang",
+    "name": "Pyongyang",
+    "longitude": 125.8,
+    "latitude": 39.0,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "KOR",
+    "id": "as_kor_seoul",
+    "name": "Seul",
+    "longitude": 127.0,
+    "latitude": 37.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "JPN",
+    "id": "as_jpn_kanto",
+    "name": "Kantō (Tóquio)",
+    "longitude": 139.7,
+    "latitude": 35.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "JPN",
+    "id": "as_jpn_kansai",
+    "name": "Kansai",
+    "longitude": 135.5,
+    "latitude": 34.7,
+    "population": 22000,
+    "development": 5,
+    "terrain": "mountains"
+  },
+  {
+    "tag": "MMR",
+    "id": "as_mmr_naypyidaw",
+    "name": "Naypyidaw",
+    "longitude": 96.1,
+    "latitude": 19.8,
+    "population": 30000,
+    "development": 7,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "MMR",
+    "id": "as_mmr_northern_myanmar",
+    "name": "Norte de Myanmar",
+    "longitude": 97.0,
+    "latitude": 25.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "hills"
+  },
+  {
+    "tag": "THA",
+    "id": "as_tha_bangkok",
+    "name": "Bangkok",
+    "longitude": 100.5,
+    "latitude": 13.7,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "THA",
+    "id": "as_tha_southern_thailand",
+    "name": "Sul da Tailândia",
+    "longitude": 99.5,
+    "latitude": 8.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "LAO",
+    "id": "as_lao_vientiane",
+    "name": "Vientiane",
+    "longitude": 102.6,
+    "latitude": 18.0,
+    "population": 30000,
+    "development": 7,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "KHM",
+    "id": "as_khm_phnom_penh",
+    "name": "Phnom Penh",
+    "longitude": 104.9,
+    "latitude": 11.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "plains"
+  },
+  {
+    "tag": "VNM",
+    "id": "as_vnm_hanoi",
+    "name": "Hanói",
+    "longitude": 105.8,
+    "latitude": 21.0,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  },
+  {
+    "tag": "VNM",
+    "id": "as_vnm_southern_vietnam",
+    "name": "Sul do Vietnã",
+    "longitude": 106.7,
+    "latitude": 11.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "MYS",
+    "id": "as_mys_kuala_lumpur",
+    "name": "Kuala Lumpur",
+    "longitude": 101.7,
+    "latitude": 3.1,
+    "population": 30000,
+    "development": 7,
+    "terrain": "jungle"
+  },
+  {
+    "tag": "IDN",
+    "id": "as_idn_java",
+    "name": "Java (Jacarta)",
+    "longitude": 106.8,
+    "latitude": -6.2,
+    "population": 30000,
+    "development": 7,
+    "terrain": "jungle",
+    "outlinePart": 0
+  },
+  {
+    "tag": "IDN",
+    "id": "as_idn_sumatra",
+    "name": "Sumatra",
+    "longitude": 101.0,
+    "latitude": 0.0,
+    "population": 22000,
+    "development": 5,
+    "terrain": "jungle",
+    "outlinePart": 1
+  },
+  {
+    "tag": "PHL",
+    "id": "as_phl_luzon",
+    "name": "Luzon (Manila)",
+    "longitude": 121.0,
+    "latitude": 14.6,
+    "population": 30000,
+    "development": 7,
+    "terrain": "hills"
+  }
+]

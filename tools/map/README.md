@@ -12,7 +12,7 @@ This source represents contemporary country positions, not the game's 1444 histo
 `southAmerica.provinces.json` stores regional seeds and approximate gameplay values.
 `southAmerica.outlines.json` stores the checked-in country outlines for offline,
 repeatable generation. Internal provinces are simplified gameplay partitions,
-not official state/department borders. All four regions use `world_projection.py`:
+not official state/department borders. All six active regions use `world_projection.py`:
 x = (longitude + 180) * 14, y = (90 - latitude) * 14.
 Global bounds are 5040 × 2520; future continents use the same SVG space.
 
@@ -95,3 +95,26 @@ Russia's real land bridge is available. No Denmark–Sweden or Channel crossing 
 invented. Ireland, Great Britain, Zealand and Madagascar are also explicit groups.
 Africa remains one continental component. Inland lake borders (e.g. Congo–Tanzania)
 follow the existing coarse land-border model; there are no maritime edges.
+
+## Asia + Oceania Core (Step 3A)
+
+The Step 2 descriptions above record its historical scope. The active assembly
+now has six regions, 128 countries and 274 provinces. Asia contributes 37/70;
+Oceania contributes 2/8. Regenerate offline with `generate_asia.py` and
+`generate_oceania.py`, using the same checked-in outlines/seeds and projection.
+Russia retains its mainland polygon up to longitude 180; antimeridian fragments,
+Kaliningrad and islands are deferred. Turkey retains Thrace/Anatolia separately.
+Malaysia retains its peninsula; Indonesia retains Java/Sumatra as separate parts.
+Australia excludes Tasmania; New Zealand retains North/South Island separately.
+No outline selection creates sea neighbors or a Bosporus bridge.
+
+`audit_world.py` audits all 274 shapes and authored geometric contacts. Its
+`export_audit.mjs` bridge uses the installed Vite/Node toolchain to inspect the
+actual TypeScript assembly and topology validator: 128 unique country tags,
+17 intentional landmasses and 11 cross-region edges. Russia and Sinai join
+Europe/Asia/Africa into the shared `eurasian-mainland` declaration. Generators
+never create neighbors; topology remains explicitly authored.
+
+See `docs/world-map-expansion-v1-step-3a.md` and the mandatory planned
+`docs/world-map-completeness-backlog.md` for omitted countries/territories and
+secondary polygon parts. Completing that backlog is Step 3B, before naval work.

@@ -29,7 +29,8 @@ export function processMovementTick(p: Params) {
   const interruptions: MovementPlanInterruption[] = [...prepared.interruptions];
 
   // PASSO B: MOVIMENTAÇÃO
-  const logistics = buildLogisticsNetworks({countries,provinces,relations,wars: p.wars});
+  const armyOwners = new Set(armies.map(army => army.owner));
+  const logistics = buildLogisticsNetworks({countries:countries.filter(country => armyOwners.has(country.tag)),provinces,relations,wars: p.wars});
   const moveResult = processArmyMovement(armies, provinces, relations, logistics);
   armies = moveResult.updatedArmies.map(army => {
     const before = prepared.armies.find(a => a.id === army.id);

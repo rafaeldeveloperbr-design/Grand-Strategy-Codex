@@ -1,6 +1,7 @@
 import type { Country, DiplomaticRelation, Province, War } from '../../types';
 import { getBuildingLevel } from '../../data/buildings';
 import { hasMilitaryAccess } from '../diplomacy/diplomacySelectors';
+import { indexRelations, relationKey } from '../diplomacy/diplomacyRelations';
 import { isTerrainType } from '../terrain';
 import { LOGISTICS_BALANCE as B } from './balance';
 export { LOGISTICS_BALANCE } from './balance';
@@ -79,15 +80,15 @@ export function buildLogisticsNetworks(ctx: LogisticsContext): LogisticsSnapshot
     for (const id of war.occupiedByDefender) if (provinceById.get(id)?.owner === war.defender) occupied.add(id);
   }
   const networks = new Map<string,CountryLogisticsNetwork>(),allowedOwners = new Map<string,Set<string>>();
+  const relationIndex = indexRelations(ctx.relations);
   const owners = [...new Set(provinces.map(p => p.owner))];
   for (const country of [...ctx.countries].sort((a,b) => a.tag.localeCompare(b.tag))) {
     if (country.tag.startsWith('rebel_')) continue;
     const origin = resolveLogisticsOrigin(country,provinces),network: CountryLogisticsNetwork = {tag: country.tag,originId: origin?.id ?? null,provinces: new Map()};
     networks.set(country.tag,network);
-    // Keep the canonical access check and first-record semantics, but avoid
-    // rescanning unrelated pairs for every possible owner in the expanded world.
-    const countryRelations = ctx.relations.filter(r => r.countryA === country.tag || r.countryB === country.tag);
-    const allowed = new Set(owners.filter(tag => !tag.startsWith('rebel_') && !hostile.get(country.tag)?.has(tag) && hasMilitaryAccess(countryRelations,country.tag,tag)));
+    // Canonical access rules consume the first pair row from this scoped snapshot.
+    const allowed = new Set(owners.filter(tag => !tag.startsWith('rebel_') && !hostile.get(country.tag)?.has(tag)
+      && hasMilitaryAccess(relationIndex.get(relationKey(country.tag,tag)) ?? [],country.tag,tag)));
     allowedOwners.set(country.tag,allowed);
     if (!origin) continue;
     const queue = [origin.id],parents = new Map<string,string>();

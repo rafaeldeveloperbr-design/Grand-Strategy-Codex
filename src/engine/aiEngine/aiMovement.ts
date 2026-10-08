@@ -860,7 +860,10 @@ export function processAI(
   if (!botCountryId || !Array.isArray(armies) || !Array.isArray(provinces) || !Array.isArray(diplomacy)) {
     return armies;
   }
-  const logistics = suppliedLogistics ?? (countries.length ? buildLogisticsNetworks({countries,provinces,relations:diplomacy,wars}) : undefined);
+  // Only armies consume this snapshot; retain every army owner's network so
+  // enemy power and allied reinforcement estimates remain identical.
+  const armyOwners = new Set([botCountryId,...armies.map(army => army.owner)]);
+  const logistics = suppliedLogistics ?? (countries.length ? buildLogisticsNetworks({countries:countries.filter(country => armyOwners.has(country.tag)),provinces,relations:diplomacy,wars}) : undefined);
   const defensiveWar = shouldUseDefensiveWarPosture(botCountryId,wars,provinces,countries,armies);
   const reinforcementOrders = new Map<string, string>();
   const reservedReinforcements = new Set<string>();

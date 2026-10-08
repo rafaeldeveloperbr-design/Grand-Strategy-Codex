@@ -1,6 +1,7 @@
 import type { Country, DiplomaticRelation, GameDate, GoodId, Province, War } from '../../types';
 import type { TradeGoodMetrics } from '../../types/economy';
 import { areAtWar, diplomacyDay, isDiplomaticCountry } from '../diplomacy';
+import { indexRelations, relationKey } from '../diplomacy/diplomacyRelations';
 import { ALL_GOODS, GOODS, getStorageCapacity, normalizeMarket, refreshProvinceMarket } from '../market';
 import { calculateLawModifiers } from '../government';
 import { ECONOMY_V2_BALANCE as B } from './balance';
@@ -66,6 +67,8 @@ export function processInternationalTrade(ctx: InternationalTradeContext) {
   for (const c of countries.filter(c => !validTags.has(c.tag))) c.trade = normalizeNationalTrade({tariffRate: c.trade!.tariffRate});
   if (day%B.tradeTickInterval !== 0 || valid.every(c => c.trade!.lastTradeDay === day)) return {countries,provinces: ctx.provinces,transfers};
   const participants = valid.filter(c => c.trade!.lastTradeDay !== day).sort((a,b) => a.tag.localeCompare(b.tag));
+  // Per-tick lookup; still delegates eligibility to the canonical validator.
+  const relationIndex = indexRelations(ctx.relations);
   const provinces = ctx.provinces.map(p => validTags.has(p.owner) ? {...p,market: normalizeMarket(p.market)} : p);
   const owned = new Map(participants.map(c => [c.tag,provinces.filter(p => p.owner === c.tag).sort((a,b) => a.id.localeCompare(b.id))]));
   const markets = new Map(participants.map(c => [c.tag,aggregateNationalMarket(c,owned.get(c.tag)!)]));
@@ -84,7 +87,7 @@ export function processInternationalTrade(ctx: InternationalTradeContext) {
       .sort((a,b) => markets.get(a.tag)!.goods[id].price-markets.get(b.tag)!.goods[id].price
         || markets.get(b.tag)!.goods[id].exportable-markets.get(a.tag)!.goods[id].exportable || a.tag.localeCompare(b.tag));
     for (const importer of importers) for (const exporter of exporters) {
-      if (!canCountriesTrade(exporter,importer,ctx)) continue;
+      if (!canCountriesTrade(exporter,importer,{...ctx,relations:relationIndex.get(relationKey(exporter.tag,importer.tag)) ?? []})) continue;
       const supply = markets.get(exporter.tag)!.goods[id],need = markets.get(importer.tag)!.goods[id];
       const sources = sourceOrder(owned.get(exporter.tag)!,id),destinations = destinationOrder(owned.get(importer.tag)!,id);
       const price = calculateBilateralPrice(id,supply.price,need.price),tariffRate = importer.trade!.tariffRate;

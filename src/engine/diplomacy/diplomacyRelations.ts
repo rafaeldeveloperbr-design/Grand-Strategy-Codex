@@ -26,7 +26,9 @@ export function updateRelation(relations: DiplomaticRelation[], a: string, b: st
   const relation = getRelation(relations,a,b) ?? createRelation(a,b);
   const [countryA,countryB] = [a,b].sort();
   const next = update(relation);
-  return [...relations.filter(r => relationKey(r.countryA,r.countryB) !== relationKey(a,b)),
+  // Global declaration penalties update many pairs. Compare tags directly,
+  // preserving removal of both orientations without per-row JSON allocations.
+  return [...relations.filter(r => !(r.countryA === a && r.countryB === b || r.countryA === b && r.countryB === a)),
     { ...next,countryA,countryB,opinion: clampOpinion(next.opinion),trust: clampTrust(next.trust) }];
 }
 export const getOpinion = (rs: DiplomaticRelation[], a: string, b: string): number => getRelation(rs,a,b)?.opinion ?? 0;

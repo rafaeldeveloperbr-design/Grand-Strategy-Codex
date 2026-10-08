@@ -80,7 +80,11 @@ export function buildLogisticsNetworks(ctx: LogisticsContext): LogisticsSnapshot
     for (const id of war.occupiedByDefender) if (provinceById.get(id)?.owner === war.defender) occupied.add(id);
   }
   const networks = new Map<string,CountryLogisticsNetwork>(),allowedOwners = new Map<string,Set<string>>();
-  const relationIndex = indexRelations(ctx.relations);
+  const networkTags = new Set(ctx.countries.map(c => c.tag));
+  // A scoped snapshot never looks up pairs without a requested visitor.
+  // Filtering before indexing avoids sorting/allocating all distant pairs for
+  // a two-country battle, while retaining canonical first-record semantics.
+  const relationIndex = indexRelations(ctx.relations.filter(r => networkTags.has(r.countryA) || networkTags.has(r.countryB)));
   const owners = [...new Set(provinces.map(p => p.owner))];
   for (const country of [...ctx.countries].sort((a,b) => a.tag.localeCompare(b.tag))) {
     if (country.tag.startsWith('rebel_')) continue;

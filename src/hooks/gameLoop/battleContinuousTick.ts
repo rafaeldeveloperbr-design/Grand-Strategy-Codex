@@ -148,7 +148,10 @@ export function processBattleContinuous(p: Params) {
     winner: 'attacker' | 'defender';
   }> = [];
   const stillActiveBattles: BattleExtended[] = [];
-  const logistics = buildLogisticsNetworks({countries,provinces,wars,relations: p.relations ?? []});
+  // Only army owners consume this snapshot. Transit still sees every province,
+  // relation and war; unrelated national networks cannot affect a battle.
+  const armyOwners = new Set(armies.map(army => army.owner));
+  const logistics = buildLogisticsNetworks({countries:countries.filter(country => armyOwners.has(country.tag)),provinces,wars,relations: p.relations ?? []});
 
   for (const battle of currentActiveBattles) {
     const province = provinces.find(pr => pr.id === battle.provinceId);

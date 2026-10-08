@@ -118,3 +118,63 @@ never create neighbors; topology remains explicitly authored.
 See `docs/world-map-expansion-v1-step-3a.md` and the mandatory planned
 `docs/world-map-completeness-backlog.md` for omitted countries/territories and
 secondary polygon parts. Completing that backlog is Step 3B, before naval work.
+
+## Step 3B completeness: offline supplemental extracts
+
+The previous sections describe the CORE debt history. Active assembly now extends
+those same six regions through `src/data/map/completeness`, never a second map.
+`completeness.extract.json` contains only needed vector polygons, resolution,
+region, owner, gameplay seed values and optional scenario country/capital metadata.
+Its generated TS definitions are consumed through the existing `createProvinceGameplay`
+and `assembleMap` pipeline. No additional country/geometry audit manifest exists.
+
+Sources downloaded on 08 October 2026, Natural Earth public domain:
+- 110m Admin 0 Countries: https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson
+  SHA256 `6866c877d39cba9c357620878839b336d569f8c662d3cfab4cb1dbe2d39c977f`.
+- 10m Admin 0 Map Units: https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_map_units.geojson
+  SHA256 `57da82be755f4afccd8f3b14251bb2752f5df1395f47d2d86f817470c4a48862`.
+- License: https://www.naturalearthdata.com/about/terms-of-use/ (public domain,
+  modification and distribution permitted).
+
+110m remains the main world source. 10m is used only where an entity or detached
+island is omitted/inadequate at 110m. Microstate footprints carve local holes from
+CORE; Gibraltar and Macao require small local neighboring border patches.
+Source features are selected by ADM0_A3/GU_A3; source SAH/KOS/PSX are mapped to
+scenario ESH/XKX/PSE. Their names/owners express gameplay representation only.
+Full source dumps are not versioned. Source coastlines are neither hand drawn nor
+inflated for clicking. Offline restoration keeps all pre-existing province IDs.
+Detached 10m extracts filter polygons below 0.00001 square geographic degrees and
+within 0.03 degrees of CORE, avoiding high-resolution coastal slivers. Resulting
+omissions are explicitly recorded in the backlog. Small neighboring islands may
+use a strategic compound holding with no neighbors; large mainland/island holdings
+that would permit a false jump (Bioko, PNG offshore, Gaza) are separate provinces.
+
+`generate_completeness.py` writes only geometry/definitions. Topology and intentional
+land components live in the reviewed TS `completeness/topology.ts`; generation
+never invents movement contacts. Runtime never downloads source geometry.
+Supplemental SVG uses six decimals to retain small island rings; CORE retains
+three. `split_antimeridian` unwraps, aligns holes, clips and normalizes rings into
+[-180,180]. It changes geometry only, without camera wrap or logical seam edges.
+
+Regenerate and audit:
+
+```sh
+python tools/map/generate_south_america.py
+python tools/map/generate_north_america.py
+python tools/map/generate_europe.py
+python tools/map/generate_africa.py
+python tools/map/generate_asia.py
+python tools/map/generate_oceania.py
+python tools/map/generate_completeness.py
+python tools/map/test_world_projection.py
+python tools/map/audit_world.py
+node tools/map/benchmark_world.mjs
+```
+
+The audit reads actual rounded SVG, the extract roster and live TypeScript assembly.
+It checks validity, centers, bounds, overlaps, antimeridian segments, duplicate tags
+and IDs, complete landmass membership, actual contact on authored terrestrial edges,
+compound part counts and cross-region edges. The existing overlap tolerance remains
+0.05 SVG square units; no validation threshold was raised for Step 3B.
+Benchmark medians are local authoring diagnostics, not browser GPU/frame-time claims.
+Detailed decisions and measurements: `docs/world-map-expansion-v1-step-3b.md`.

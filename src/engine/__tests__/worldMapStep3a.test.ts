@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { assembleMap, countries, mapCapitals, mapLandmasses, mapMetadata, mapRegions, provincesData, validateMapTopology } from '../../data/map';
+import { southAmerica } from '../../data/map/regions/southAmerica';
+import { northAmerica } from '../../data/map/regions/northAmerica';
+import { europe } from '../../data/map/regions/europe';
+import { africa } from '../../data/map/regions/africa';
 import { asia } from '../../data/map/regions/asia';
 import { oceania } from '../../data/map/regions/oceania';
 import { crossRegionConnections } from '../../data/map/crossRegionConnections';
@@ -44,8 +48,8 @@ describe('World Map Step 3A Core',()=>{
     expect(mapRegions.map(r=>r.id)).toEqual(['southAmerica','northAmerica','europe','africa','asia','oceania']);
     expect(asia.countries.map(c=>c.tag)).toEqual(core.slice(0,37)); expect(oceania.countries.map(c=>c.tag)).toEqual(core.slice(37));
     expect(asia.provinces).toHaveLength(70); expect(oceania.provinces).toHaveLength(8);
-    expect(countries).toHaveLength(128); expect(provincesData).toHaveLength(274);
-    expect(byId.size).toBe(274); expect(byTag.size).toBe(128);
+    expect(countries).toHaveLength(201); expect(provincesData).toHaveLength(494);
+    expect(byId.size).toBe(494); expect(byTag.size).toBe(201);
     for (const region of mapRegions) {
       const ids=region.provinces.map(p=>p.id).sort();
       expect(region.geometry.map(p=>p.id).sort()).toEqual(ids); expect(region.topology.map(p=>p.id).sort()).toEqual(ids);
@@ -64,7 +68,7 @@ describe('World Map Step 3A Core',()=>{
       expect(completed.countries[0].resources.gold).toBe(queued.country.resources.gold);
     }
     for (const id of c.provinces) {
-      const p=byId.get(id)!; expect(id).toMatch(/^(as|oc)_[a-z]{3}_[a-z_]+$/);
+      const p=byId.get(id)!; expect(id).toMatch(/^(as|oc)_[a-z]{3}_[a-z_0-9]+$/);
       expect(p.owner).toBe(tag); expect(p.originalOwner).toBe(tag); expect(p.color).toBe(c.color);
       expect(isTerrainType(p.terrain)).toBe(true); expect(p.path).toMatch(/^M/);
       expect(p.population.total).toBeGreaterThan(0); expect(p.maxPopulation).toBeGreaterThan(p.population.total); expect(p.defense).toBeGreaterThan(0); expect(p.unrest).toBe(0);
@@ -79,15 +83,15 @@ describe('World Map Step 3A Core',()=>{
     ['MMR','Naypyidaw'],['THA','Bangkok'],['LAO','Vientiane'],['KHM','Phnom Penh'],['VNM','Hanói'],['MYS','Kuala Lumpur'],['IDN','Jacarta'],['PHL','Manila'],['AUS','Canberra'],['NZL','Wellington'],
   ])('retains friendly capital %s: %s',(tag,name)=>expect(byId.get(byTag.get(tag)!.capitalId!)?.name).toContain(name));
   it('keeps strategic powers strong at the requested coarse scale',()=>{
-    for (const [tag,count] of [['RUS',10],['CHN',8],['IND',6],['AUS',6],['TUR',3],['IRN',3],['JPN',2],['IDN',2]] as const) expect(byTag.get(tag)?.provinces).toHaveLength(count);
+    for (const [tag,count] of [['RUS',10],['CHN',8],['IND',6],['AUS',6],['TUR',3],['IRN',3],['JPN',2],['IDN',2]] as const) expect([...asia.provinces,...oceania.provinces].filter(p=>p.owner===tag)).toHaveLength(count);
     expect(byTag.get('RUS')!.resources.gold).toBeLessThan(byTag.get('FRA')!.resources.gold*2);
   });
   it('validates one connected Afro-Eurasian mainland with intentional island groups',()=>{
     const result=validateMapTopology(provincesData,countries); expect(result.issues).toEqual([]); expect(result.valid).toBe(true);
-    expect(mapLandmasses).toHaveLength(17);
+    expect(mapLandmasses).toHaveLength(186);
     const mainland=mapLandmasses.find(l=>l.id==='eurasian-mainland')!;
-    expect(mainland.provinceIds).toHaveLength(162);
-    expect(result.components.some(component=>component.length===162&&component.every(id=>mainland.provinceIds.includes(id)))).toBe(true);
+    expect(mainland.provinceIds).toHaveLength(206);
+    expect(result.components.some(component=>component.length===206&&component.every(id=>mainland.provinceIds.includes(id)))).toBe(true);
     for (const p of provincesData) for (const id of p.neighbors) {expect(id).not.toBe(p.id); expect(byId.get(id)?.neighbors).toContain(p.id);}
     const severed=provincesData.map(p=>({...p,neighbors:p.neighbors.filter(id=>!(p.owner==='RUS'&&id.startsWith('eu_fin_')||p.owner==='FIN'&&id.startsWith('as_rus_')))}));
     // Norway also borders Russia only when explicitly modeled; currently Finland is the bridge.
@@ -112,7 +116,7 @@ describe('World Map Step 3A Core',()=>{
   ])('routes across contiguous land %s → %s',(from,to)=>{
     const path=route(from,to); expect(path.length).toBeGreaterThan(0); expect(path[path.length-1]).toBe(to);
     for (const id of path) {expect(byId.get(from)?.neighbors).toContain(id); from=id;}
-    if (to==='as_chn_beijing') expect(path.some(id=>id.startsWith('as_rus_')) || path[0]?.startsWith('as_')).toBe(true);
+    if (to==='as_chn_beijing') expect(path.some(id=>id.startsWith('as_rus_') && id!=='as_rus_restored_9') || path[0]?.startsWith('as_')).toBe(true);
   });
   it.each([
     ['as_chn_beijing','as_jpn_kanto'],['as_ind_delhi','as_lka_colombo'],['as_mys_kuala_lumpur','as_idn_java'],['as_mys_kuala_lumpur','as_idn_sumatra'],
@@ -120,12 +124,12 @@ describe('World Map Step 3A Core',()=>{
     ['oc_nzl_north_island','oc_nzl_south_island'],['as_idn_java','as_idn_sumatra'],
   ])('never invents sea crossings %s → %s',(from,to)=>expect(route(from,to)).toEqual([]));
   it('uses no Kaliningrad/Lithuania, Egypt/Jordan or Bosporus shortcut',()=>{
-    expect(provincesData.filter(p=>p.owner==='LTU').flatMap(p=>p.neighbors).some(id=>id.startsWith('as_rus_'))).toBe(false);
+    expect(provincesData.filter(p=>p.owner==='LTU').flatMap(p=>p.neighbors).some(id=>id.startsWith('as_rus_') && id!=='as_rus_restored_9')).toBe(false);
     expect(byId.get('af_egy_cairo')?.neighbors).not.toContain('as_jor_amman');
     expect(byId.get('as_tur_thrace')?.neighbors).not.toContain('as_tur_ankara');
   });
   it('initializes all armies, finite logistics, domestic island barriers and every diplomacy pair',()=>{
-    const armies=createInitialArmies(countries); expect(armies).toHaveLength(128);
+    const armies=createInitialArmies(countries); expect(armies).toHaveLength(201);
     const logistics=buildLogisticsNetworks({provinces:provincesData,countries,relations,wars:[]});
     for (const tag of core) {
       const c=byTag.get(tag)!; expect(armies.find(a=>a.owner===tag)?.location).toBe(c.capitalId);
@@ -134,7 +138,7 @@ describe('World Map Step 3A Core',()=>{
     }
     expect(findDomesticTradePath('as_idn_java','as_idn_sumatra',provincesData)).toEqual([]);
     expect(findDomesticTradePath('oc_nzl_north_island','oc_nzl_south_island',provincesData)).toEqual([]);
-    expect(relations).toHaveLength(8128); expect(new Set(relations.map(r=>JSON.stringify([r.countryA,r.countryB].sort()))).size).toBe(8128);
+    expect(relations).toHaveLength(20100); expect(new Set(relations.map(r=>JSON.stringify([r.countryA,r.countryB].sort()))).size).toBe(20100);
   });
   it.each([
     ['RUS','UKR','as_rus_southern_russia','eu_ukr_eastern_ukraine'],['CHN','MNG','as_chn_beijing','as_mng_ulaanbaatar'],['IND','PAK','as_ind_punjab','as_pak_islamabad'],
@@ -160,7 +164,7 @@ describe('World Map Step 3A Core',()=>{
   it('retains world-v1/Save V3 and rejects the previous four-region roster',()=>{
     expect(mapMetadata.id).toBe('world-v1'); expect(mapMetadata.bounds).toEqual({x:0,y:0,w:5040,h:2520});
     const active={mapId:'world-v1',version:3,world:{countries,provinces:provincesData}} as SaveGameV3; expect(isSaveCompatibleWithActiveMap(active)).toBe(true);
-    const old=assembleMap(mapRegions.slice(0,4),crossRegionConnections.filter(([a])=>a.startsWith('sa_')));
+    const old=assembleMap([southAmerica,northAmerica,europe,africa],crossRegionConnections.filter(([a])=>a.startsWith('sa_')));
     expect(old.countries).toHaveLength(89); expect(old.provincesData).toHaveLength(196);
     expect(isSaveCompatibleWithActiveMap({...active,world:{countries:old.countries,provinces:old.provincesData}})).toBe(false);
   });

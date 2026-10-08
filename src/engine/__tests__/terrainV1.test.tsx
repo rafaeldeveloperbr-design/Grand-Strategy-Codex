@@ -25,7 +25,7 @@ const types = Object.keys(TERRAIN_DEFINITIONS) as TerrainType[];
 
 describe('Terrain V1 data and military integration', () => {
   it('classifies every province, across six regions with six valid distinct colors and 128 countries', () => {
-    expect(provincesData).toHaveLength(274); expect(countries).toHaveLength(128);
+    expect(provincesData).toHaveLength(494); expect(countries).toHaveLength(201);
     expect(provincesData.every(p => isTerrainType(p.terrain))).toBe(true);
     expect(new Set(types.map(t => TERRAIN_DEFINITIONS[t].color)).size).toBe(6);
     expect(isTerrainType('urban')).toBe(false);
@@ -91,7 +91,9 @@ describe('Terrain V1 UI and saves', () => {
     const onClick = vi.fn();
     const view = render(<GameMap provinces={provincesData} countries={countries} armies={[]} recruitments={[]} buildingConstructions={[]} activeBattles={[]} selectedProvince={null} hoveredProvince={null} selectedArmy={null} onProvinceHover={vi.fn()} onProvinceClick={onClick} onArmyClick={vi.fn()} onProvinceRightClick={vi.fn()} />);
     fireEvent.click(view.getByRole('button', { name: 'Modo Terreno' }));
-    for (const p of provincesData) expect(view.container.querySelector(`[data-province-id="${p.id}"]`)!.getAttribute('fill')).toBe(getTerrainDefinition(p).color);
+    const shapes = new Map([...view.container.querySelectorAll('[data-province-id]')].map(node => [node.getAttribute('data-province-id'), node]));
+    expect(shapes.size).toBe(provincesData.length);
+    for (const p of provincesData) expect(shapes.get(p.id)!.getAttribute('fill')).toBe(getTerrainDefinition(p).color);
     for (const terrain of Object.values(TERRAIN_DEFINITIONS)) expect(view.getByLabelText('Legenda Terreno').textContent).toContain(terrain.label);
     fireEvent.click(view.container.querySelector(`[data-province-id="${base.id}"]`)!);
     expect(onClick).toHaveBeenCalledWith(base.id);

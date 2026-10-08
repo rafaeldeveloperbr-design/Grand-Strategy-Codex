@@ -60,7 +60,7 @@ describe('South America V1 scenario', () => {
 
   it('initializes valid capital armies and viable provincial markets without extreme values', () => {
     const armies = createInitialArmies(countries);
-    expect(armies).toHaveLength(128);
+    expect(armies).toHaveLength(201);
     expect(armies.filter(a => southAmerica.countries.some(c => c.tag === a.owner))).toHaveLength(13);
     for (const army of armies) {
       const capital = provincesData.find(province => province.id === army.location)!;

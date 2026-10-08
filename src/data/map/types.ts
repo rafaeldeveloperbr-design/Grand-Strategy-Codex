@@ -24,6 +24,8 @@ export interface MapRegion {
   metadata?: MapMetadata;
   /** Explicit expected land components; matching IDs merge across regions. */
   landmasses?: readonly Landmass[];
+  /** Explicit holdings of globally defined countries, including overseas territories. */
+  additionalHoldings?: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface Landmass { id: string; provinceIds: readonly string[] }

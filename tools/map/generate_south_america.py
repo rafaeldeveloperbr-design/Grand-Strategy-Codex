@@ -31,12 +31,12 @@ def polygons(geometry):
     return [geometry] if geometry.geom_type == 'Polygon' else list(geometry.geoms)
 
 
-def svg_path(geometry):
+def svg_path(geometry, precision=3):
     paths = []
     for polygon in polygons(geometry):
         for ring in [polygon.exterior, *polygon.interiors]:
             points = list(ring.coords)[:-1]
-            paths.append('M' + ' L'.join(f'{x:.3f},{y:.3f}' for x, y in points) + ' Z')
+            paths.append('M' + ' L'.join(f'{x:.{precision}f},{y:.{precision}f}' for x, y in points) + ' Z')
     return ' '.join(paths)
 
 

@@ -95,12 +95,12 @@ describe('map topology validation', () => {
 
   it('assembles multiple regions and preserves cross-region edges', () => {
     const current = mapRegions[0];
-    const split = [0, 1].map(index => ({ ...current, id: String(index), provinces: current.provinces.filter((_, i) => i % 2 === index), topology: current.topology.filter((_, i) => i % 2 === index), geometry: current.geometry.filter((_, i) => i % 2 === index), countries: index === 0 ? current.countries : [] }));
+    const split = [0, 1].map(index => ({ ...current, id: String(index), provinces: current.provinces.filter((_, i) => i % 2 === index), topology: current.topology.filter((_, i) => i % 2 === index), geometry: current.geometry.filter((_, i) => i % 2 === index), additionalHoldings: Object.fromEntries(Object.entries(current.additionalHoldings ?? {}).map(([tag, ids]) => [tag, ids.filter(id => current.provinces.findIndex(p => p.id === id) % 2 === index)])), countries: index === 0 ? current.countries : [] }));
     const assembled = assembleMap(split);
     expect(assembled.provincesData).toHaveLength(current.provinces.length);
     const regionalBaseline = assembleMap([current]);
     for (const province of assembled.provincesData) expect(province).toEqual(regionalBaseline.provincesData.find(item => item.id === province.id));
-    expect(assembled.countries).toEqual(current.countries);
+    expect(assembled.countries.map(c=>({...c,provinces:[...c.provinces].sort()}))).toEqual(regionalBaseline.countries.map(c=>({...c,provinces:[...c.provinces].sort()})));
     expect(() => assembleMap([current, current])).toThrow('Duplicate map definition');
     expect(() => assembleMap([{ ...current, geometry: [] }])).toThrow('Missing topology or geometry');
   });

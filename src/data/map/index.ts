@@ -9,9 +9,11 @@ import { oceania } from './regions/oceania';
 import { worldMapMetadata } from './worldMetadata';
 import { crossRegionConnections } from './crossRegionConnections';
 import { validateMapTopology as auditTopology } from './validation';
+import { withCompleteness, completenessConnections } from './completeness';
 
-export const mapRegions: readonly MapRegion[] = [southAmerica,northAmerica,europe,africa,asia,oceania];
+export const mapRegions: readonly MapRegion[] = [southAmerica,northAmerica,europe,africa,asia,oceania].map(withCompleteness);
 export const mapMetadata = worldMapMetadata;
+export const mapConnections = [...crossRegionConnections,...completenessConnections];
 const landmassIds = [...new Set(mapRegions.flatMap(r => r.landmasses?.map(l => l.id) ?? []))];
 export const mapLandmasses: readonly Landmass[] = landmassIds.map(id => ({
   id,provinceIds:mapRegions.flatMap(r => r.landmasses?.filter(l => l.id === id).flatMap(l => l.provinceIds) ?? []),
@@ -33,7 +35,7 @@ export function assembleMap(regions: readonly MapRegion[], connections: readonly
   const topology = indexById(regions.flatMap(region => region.topology));
   const geometry = indexById(regions.flatMap(region => region.geometry));
   const gameplayIndex = indexById(gameplay);
-  const countries = regions.flatMap(region => region.countries);
+  const countries = regions.flatMap(region => region.countries).map(c => ({...c, provinces:[...c.provinces]}));
   const tags = new Set<string>();
   for (const country of countries) {
     if (tags.has(country.tag)) throw new Error(`Duplicate country definition: ${country.tag}`);
@@ -49,6 +51,17 @@ export function assembleMap(regions: readonly MapRegion[], connections: readonly
     return { ...province, neighbors: [...edges.neighbors], center: { ...shape.center }, path: shape.path };
   });
   const byId = new Map(provincesData.map(p => [p.id,p]));
+  for (const region of regions) {
+    for (const [tag, ids] of Object.entries(region.additionalHoldings ?? {})) {
+      const country = countries.find(c => c.tag === tag);
+      if (!country) throw new Error(`Missing holdings country: ${tag}`);
+      for (const id of ids) {
+        if (byId.get(id)?.owner !== tag || country.provinces.includes(id)) throw new Error(`Invalid additional holding: ${tag} / ${id}`);
+        country.provinces.push(id);
+        byId.get(id)!.color = country.color;
+      }
+    }
+  }
   for (const [a,b] of connections) {
     if (a === b || !byId.has(a) || !byId.has(b)) throw new Error(`Invalid cross-region connection: ${a} / ${b}`);
     byId.get(a)!.neighbors = [...new Set([...byId.get(a)!.neighbors,b])];
@@ -57,7 +70,7 @@ export function assembleMap(regions: readonly MapRegion[], connections: readonly
   return { provincesData, countries };
 }
 
-export const { provincesData, countries } = assembleMap(mapRegions,crossRegionConnections);
+export const { provincesData, countries } = assembleMap(mapRegions,mapConnections);
 export const mapCapitals: Readonly<Record<string, string>> = Object.assign({}, ...mapRegions.map(region => region.capitals));
 
 export function getCountryByTag(tag: string): Country | undefined {

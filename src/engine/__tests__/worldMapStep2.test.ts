@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { assembleMap, countries, mapCapitals, mapLandmasses, mapMetadata, mapRegions, provincesData, validateMapTopology } from '../../data/map';
+import { southAmerica } from '../../data/map/regions/southAmerica';
+import { northAmerica } from '../../data/map/regions/northAmerica';
 import { europe } from '../../data/map/regions/europe';
 import { africa } from '../../data/map/regions/africa';
 import { crossRegionConnections } from '../../data/map/crossRegionConnections';
@@ -34,13 +36,13 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('World Map Step 2 assembly, capitals and gameplay', () => {
   it('preserves the original four regions inside the 128-country, 274-province world', () => {
-    expect(mapRegions.slice(0,4)).toEqual([mapRegions[0], mapRegions[1], europe, africa]);
+    expect(mapRegions.slice(0,4).map(r=>r.id)).toEqual(['southAmerica','northAmerica','europe','africa']);
     expect(europe.countries.map(c => c.tag)).toEqual(europeTags);
     expect(africa.countries.map(c => c.tag)).toEqual(africaTags);
     expect(europe.provinces).toHaveLength(56); expect(africa.provinces).toHaveLength(49);
-    expect(countries).toHaveLength(128); expect(provincesData).toHaveLength(274);
-    expect(new Set(countries.map(c => c.tag)).size).toBe(128);
-    expect(new Set(provincesData.map(p => p.id)).size).toBe(274);
+    expect(countries).toHaveLength(201); expect(provincesData).toHaveLength(494);
+    expect(new Set(countries.map(c => c.tag)).size).toBe(201);
+    expect(new Set(provincesData.map(p => p.id)).size).toBe(494);
     for (const region of [europe, africa]) {
       const ids = region.provinces.map(p => p.id).sort();
       expect(region.geometry.map(p => p.id).sort()).toEqual(ids);
@@ -58,7 +60,7 @@ describe('World Map Step 2 assembly, capitals and gameplay', () => {
     expect(byId.get(country.capitalId!)?.owner).toBe(tag);
     for (const id of country.provinces) {
       const p = byId.get(id)!;
-      expect(id).toMatch(/^(eu|af)_[a-z]{3}_[a-z_]+$/);
+      expect(id).toMatch(/^(eu|af|as|oc|na|sa)_[a-z]{3}_[a-z_0-9]+$/);
       expect(p.owner).toBe(tag); expect(p.originalOwner).toBe(tag); expect(p.color).toBe(country.color);
       expect(isTerrainType(p.terrain)).toBe(true); expect(p.path).toMatch(/^M/);
       expect(Number.isFinite(p.center.x) && Number.isFinite(p.center.y)).toBe(true);
@@ -76,9 +78,9 @@ describe('World Map Step 2 assembly, capitals and gameplay', () => {
     ['NGA','Abuja'], ['ETH','Adis Abeba'], ['KEN','Nairóbi'], ['TZA','Dodoma'], ['COD','Kinshasa'], ['AGO','Luanda'], ['ZAF','Pretória'],
   ])('uses friendly capital %s: %s', (tag, name) => expect(byId.get(byTag.get(tag)!.capitalId!)?.name).toBe(name));
   it('keeps strategic subdivisions and balanced major powers', () => {
-    for (const tag of ['FRA','DEU']) expect(byTag.get(tag)?.provinces).toHaveLength(5);
-    for (const tag of ['ESP','ITA','GBR']) expect(byTag.get(tag)?.provinces).toHaveLength(4);
-    for (const tag of ['POL','UKR']) expect(byTag.get(tag)?.provinces).toHaveLength(3);
+    for (const tag of ['FRA','DEU']) expect(europe.countries.find(c=>c.tag===tag)?.provinces).toHaveLength(5);
+    for (const tag of ['ESP','ITA','GBR']) expect(europe.countries.find(c=>c.tag===tag)?.provinces).toHaveLength(4);
+    for (const tag of ['POL','UKR']) expect(europe.countries.find(c=>c.tag===tag)?.provinces).toHaveLength(3);
     expect(byTag.get('DEU')!.resources).toEqual(byTag.get('FRA')!.resources);
     expect(africa.countries.every(c => c.provinces.length <= 3)).toBe(true);
   });
@@ -117,8 +119,11 @@ describe('World Map Step 2 explicit land topology', () => {
     }
   });
   it('models Great Britain, Ireland, Zealand and Madagascar without fake crossings', () => {
-    for (const id of ['eu_irl_dublin','eu_dnk_copenhagen','af_mdg_antananarivo']) expect(byId.get(id)?.neighbors).toEqual([]);
-    for (const p of provincesData.filter(p => p.owner === 'GBR')) expect(p.neighbors.every(id => byId.get(id)?.owner === 'GBR')).toBe(true);
+    expect(byId.get('eu_irl_dublin')?.neighbors).toEqual(['eu_gbr_restored_1']);
+    for (const id of ['eu_dnk_copenhagen','af_mdg_antananarivo']) expect(byId.get(id)?.neighbors).toEqual([]);
+    for (const p of provincesData.filter(p => p.owner === 'GBR' && europe.provinces.some(core=>core.id===p.id))) expect(p.neighbors.every(id => byId.get(id)?.owner === 'GBR')).toBe(true);
+    expect(byId.get('eu_gbr_restored_1')?.neighbors).toEqual(['eu_irl_dublin']);
+    expect(byId.get('eu_gib_territory')?.neighbors).toEqual(['eu_esp_andalusia']);
     expect(mapLandmasses.find(l => l.id === 'eurasian-mainland')?.provinceIds.filter(id => /^eu_(nor|swe|fin)_/.test(id))).toHaveLength(6);
     expect(newProvinces.every(p => p.neighbors.every(id => !(p.id.startsWith('eu_') && id.startsWith('af_') || p.id.startsWith('af_') && id.startsWith('eu_'))))).toBe(true);
     expect(crossRegionConnections.filter(([a]) => a.startsWith('sa_'))).toEqual([['sa_col_caribe','na_pan_panama']]);
@@ -179,8 +184,8 @@ describe('World Map Step 2 existing-system integration', () => {
     for (const p of processInternalTrade(newProvinces)) for (const good of ALL_GOODS) expect(Number.isFinite(p.market!.goods[good].stock) && p.market!.goods[good].stock >= 0).toBe(true);
   });
   it('initializes every diplomacy pair once and preserves unordered lookup semantics', () => {
-    expect(relations).toHaveLength(8128);
-    expect(new Set(relations.map(r => JSON.stringify([r.countryA,r.countryB].sort()))).size).toBe(8128);
+    expect(relations).toHaveLength(20100);
+    expect(new Set(relations.map(r => JSON.stringify([r.countryA,r.countryB].sort()))).size).toBe(20100);
     for (const [a,b] of [['FRA','DEU'],['EGY','LBY'],['BRA','ZAF']]) {
       expect(getRelation(relations,a,b)?.status).toBe('peace'); expect(getRelation(relations,a,b)).toBe(getRelation(relations,b,a));
     }
@@ -236,7 +241,7 @@ describe('World Map Step 2 existing-system integration', () => {
     expect(mapMetadata.id).toBe('world-v1'); expect(mapMetadata.bounds).toEqual({x:0,y:0,w:5040,h:2520});
     const active = {mapId: 'world-v1',world: {provinces: provincesData,countries}} as SaveGameV3;
     expect(isSaveCompatibleWithActiveMap(active)).toBe(true);
-    const old = assembleMap(mapRegions.slice(0,2),crossRegionConnections.filter(([a]) => a.startsWith('sa_')));
+    const old = assembleMap([southAmerica,northAmerica],crossRegionConnections.filter(([a]) => a.startsWith('sa_')));
     expect(old.provincesData).toHaveLength(91); expect(old.countries).toHaveLength(27);
     expect(isSaveCompatibleWithActiveMap({...active,world:{provinces:old.provincesData,countries:old.countries}})).toBe(false);
     expect(isSaveCompatibleWithActiveMap({...active,mapId:undefined,world:{provinces:old.provincesData,countries:old.countries}})).toBe(false);

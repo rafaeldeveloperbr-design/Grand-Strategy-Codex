@@ -3,7 +3,7 @@ import { processPoliticalTick } from '../engine/politics';
 import { cleanupDiplomacy } from '../engine/diplomacy';
 import {
   useCallback,
-  useEffect,
+  useRef,
   type Dispatch,
   type MutableRefObject,
   type SetStateAction,
@@ -41,7 +41,8 @@ import { collectRebellionFormationFeedback, collectRebellionResolutionFeedback }
  * 11. events (futuro)
  */
 
-const SPEED_INTERVALS: Record<number, number> = { 0: 0, 1: 1000, 2: 500, 3: 250, 4: 125, 5: 60 };
+import { SPEED_INTERVALS, useGameLoopScheduler } from './gameLoop/useGameLoopScheduler';
+import { createGameLoopProfiler } from '../engine/performance/gameLoopProfiler';
 
 type Props = {
   // Refs principais do jogo
@@ -139,6 +140,14 @@ export function useGameLoop(props: Props) {
     addLog, addToast, addAILog, formatGameDate,
   } = props;
 
+  const profilerRef = useRef<ReturnType<typeof createGameLoopProfiler> | null>(null);
+  if (profilerRef.current === null) profilerRef.current = createGameLoopProfiler(import.meta.env.DEV);
+  const stopSchedulerRef = useRef<() => void>(() => undefined);
+  const setLoopPaused: typeof setIsPaused = value => {
+    if (value === true) stopSchedulerRef.current();
+    setIsPaused(value);
+  };
+
   const cancelProvinceActivities = useCallback((
     provinceId: string,
     oldOwner: string,
@@ -175,8 +184,10 @@ export function useGameLoop(props: Props) {
     let { day, month, year } = d; day++; if (day > 30) { day = 1; month++; } if (month > 12) { month = 1; year++; } return { day, month, year };
   }, []);
 
-  const processTick = useCallback(() => {
+  const processTick = () => {
     if (hasTriggeredEndGame) return;
+    const profiler = profilerRef.current!;
+    profiler.begin();
     const snapshot = {
       provinces: provincesRef.current, countries: countriesRef.current, armies: armiesRef.current,
       recruitments: recruitmentsRef.current, wars: warsRef.current, relations: diplomaticRelationsRef.current,
@@ -194,32 +205,48 @@ export function useGameLoop(props: Props) {
     const eco = processEconomyTick({ recruitments, armies, countries, provinces, buildingConstructions, wars, relations, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, date: snapshot.date, allCountries, addToast, addAILog, addLog, formatGameDate });
     recruitments = eco.recruitments; armies = eco.armies; provinces = eco.provinces; buildingConstructions = eco.buildingConstructions; countries = eco.countries;
 
-    const political = processPoliticalTick(countries,{provinces,armies,wars,date:snapshot.date},playerCountryTag);
+    profiler.endPhase('economy');
+
+    const political = processPoliticalTick(countries,{provinces,armies,wars,date:snapshot.date},playerCountryTag,false);
     countries = political.countries;
     political.messages.forEach(message => {addLog(message);addAILog('Governo','government',message,formatGameDate(snapshot.date));});
+
+    profiler.endPhase('politics');
 
     // 4. STABILITY - depende de economy
     const unr = processUnrestTick({ provinces, armies, countries, wars, relations, snapshot, playerCountryTag, allCountries, addLog, addToast });
     provinces = unr.provinces; armies = unr.armies; countries = unr.countries; wars = unr.wars; relations = unr.relations;
 
+    profiler.endPhase('unrest');
+
     // 5/6. DIPLOMACY + TECHNOLOGY
     const dip = processDiplomacyTechTick({ countries, provinces, armies, wars, relations, playerCountryTag, snapshot, currentPlayerTechState, currentBotTechStates, aiDifficultyRef, playerTechStateRef, botTechStatesRef, addLog, addToast, addAILog, formatGameDate });
     countries = dip.countries; provinces = dip.provinces; armies = dip.armies; wars = dip.wars; relations = dip.relations; currentPlayerTechState = dip.currentPlayerTechState; currentBotTechStates = dip.currentBotTechStates;
 
+    profiler.endPhase('diplomacyTechnology');
+
     // 7. AI - precisa ver economy, stability e diplomacy antes de decidir
-    const ai = processAiTick({ countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates, playerCountryTag, aiDifficultyRef, ceilingLogRef, snapshot, allCountries, addAILog, addToast, formatGameDate });
+    const ai = processAiTick({ profiler: profiler.aiProfiler, countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates, playerCountryTag, aiDifficultyRef, ceilingLogRef, snapshot, allCountries, addAILog, addToast, formatGameDate });
     countries = ai.countries; provinces = ai.provinces; armies = ai.armies; wars = ai.wars; relations = ai.relations; buildingConstructions = ai.buildingConstructions; recruitments = ai.recruitments; currentBotTechStates = ai.currentBotTechStates;
+
+    profiler.endPhase('AI');
 
     // 8. MOVEMENT - IA já decidiu pra onde ir
     const mov = processMovementTick({ armies, provinces, relations, countries, wars, addLog, addToast, playerCountryTag });
     armies = mov.armies; provinces = mov.provinces; countries = mov.countries; const arrivedArmies = mov.arrivedArmies;
 
+    profiler.endPhase('movement');
+
     // 9. COMBAT - só depois de mover
     const arr = processBattleArrival({ arrivedArmies, armies, provinces, countries, wars, relations, recruitments, buildingConstructions, currentActiveBattles, snapshot, playerCountryTag, allCountries, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities });
     armies = arr.armies; provinces = arr.provinces; countries = arr.countries; currentActiveBattles = arr.currentActiveBattles; recruitments = arr.recruitments; buildingConstructions = arr.buildingConstructions;
 
-    const cont = processBattleContinuous({ armies, provinces, countries, wars, relations, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused, activeBattlesRef, cancelProvinceActivities });
+    profiler.endPhase('battleArrival');
+
+    const cont = processBattleContinuous({ armies, provinces, countries, wars, relations, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused: setLoopPaused, activeBattlesRef, cancelProvinceActivities });
     armies = cont.armies; provinces = cont.provinces; countries = cont.countries; currentActiveBattles = cont.currentActiveBattles; wars = cont.wars; recruitments = cont.recruitments; buildingConstructions = cont.buildingConstructions;
+
+    profiler.endPhase('battleContinuous');
 
     const resolvedWars = processWarResolutionTick({provinces,countries,wars,relations,armies,activeBattles:currentActiveBattles,recruitments,constructions:buildingConstructions,date:snapshot.date});
     ({provinces,countries,wars,relations,armies,recruitments} = resolvedWars);
@@ -231,12 +258,18 @@ export function useGameLoop(props: Props) {
       addAILog(countries.find(c => c.tag === resolution.winner)?.name ?? 'País','diplomacy',resolution.message,formatGameDate(snapshot.date));
     }
 
+    profiler.endPhase('warResolution');
+
     // 10. REBELLION - por último, depende de stability + combat
-    const reb = processRebelTick({ recruitments, buildingConstructions, provinces, armies, countries, wars, relations, currentActiveBattles, snapshot, playerCountryTag, hasTriggeredEndGame, battleHistory, dateRef, addLog, addToast, setActiveBattles, activeBattlesRef, setEndGameType, setGameStats, setHasTriggeredEndGame, setIsPaused });
+    const reb = processRebelTick({ recruitments, buildingConstructions, provinces, armies, countries, wars, relations, currentActiveBattles, snapshot, playerCountryTag, hasTriggeredEndGame, battleHistory, dateRef, addLog, addToast, setActiveBattles, activeBattlesRef, setEndGameType, setGameStats, setHasTriggeredEndGame, setIsPaused: setLoopPaused });
     provinces = reb.provinces; armies = reb.armies; countries = reb.countries; wars = reb.wars; relations = reb.relations; currentActiveBattles = reb.currentActiveBattles; recruitments = reb.recruitments; buildingConstructions = reb.buildingConstructions;
-    if (reb.endGameTriggered) { setEndGameType(reb.endGameType); setGameStats(reb.gameStats); setHasTriggeredEndGame(true); setIsPaused(true); }
+    if (reb.endGameTriggered) { stopSchedulerRef.current(); setEndGameType(reb.endGameType); setGameStats(reb.gameStats); setHasTriggeredEndGame(true); setIsPaused(true); }
+
+    profiler.endPhase('rebellion');
 
     ({relations,wars} = cleanupDiplomacy({relations,wars,countries,provinces,armies,date: snapshot.date}));
+    profiler.endPhase('cleanup');
+
     setArmies(armies); setProvinces(provinces); setAllCountries(countries); setWars(wars);
     setDiplomaticRelations(relations); setRecruitments(recruitments); setBuildingConstructions(buildingConstructions);
     setPlayerTechState(currentPlayerTechState); setBotTechStates(currentBotTechStates); setDate((prev: GameDate) => advanceDate(prev));
@@ -265,14 +298,10 @@ export function useGameLoop(props: Props) {
         'Autosave'
       );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addLog, playerCountryTag, advanceDate, cancelProvinceActivities, hasTriggeredEndGame]);
+    profiler.endPhase('statePublication');
+    profiler.finish(gameSpeed, SPEED_INTERVALS[gameSpeed]);
+  };
 
-  useEffect(() => {
-    if (gameLoopRef.current) { clearInterval(gameLoopRef.current); gameLoopRef.current = null; }
-    if (gameSpeed > 0 && !isPaused) {
-      gameLoopRef.current = window.setInterval(processTick, SPEED_INTERVALS[gameSpeed]);
-    }
-    return () => { if (gameLoopRef.current) clearInterval(gameLoopRef.current); };
-  }, [gameSpeed, processTick, isPaused, gameLoopRef]);
+  const stopScheduler = useGameLoopScheduler(processTick, gameSpeed, isPaused, hasTriggeredEndGame, gameLoopRef);
+  stopSchedulerRef.current = stopScheduler;
 }

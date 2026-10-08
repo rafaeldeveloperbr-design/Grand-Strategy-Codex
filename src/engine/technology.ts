@@ -150,7 +150,7 @@ export function getResearchProgress(state: CountryTechState, slotId = 0): Resear
   return { current, required: technology.durationDays, remainingProgress, percent: technology.durationDays ? current / technology.durationDays * 100 : 100, estimatedDaysRemaining: Math.ceil(remainingProgress / speed) };
 }
 
-export function processDailyFocusProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false) {
+export function processDailyFocusProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false, emitNotifications = true) {
   const normalized = normalizeTechState(state, country.tag);
   const notifications: string[] = [];
   const next = { ...normalized, completedFocuses: [...normalized.completedFocuses] };
@@ -164,20 +164,20 @@ export function processDailyFocusProgress(state: CountryTechState, country: Coun
         if (!next.completedFocuses.includes(focus.id)) next.completedFocuses.push(focus.id);
         next.activeFocusId = null;
         next.focusProgressDays = 0;
-        notifications.push(`✅ Foco concluído: ${focus.title}`);
+        if (emitNotifications) notifications.push(`✅ Foco concluído: ${focus.title}`);
       }
     }
   }
   return { techState: normalizeTechState(next, country.tag), notifications };
 }
 
-export function processDailyTechProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false) {
-  const { techState: focusState, notifications } = processDailyFocusProgress(state, country, difficulty, isPlayer);
-  const research = processDailyResearchProgress(focusState, country, difficulty, isPlayer);
+export function processDailyTechProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false, emitNotifications = true) {
+  const { techState: focusState, notifications } = processDailyFocusProgress(state, country, difficulty, isPlayer, emitNotifications);
+  const research = processDailyResearchProgress(focusState, country, difficulty, isPlayer, emitNotifications);
   return { techState: research.techState, notifications: [...notifications, ...research.notifications] };
 }
 
-export function processDailyResearchProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false) {
+export function processDailyResearchProgress(state: CountryTechState, country: Country, difficulty: AIDifficulty = 'medium', isPlayer = false, emitNotifications = true) {
   const normalized = normalizeTechState(state, country.tag);
   const notifications: string[] = [];
   const next = { ...normalized, completedTechnologies: [...normalized.completedTechnologies] };
@@ -191,7 +191,7 @@ export function processDailyResearchProgress(state: CountryTechState, country: C
     if (slot.progressDays >= technology.durationDays) {
       if (!next.completedTechnologies.includes(technology.id)) next.completedTechnologies.push(technology.id);
       slot.technologyId = null; slot.progressDays = 0;
-      notifications.push(`🔬 Pesquisa concluída: ${technology.title}`);
+      if (emitNotifications) notifications.push(`🔬 Pesquisa concluída: ${technology.title}`);
     }
   }
   return { techState: next, notifications };

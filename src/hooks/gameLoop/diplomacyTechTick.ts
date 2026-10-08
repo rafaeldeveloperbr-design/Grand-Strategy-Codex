@@ -45,7 +45,7 @@ type Params = {
 
 export function processDiplomacyTechTick(p: Params) {
   let { countries, provinces, armies, wars, relations, currentPlayerTechState, currentBotTechStates } = p;
-  const { playerCountryTag, snapshot, aiDifficultyRef, playerTechStateRef, botTechStatesRef, addLog, addToast, addAILog, formatGameDate } = p;
+  const { playerCountryTag, snapshot, aiDifficultyRef, playerTechStateRef, botTechStatesRef, addLog, addToast, formatGameDate } = p;
 
   // PASSO E: DIPLOMACIA
   relations = processDiplomacyTick({relations,wars,countries,date: snapshot.date,armies,provinces}).relations;
@@ -70,19 +70,8 @@ export function processDiplomacyTechTick(p: Params) {
     if (country?.tag && country.tag !== playerCountryTag) {
       const botTechState = currentBotTechStates.get(country.tag);
       if (botTechState) {
-        const botTechResult = processDailyTechProgress(botTechState, country, aiDifficultyRef.current, false);
+        const botTechResult = processDailyTechProgress(botTechState, country, aiDifficultyRef.current, false, false);
         currentBotTechStates.set(country.tag, botTechResult.techState);
-        if (botTechResult.notifications?.length > 0) {
-          const dateString = formatGameDate(snapshot.date);
-          botTechResult.notifications.forEach((notif: string) => {
-            addLog(`🤖 ${country.name}: ${notif}`);
-            if (notif.includes('Foco concluído')) {
-              addAILog(country.name, 'focus', `Foco Nacional "${notif.replace('✅ Foco concluído: ', '')}" concluído`, dateString, country.color);
-            } else if (notif.includes('Pesquisa concluída')) {
-              addAILog(country.name, 'tech', `Tecnologia "${notif.replace('🔬 Pesquisa concluída: ', '')}" pesquisada`, dateString, country.color);
-            }
-          });
-        }
       }
     }
   });

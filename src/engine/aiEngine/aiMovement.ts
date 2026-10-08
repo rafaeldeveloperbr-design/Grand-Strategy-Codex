@@ -1043,10 +1043,6 @@ export function processAI(
         if (!routed.destination) return army;
         reservedCapitalDefense += reinforcementPower;
 
-        console.log(
-          `🏰 [IA CAPITAL] ${botCountryId} enviando ${army.name} para defender ${threatenedCapital.name}`
-        );
-
         return routed;
       }
     }
@@ -1062,9 +1058,6 @@ export function processAI(
       reinforcementDestination &&
       army.location !== reinforcementDestination
     ) {
-      console.log(
-        `🤝 [IA REFORÇO] ${botCountryId} enviando ${army.name} para apoiar outro exército`
-      );
 
       return createArmyWithRoute(
         army,
@@ -1171,9 +1164,6 @@ export function processAI(
                 defensiveProvince &&
                 army.location !== defensiveProvince.id
               ) {
-                console.log(
-                  `🛡️ [IA DEFENSIVA] ${botCountryId} evitando combate desfavorável ${attackRatio.toFixed(2)}:1 e recuando para ${defensiveProvince.name}`
-                );
 
                 return createArmyWithRoute(
                   army,
@@ -1192,9 +1182,6 @@ export function processAI(
             // ===============================================
 
             if (attackRatio < (defensiveWar ? WB.aiCautiousAttackRatio : 1.20)) {
-              console.log(
-                `⏸️ [IA CAUTELOSA] ${botCountryId} segurando posição contra ${bestEnemy.owner} (${attackRatio.toFixed(2)}:1)`
-              );
 
               return army;
             }
@@ -1202,10 +1189,6 @@ export function processAI(
             // ===============================================
             // PRIORIDADE 5 — ATAQUE FAVORÁVEL
             // ===============================================
-
-            console.log(
-              `🎯 [IA OFENSIVA] ${botCountryId} atacando ${bestEnemy.owner} com vantagem ${attackRatio.toFixed(2)}:1`
-            );
 
             return createArmyWithRoute(
               army,
@@ -1235,9 +1218,6 @@ export function processAI(
         );
 
       if (bestProvinceTarget) {
-        console.log(
-          `🏴 [IA OBJETIVO] ${botCountryId} avançando sobre ${bestProvinceTarget.name}`
-        );
 
         return createArmyWithRoute(
           army,

@@ -1,17 +1,18 @@
+import type { DiplomacyAIIndex } from './diplomacyAIIndex';
 import type { DiplomacyAction, DiplomaticProposal, ProposalKind } from '../../types/diplomacy';
 import { DIPLOMACY_BALANCE as B } from './diplomacyBalance';
 import { diplomacyDay, getRelation, updateRelation, changeOpinion, changeTrust } from './diplomacyRelations';
 import { hasMilitaryAccess, hasNonAggressionPact, isDiplomaticCountry } from './diplomacySelectors';
 import { result, type DiplomacyContext, type DiplomacyResult } from './diplomacyTypes';
 
-export function pairBlockReason(ctx: DiplomacyContext, a: string, b: string): string | undefined {
+export function pairBlockReason(ctx: DiplomacyContext, a: string, b: string, index?: DiplomacyAIIndex): string | undefined {
   if (a === b) return 'Escolha outro país';
-  if (![a,b].every(tag => isDiplomaticCountry(ctx.countries.find(c => c.tag === tag)))) return 'País inexistente, rebelde ou anexado';
+  if (![a,b].every(tag => isDiplomaticCountry(index ? index.countryByTag.get(tag) : ctx.countries.find(c => c.tag === tag)))) return 'País inexistente, rebelde ou anexado';
 }
-export function actionBlockReason(ctx: DiplomacyContext, a: string, b: string, action: DiplomacyAction): string | undefined {
-  const invalid = pairBlockReason(ctx,a,b); if (invalid) return invalid;
-  const r = getRelation(ctx.relations,a,b), day = diplomacyDay(ctx.date);
-  const nap = hasNonAggressionPact(ctx.relations,a,b,day);
+export function actionBlockReason(ctx: DiplomacyContext, a: string, b: string, action: DiplomacyAction, index?: DiplomacyAIIndex): string | undefined {
+  const invalid = pairBlockReason(ctx,a,b,index); if (invalid) return invalid;
+  const r = index ? index.relation(a,b) : getRelation(ctx.relations,a,b), day = diplomacyDay(ctx.date);
+  const nap = index ? (r?.nonAggressionPact?.expiresAt ?? -Infinity) > day : hasNonAggressionPact(ctx.relations,a,b,day);
   if (action === 'breakAlliance') return r?.alliance ? undefined : 'Não existe aliança';
   if (action === 'breakNap') return nap ? undefined : 'Não existe pacto ativo';
   if (action === 'revokeAccess') return r?.militaryAccess?.includes(a) ? undefined : 'Você não concedeu acesso';
@@ -29,14 +30,14 @@ export function actionBlockReason(ctx: DiplomacyContext, a: string, b: string, a
   };
   if (action === 'offerAlliance' && r?.alliance) return 'Já são aliados';
   if (action === 'offerNap' && nap) return 'Pacto de Não Agressão ativo';
-  if (action === 'requestAccess' && hasMilitaryAccess(ctx.relations,a,b)) return 'Acesso já concedido';
+  if (action === 'requestAccess' && (index ? index.access(a,b) : hasMilitaryAccess(ctx.relations,a,b))) return 'Acesso já concedido';
   if (action === 'guarantee' && r?.guarantees?.includes(a)) return 'Garantia já ativa';
   const req = requirements[action];
   if (req && (r?.opinion ?? 0) < req[0]) return `Requer opinião +${req[0]}`;
   if (req && (r?.trust ?? 50) < req[1]) return `Requer confiança ${req[1]}`;
 }
 export const proposalAction: Record<Exclude<ProposalKind,'call'>, DiplomacyAction> = { alliance: 'offerAlliance',nap: 'offerNap',access: 'requestAccess' };
-export function offerAgreement(ctx: DiplomacyContext, from: string,to: string,kind: Exclude<ProposalKind,'call'>): DiplomacyResult {
+export function offerAgreement(ctx: DiplomacyContext, from: string,to: string,kind: Exclude<ProposalKind,'call'>,emitFeedback = true): DiplomacyResult {
   const action = proposalAction[kind], reason = actionBlockReason(ctx,from,to,action);
   if (reason) return result(ctx,false,reason);
   const day = diplomacyDay(ctx.date);
@@ -45,7 +46,7 @@ export function offerAgreement(ctx: DiplomacyContext, from: string,to: string,ki
   const proposal: DiplomaticProposal = { id: `${kind}:${from}:${to}:${day}`,kind,from,to,createdAt: day,expiresAt: day+B.proposalDuration };
   const relations = updateRelation(ctx.relations,from,to,r => ({...r,
     proposals: [...(r.proposals ?? []),proposal],cooldowns: {...r.cooldowns,[`${from}:${action}`]: day+B.actionCooldown} }));
-  return result({...ctx,relations},true,`Proposta enviada a ${to}.`);
+  return result({...ctx,relations},true,emitFeedback ? `Proposta enviada a ${to}.` : '');
 }
 /** Shared response checks; proposals and UI use the same agreement rules. */
 export function agreementResponseBlockReason(ctx: DiplomacyContext,from: string,to: string,kind: Exclude<ProposalKind,'call'>): string | undefined {
@@ -54,14 +55,14 @@ export function agreementResponseBlockReason(ctx: DiplomacyContext,from: string,
   const relations = updateRelation(ctx.relations,from,to,r => ({...r,cooldowns: {...r.cooldowns,[`${from}:${proposalAction[kind]}`]: day}}));
   return actionBlockReason({...ctx,relations},from,to,proposalAction[kind]);
 }
-export function respondAgreement(ctx: DiplomacyContext, from: string,to: string,kind: Exclude<ProposalKind,'call'>,accept: boolean): DiplomacyResult {
+export function respondAgreement(ctx: DiplomacyContext, from: string,to: string,kind: Exclude<ProposalKind,'call'>,accept: boolean,emitFeedback = true): DiplomacyResult {
   const r = getRelation(ctx.relations,from,to),day = diplomacyDay(ctx.date);
   if (!r?.proposals?.some(p => p.from === from && p.to === to && p.kind === kind && p.expiresAt > day)) return result(ctx,false,'Proposta não existe ou expirou');
   const aiRefusal = !accept && r.proposals?.some(p => p.from === from && p.to === to && p.kind === kind && p.aiToPlayer);
   const clean = updateRelation(ctx.relations,from,to,r => ({...r,
     ...(aiRefusal ? {cooldowns: {...r.cooldowns,[`${from}:aiProposalRetry:${kind}`]: day+B.aiRejectedProposalRetryDays}} : {}),
     proposals: r.proposals?.filter(p => !(p.kind === kind && p.from === from && p.to === to))}));
-  if (!accept) return result({...ctx,relations: clean},true,`${to} recusou a proposta de ${kind === 'alliance' ? 'aliança' : kind === 'nap' ? 'pacto' : 'acesso'}.`);
+  if (!accept) return result({...ctx,relations: clean},true,emitFeedback ? `${to} recusou a proposta de ${kind === 'alliance' ? 'aliança' : kind === 'nap' ? 'pacto' : 'acesso'}.` : '');
   // Revalidate conditions, excluding the sender's offer cooldown.
   const reason = agreementResponseBlockReason({...ctx,relations: clean},from,to,kind);
   if (reason) return result({...ctx,relations: clean},false,reason);
@@ -69,7 +70,7 @@ export function respondAgreement(ctx: DiplomacyContext, from: string,to: string,
     ...(kind === 'alliance' ? {alliance: {since: day}} : kind === 'nap' ? {nonAggressionPact: {since: day,expiresAt: day+B.napDuration}}
       : {militaryAccess: [...new Set([...(r.militaryAccess ?? []),to])]}),
   }));
-  return result({...ctx,relations},true,`${to} aceitou sua proposta de ${kind === 'alliance' ? 'aliança' : kind === 'nap' ? 'pacto de não agressão' : 'acesso militar'}.`);
+  return result({...ctx,relations},true,emitFeedback ? `${to} aceitou sua proposta de ${kind === 'alliance' ? 'aliança' : kind === 'nap' ? 'pacto de não agressão' : 'acesso militar'}.` : '');
 }
 export const offerAlliance = (c: DiplomacyContext,a: string,b: string) => offerAgreement(c,a,b,'alliance');
 export const acceptAlliance = (c: DiplomacyContext,a: string,b: string) => respondAgreement(c,a,b,'alliance',true);
@@ -79,24 +80,24 @@ export const acceptNonAggressionPact = (c: DiplomacyContext,a: string,b: string)
 export const rejectNonAggressionPact = (c: DiplomacyContext,a: string,b: string) => respondAgreement(c,a,b,'nap',false);
 export const requestMilitaryAccess = (c: DiplomacyContext,a: string,b: string) => offerAgreement(c,a,b,'access');
 export const grantMilitaryAccess = (c: DiplomacyContext,grantor: string,visitor: string) => respondAgreement(c,visitor,grantor,'access',true);
-export function breakAgreement(ctx: DiplomacyContext,a: string,b: string,kind: 'alliance' | 'nap'): DiplomacyResult {
+export function breakAgreement(ctx: DiplomacyContext,a: string,b: string,kind: 'alliance' | 'nap',emitFeedback = true): DiplomacyResult {
   const reason = actionBlockReason(ctx,a,b,kind === 'alliance' ? 'breakAlliance' : 'breakNap'); if (reason) return result(ctx,false,reason);
   let relations = updateRelation(ctx.relations,a,b,r => ({...r,...(kind === 'alliance' ? {alliance: undefined} : {nonAggressionPact: undefined,lastNapBroken: {by: a,at: diplomacyDay(ctx.date)}})}));
   relations = changeOpinion(relations,a,b,kind === 'alliance' ? B.breakAllianceOpinionPenalty : B.breakNapOpinionPenalty);
   relations = changeTrust(relations,a,b,kind === 'alliance' ? B.breakAllianceTrustPenalty : B.breakNapTrustPenalty);
-  return result({...ctx,relations},true,`${a} rompeu ${kind === 'alliance' ? 'a aliança' : 'o pacto'} com ${b}.`);
+  return result({...ctx,relations},true,emitFeedback ? `${a} rompeu ${kind === 'alliance' ? 'a aliança' : 'o pacto'} com ${b}.` : '');
 }
-export const breakAlliance = (c: DiplomacyContext,a: string,b: string) => breakAgreement(c,a,b,'alliance');
-export const breakNonAggressionPact = (c: DiplomacyContext,a: string,b: string) => breakAgreement(c,a,b,'nap');
+export const breakAlliance = (c: DiplomacyContext,a: string,b: string,emitFeedback = true) => breakAgreement(c,a,b,'alliance',emitFeedback);
+export const breakNonAggressionPact = (c: DiplomacyContext,a: string,b: string,emitFeedback = true) => breakAgreement(c,a,b,'nap',emitFeedback);
 export function revokeMilitaryAccess(ctx: DiplomacyContext,grantor: string,visitor: string): DiplomacyResult {
   const reason = actionBlockReason(ctx,grantor,visitor,'revokeAccess'); if (reason) return result(ctx,false,reason);
   const relations = updateRelation(ctx.relations,grantor,visitor,r => ({...r,militaryAccess: r.militaryAccess?.filter(t => t !== grantor)}));
   return result({...ctx,relations},true,`${grantor} revogou o acesso de ${visitor}.`);
 }
-export function guaranteeIndependence(ctx: DiplomacyContext,a: string,b: string): DiplomacyResult {
+export function guaranteeIndependence(ctx: DiplomacyContext,a: string,b: string,emitFeedback = true): DiplomacyResult {
   const reason = actionBlockReason(ctx,a,b,'guarantee'); if (reason) return result(ctx,false,reason);
   const relations = updateRelation(ctx.relations,a,b,r => ({...r,guarantees: [...new Set([...(r.guarantees ?? []),a])]}));
-  return result({...ctx,relations},true,`${b} está garantido por ${a}.`);
+  return result({...ctx,relations},true,emitFeedback ? `${b} está garantido por ${a}.` : '');
 }
 export function withdrawGuarantee(ctx: DiplomacyContext,a: string,b: string): DiplomacyResult {
   const reason = actionBlockReason(ctx,a,b,'withdrawGuarantee'); if (reason) return result(ctx,false,reason);

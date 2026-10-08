@@ -1,0 +1,141 @@
+{
+  "proposalCycle": {
+    "before": {
+      "samples": 1,
+      "median": 61480.451700000005,
+      "p95": 61480.451700000005,
+      "max": 61480.451700000005,
+      "milliseconds": [
+        61480.451700000005
+      ],
+      "profile": {
+        "date": {
+          "year": 1444,
+          "month": 11,
+          "day": 24
+        },
+        "phases": {
+          "proposalCollection": {
+            "total": 0.6377999999999702,
+            "count": 1,
+            "max": 0.6377999999999702
+          },
+          "relationEvaluation": {
+            "total": 7021.77540000013,
+            "count": 120000,
+            "max": 1.4945000000000164,
+            "context": {
+              "from": "PRY",
+              "to": "BOL"
+            }
+          },
+          "allianceLogic": {
+            "total": 207.17630000036002,
+            "count": 40188,
+            "max": 7.158899999999903,
+            "context": {
+              "from": "ETH",
+              "to": "SOM"
+            }
+          },
+          "neighborEvaluation": {
+            "total": 750.1566999991228,
+            "count": 40000,
+            "max": 0.33420000000478467,
+            "context": {
+              "from": "KEN",
+              "to": "LCA"
+            }
+          },
+          "warEvaluation": {
+            "total": 13.114100000365397,
+            "count": 40000,
+            "max": 0.08539999999629799,
+            "context": {
+              "from": "LBN",
+              "to": "SLE"
+            }
+          },
+          "politicalTie": {
+            "total": 9827.894999999944,
+            "count": 40000,
+            "max": 0.7173999999977241,
+            "context": {
+              "from": "BFA",
+              "to": "CAF"
+            }
+          },
+          "strategicThreat": {
+            "total": 40161.81109999979,
+            "count": 40000,
+            "max": 6.257800000000316,
+            "context": {
+              "from": "ARG",
+              "to": "KNA"
+            }
+          },
+          "nonAggressionLogic": {
+            "total": 376.52089999947566,
+            "count": 40000,
+            "max": 0.8268000000025495,
+            "context": {
+              "from": "DZA",
+              "to": "NER"
+            }
+          },
+          "accessLogic": {
+            "total": 3021.8105000005835,
+            "count": 40000,
+            "max": 17.989499999996042,
+            "context": {
+              "from": "CHN",
+              "to": "RUS"
+            }
+          },
+          "candidateSorting": {
+            "total": 7.0284000000028755,
+            "count": 1,
+            "max": 7.0284000000028755
+          },
+          "relationUpdates": {
+            "total": 7.610399999990477,
+            "count": 6,
+            "max": 1.8997000000017579,
+            "context": {
+              "from": "AZE",
+              "to": "ARM"
+            }
+          },
+          "other": {
+            "total": 84.55110000023706,
+            "count": 1,
+            "max": 84.55110000023706
+          },
+          "TOTAL": {
+            "total": 61480.0877,
+            "count": 1,
+            "max": 61480.0877
+          }
+        },
+        "counts": {
+          "countries": 201,
+          "relations": 20100,
+          "wars": 0,
+          "proposals": 0,
+          "proposalsProcessed": 0,
+          "maintenancePairs": 40000,
+          "candidatePairs": 40000
+        },
+        "slowest": {
+          "phase": "accessLogic",
+          "duration": 17.989499999996042,
+          "context": {
+            "from": "CHN",
+            "to": "RUS"
+          }
+        }
+      },
+      "sha256": "70621f4cd11441149479e1f9f71eb0a5d6d7e41492887c1d556f1d657e6fe934"
+    }
+  }
+}

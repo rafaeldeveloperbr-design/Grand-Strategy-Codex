@@ -109,13 +109,13 @@ export function validatePolicyChange(country:Country,lawId:string,date:GameDate,
   else if(country.isAnnexed || country.tag.startsWith('rebel_') || !country.provinces.length) reason='País sem governo territorial válido';
   return {allowed:reason===null,reason,cost,goldCost:law?.costGold ?? 0,remaining};
 }
-export function changeGovernmentPolicy(country:Country,lawId:string,date:GameDate,atWar=false) {
+export function changeGovernmentPolicy(country:Country,lawId:string,date:GameDate,atWar=false,emitFeedback=true) {
   const validation=validatePolicyChange(country,lawId,date,atWar);if(!validation.allowed) return {...validation,country,message:validation.reason!};
   const law=LAWS[lawId],politics=normalizePolitics(country.politics,country.tag),old=country.activeLaws[law.category] ?? DEFAULT_LAWS[law.category]!;
   const approval={...politics.approval};
   for(const id of GROUP_IDS) approval[id]=clampPolitics(approval[id]+(B.policyApproval[lawId]?.[id] ?? 0)-(B.policyApproval[old]?.[id] ?? 0),-100,100);
-  const negative=GROUP_IDS.map(id => ({id,delta:(B.policyApproval[lawId]?.[id] ?? 0)-(B.policyApproval[old]?.[id] ?? 0)})).filter(g => g.delta<0).sort((a,b) => a.delta-b.delta)[0];
-  return {...validation,country:{...country,activeLaws:{...country.activeLaws,[law.category]:lawId},resources:{...country.resources,gold:country.resources.gold-law.costGold,stability:clampPolitics(country.resources.stability-B.policyStabilityCost)},politics:{...politics,approval,politicalCapital:politics.politicalCapital-validation.cost,legitimacy:clampPolitics(politics.legitimacy-B.policyLegitimacyCost),lastPolicyChangeDay:politicsDay(date)}},message:`${country.name} adotou ${law.name}.${negative ? ` ${GROUP_LABELS[negative.id]} desaprovam a mudança.` : ''}`};
+  const negative=emitFeedback ? GROUP_IDS.map(id => ({id,delta:(B.policyApproval[lawId]?.[id] ?? 0)-(B.policyApproval[old]?.[id] ?? 0)})).filter(g => g.delta<0).sort((a,b) => a.delta-b.delta)[0] : undefined;
+  return {...validation,country:{...country,activeLaws:{...country.activeLaws,[law.category]:lawId},resources:{...country.resources,gold:country.resources.gold-law.costGold,stability:clampPolitics(country.resources.stability-B.policyStabilityCost)},politics:{...politics,approval,politicalCapital:politics.politicalCapital-validation.cost,legitimacy:clampPolitics(politics.legitimacy-B.policyLegitimacyCost),lastPolicyChangeDay:politicsDay(date)}},message:emitFeedback ? `${country.name} adotou ${law.name}.${negative ? ` ${GROUP_LABELS[negative.id]} desaprovam a mudança.` : ''}` : ''};
 }
 export function choosePoliticalPolicy(country:Country,ctx:PoliticsContext): string|null {
   const i=politicalIndicators(country,ctx),p=normalizePolitics(country.politics,country.tag),A=B.ai;
@@ -133,7 +133,7 @@ export function choosePoliticalPolicy(country:Country,ctx:PoliticsContext): stri
   const legacy=chooseAILaw(country,ctx.provinces,{atWar:i.atWar});
   return legacy && validatePolicyChange(country,legacy,ctx.date,i.atWar).allowed ? legacy : null;
 }
-export function processPoliticalTick(countries:Country[],ctx:PoliticsContext,playerTag?:string) {
+export function processPoliticalTick(countries:Country[],ctx:PoliticsContext,playerTag?:string,emitFeedback=true) {
   const messages:string[]=[],day=politicsDay(ctx.date);
   const result=countries.map(original => {
     if(original.isAnnexed || original.tag.startsWith('rebel_') || !ctx.provinces.some(p => p.owner===original.tag)) return original;
@@ -149,7 +149,7 @@ export function processPoliticalTick(countries:Country[],ctx:PoliticsContext,pla
     p={...country.politics!,legitimacy:drift(p.legitimacy,legitimacyTarget,B.legitimacyDrift),politicalCapital:clampPolitics(p.politicalCapital+B.politicalCapitalGain*(p.legitimacy+country.resources.stability+support)/300),lastTickDay:day};
     country={...country,politics:p,resources:{...country.resources,stability:drift(country.resources.stability,stabilityTarget,B.stabilityDrift)}};
     if(playerTag && country.tag!==playerTag) {
-      const law=choosePoliticalPolicy(country,ctx);if(law) {const changed=changeGovernmentPolicy(country,law,ctx.date,i.atWar);country=changed.country;messages.push(changed.message);}
+      const law=choosePoliticalPolicy(country,ctx);if(law) {const changed=changeGovernmentPolicy(country,law,ctx.date,i.atWar,emitFeedback);country=changed.country;if(emitFeedback) messages.push(changed.message);}
     }
     return country;
   });return {countries:result,messages};

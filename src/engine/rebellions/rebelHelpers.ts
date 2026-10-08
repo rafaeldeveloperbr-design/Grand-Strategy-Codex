@@ -105,7 +105,7 @@ export function moveSeparatistArmy(
   if (!targetProvince) return null;
 
   if (!allowHome && targetProvince.owner === army.originalOwner) {
-    console.log(`❌ moveSeparatistArmy: bloqueado (alvo ${targetProvince.name} pertence a ${targetProvince.owner}, que é o originalOwner ${army.originalOwner})`);
+
     return null;
   }
 

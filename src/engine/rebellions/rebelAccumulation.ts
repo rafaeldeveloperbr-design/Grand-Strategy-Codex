@@ -1,7 +1,6 @@
 import { Army, Province } from '../../types';
 import {
-  isRebelArmy,
-  getArmyTotalTroops
+  isRebelArmy
 } from './rebelHelpers';
 
 /**
@@ -27,7 +26,6 @@ export function mergeRebelArmies(armies: Army[]): Army[] {
       target.regiments = [...target.regiments, ...army.regiments].map(regiment => ({ ...regiment }));
       target.separatistMode = target.separatistMode || army.separatistMode;
       result[idx] = target;
-      console.log(`🔀 Rebeldes de ${army.originalOwner} fundidos em ${army.location} (${getArmyTotalTroops(target)} tropas)`);
     } else {
       result.push({ ...army });
     }

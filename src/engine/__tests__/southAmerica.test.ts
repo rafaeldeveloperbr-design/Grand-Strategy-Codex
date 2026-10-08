@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { countries, mapMetadata, mapRegions, provincesData, validateMapTopology } from '../../data/map';
+import { assembleMap, countries, mapMetadata, mapRegions, provincesData, validateMapTopology } from '../../data/map';
+import { southAmerica } from '../../data/map/regions/southAmerica';
 import { createInitialArmies } from '../../data/map/initialState';
 import { getCountryCapitalId } from '../aiEngine/aiMovement';
 import { findPath } from '../military/movementEngine';
@@ -10,8 +11,9 @@ import { calculateDemand, calculateProduction } from '../market';
 import { transferProvince } from '../territoryTransfer';
 
 describe('South America V1 scenario', () => {
-  it('activates only South America, with descriptive IDs and the 13 requested countries', () => {
-    expect(mapRegions.map(region => region.id)).toEqual(['southAmerica']);
+  it('preserves the 56 South American provinces and 13 countries within the expanded world', () => {
+    const {countries,provincesData} = assembleMap([southAmerica]);
+    expect(mapRegions.map(region => region.id)).toEqual(['southAmerica','northAmerica']);
     expect(countries.map(country => country.tag).sort()).toEqual(['ARG', 'BOL', 'BRA', 'CHL', 'COL', 'ECU', 'GUF', 'GUY', 'PER', 'PRY', 'SUR', 'URY', 'VEN']);
     expect(provincesData).toHaveLength(56);
     expect(provincesData.every(province => /^sa_[a-z]{3}_[a-z_]+$/.test(province.id))).toBe(true);
@@ -58,7 +60,8 @@ describe('South America V1 scenario', () => {
 
   it('initializes valid capital armies and viable provincial markets without extreme values', () => {
     const armies = createInitialArmies(countries);
-    expect(armies).toHaveLength(13);
+    expect(armies).toHaveLength(27);
+    expect(armies.filter(a => southAmerica.countries.some(c => c.tag === a.owner))).toHaveLength(13);
     for (const army of armies) {
       const capital = provincesData.find(province => province.id === army.location)!;
       expect(capital.owner).toBe(army.owner);
@@ -110,7 +113,7 @@ describe('South America V1 scenario', () => {
     }
   });
 
-  it('rejects worlds from other maps without rejecting old South America saves without mapId', () => {
+  it('rejects worlds from other maps and accepts a full World V1 payload without mapId', () => {
     const save = { world: { provinces: provincesData, countries } } as SaveGameV2;
     expect(isSaveCompatibleWithActiveMap(save)).toBe(true);
     expect(isSaveCompatibleWithActiveMap({ ...save, mapId: 'fictitious' })).toBe(false);

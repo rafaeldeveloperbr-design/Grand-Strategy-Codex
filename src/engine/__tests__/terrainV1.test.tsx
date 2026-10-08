@@ -24,8 +24,8 @@ const terrainProvince = (terrain: TerrainType): Province => ({ ...base, terrain 
 const types = Object.keys(TERRAIN_DEFINITIONS) as TerrainType[];
 
 describe('Terrain V1 data and military integration', () => {
-  it('classifies every province, with six valid distinct colors and 13 countries', () => {
-    expect(provincesData).toHaveLength(56); expect(countries).toHaveLength(13);
+  it('classifies every province, across both regions with six valid distinct colors and 27 countries', () => {
+    expect(provincesData).toHaveLength(91); expect(countries).toHaveLength(27);
     expect(provincesData.every(p => isTerrainType(p.terrain))).toBe(true);
     expect(new Set(types.map(t => TERRAIN_DEFINITIONS[t].color)).size).toBe(6);
     expect(isTerrainType('urban')).toBe(false);

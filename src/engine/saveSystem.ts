@@ -194,6 +194,10 @@ function migrateRebellionSave(save: SaveGameV3): SaveGameV3 {
 function parseRawSave(rawString: string): SaveGameV3 | null {
   try {
     const parsed: unknown = JSON.parse(rawString);
+    if (parsed && typeof parsed === 'object' && 'mapId' in parsed && parsed.mapId && parsed.mapId !== mapMetadata.id) {
+      lastMilitaryLoadError = `Este save pertence a outro mapa e não pode ser carregado em ${mapMetadata.name}.`;
+      return null;
+    }
     validateMilitarySave(parsed);
 
     // V1 - legado sem version ou version 1

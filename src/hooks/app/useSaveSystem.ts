@@ -56,7 +56,7 @@ export function useSaveSystem(
     if (!saved && getSaveCompatibilityError()) addToast(getSaveCompatibilityError()!, 'error');
     if (saved) {
       if (!isSaveCompatibleWithActiveMap(saved)) {
-        addToast('Autosave de outro mapa. South America V1 iniciou uma nova partida.', 'info');
+        addToast(`Autosave de outro mapa. ${mapMetadata.name} iniciou uma nova partida.`, 'info');
         return;
       }
       setters.setPlayerCountryTag?.(saved.world.countries.some(country => country.tag === saved.technology.player.countryTag)
@@ -92,7 +92,7 @@ export function useSaveSystem(
       return;
     }
     if (!isSaveCompatibleWithActiveMap(saved)) {
-      addToast('Este save pertence a outro mapa e não pode ser carregado na South America V1.', 'error');
+      addToast(`Este save pertence a outro mapa e não pode ser carregado em ${mapMetadata.name}.`, 'error');
       return;
     }
     setters.setPlayerCountryTag?.(saved.world.countries.some(country => country.tag === saved.technology.player.countryTag)

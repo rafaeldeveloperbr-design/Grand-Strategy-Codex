@@ -21,9 +21,11 @@ describe('South America rendering and map controls', () => {
     const { x, y, w, h } = mapMetadata.initialViewBox;
     const initial = `${x} ${y} ${w} ${h}`;
     expect(svg.getAttribute('viewBox')).toBe(initial);
-    expect(container.querySelectorAll('[data-province-id]')).toHaveLength(56);
-    expect(container.querySelectorAll('.map__province-label')).toHaveLength(56);
-    expect([...container.querySelectorAll('text')].filter(text => text.textContent === '★')).toHaveLength(13);
+    expect(container.querySelectorAll('[data-province-id]')).toHaveLength(91);
+    expect(container.querySelectorAll('.map__province-label')).toHaveLength(91);
+    expect(container.querySelectorAll('[data-province-id^="sa_"]')).toHaveLength(56);
+    expect(container.querySelectorAll('[data-province-id^="na_"]')).toHaveLength(35);
+    expect([...container.querySelectorAll('text')].filter(text => text.textContent === '★')).toHaveLength(27);
     fireEvent.click(getByTitle('Zoom In'));
     expect(svg.getAttribute('viewBox')).not.toBe(initial);
     fireEvent.click(getByTitle('Reset'));
@@ -51,7 +53,7 @@ describe('South America rendering and map controls', () => {
   it('starts the full application with the active scenario and Brazil as player', () => {
     window.history.replaceState({}, '', '/?newgame=1');
     const { container } = render(<App />);
-    expect(container.querySelectorAll('[data-province-id]')).toHaveLength(56);
+    expect(container.querySelectorAll('[data-province-id]')).toHaveLength(91);
     expect(container.textContent).toContain('Brasil');
     expect(container.textContent).not.toContain('Império Aureliano');
   });

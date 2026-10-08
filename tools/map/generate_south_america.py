@@ -9,6 +9,7 @@ from pathlib import Path
 
 from shapely.geometry import Point, Polygon, shape
 from shapely.ops import transform, unary_union
+from world_projection import project
 
 ROOT = Path(__file__).resolve().parent
 DEST = ROOT.parents[1] / 'src/data/map/regions/southAmerica/geometry.ts'
@@ -24,10 +25,6 @@ def clip_half_plane(vertices, nx, ny, limit):
             t = da / (da - db)
             result.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
     return result
-
-
-def project(x, y, z=None):
-    return (x + 82) * 14, (13 - y) * 14
 
 
 def polygons(geometry):

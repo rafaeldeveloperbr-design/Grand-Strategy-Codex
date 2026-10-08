@@ -22,7 +22,12 @@ export interface MapRegion {
   /** Initial visual capitals; separate from mutable country ownership. */
   capitals: Readonly<Record<string, string>>;
   metadata?: MapMetadata;
+  /** Explicit expected land components; matching IDs merge across regions. */
+  landmasses?: readonly Landmass[];
 }
+
+export interface Landmass { id: string; provinceIds: readonly string[] }
+export interface MapValidationOptions { expectedLandmasses?: readonly Landmass[] }
 
 export interface TopologyProvince {
   id: string;
@@ -41,6 +46,7 @@ export type MapValidationIssueType =
   | 'duplicate-province-id' | 'duplicate-country-id'
   | 'missing-neighbor' | 'asymmetric-neighbor' | 'self-neighbor'
   | 'duplicate-neighbor' | 'isolated-province' | 'disconnected-components'
+  | 'unexpected-landmass-connection'
   | 'invalid-owner' | 'owner-mismatch' | 'missing-country-province'
   | 'unlisted-owned-province' | 'invalid-capital';
 

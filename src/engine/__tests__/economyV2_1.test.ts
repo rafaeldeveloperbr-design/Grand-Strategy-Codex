@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Country, GoodId, Province } from '../../types';
-import { countries as mapCountries, provincesData } from '../../data/map';
+import { assembleMap, countries as mapCountries, provincesData } from '../../data/map';
+import { southAmerica } from '../../data/map/regions/southAmerica';
 import { ALL_GOODS, calculateLocalPrice, createDefaultMarket, getStorageCapacity } from '../market';
 import { ECONOMY_V2_BALANCE as B } from '../economy/balance';
 import { aggregateNationalMarket, calculateImportDependency, strategicStockTarget } from '../economy/nationalMarket';
@@ -284,7 +285,8 @@ describe('Economy V2.1 integration and saves', () => {
     expect(imported.population.foodShortageDays).toBe(0);
   });
   it('runs 180 days on the actual South America economy and stops Brazil/Argentina trade at war', () => {
-    let ctx: InternationalTradeContext = {countries: structuredClone(mapCountries),provinces: structuredClone(provincesData),wars: [],relations: [],date: {year: 1444,month: 11,day: 11}};
+    const regionalMap = assembleMap([southAmerica]);
+    let ctx: InternationalTradeContext = {countries: structuredClone(regionalMap.countries),provinces: structuredClone(regionalMap.provincesData),wars: [],relations: [],date: {year: 1444,month: 11,day: 11}};
     let importedVolume = 0,tradeValue = 0;
     const tech = new Map(ctx.countries.map(c => [c.tag,createInitialTechState(c.tag)]));
     for (let day = 0; day < 180; day++) {

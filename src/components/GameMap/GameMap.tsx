@@ -1,4 +1,5 @@
 import { mapMetadata } from '../../data/map';
+import type { MapViewBox } from '../../data/map/types';
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { Province, Country, Army, Recruitment, BuildingConstruction, ActiveBattle, War, DiplomaticRelation } from '../../types';
 import { useMapControls } from './useMapControls';
@@ -16,6 +17,9 @@ const NO_WARS: War[] = [];
 const NO_RELATIONS: DiplomaticRelation[] = [];
 
 export interface MapProps {
+  initialViewBox?: MapViewBox;
+  selectionMode?: boolean;
+  selectedCountryTag?: string;
   provinces: Province[];
   countries: Country[];
   armies: Army[];
@@ -41,6 +45,9 @@ export interface MapProps {
 }
 
 export const GameMap: React.FC<MapProps> = ({
+  initialViewBox,
+  selectionMode = false,
+  selectedCountryTag,
   provinces,
   countries,
   armies,
@@ -94,7 +101,7 @@ export const GameMap: React.FC<MapProps> = ({
     handleMouseDown,
     handleMouseMovePan,
     handleMouseUp,
-  } = useMapControls(svgRef);
+  } = useMapControls(svgRef, initialViewBox);
   const capitalIds = war.capitals;
 
   const handleMouseEnter = (e: React.MouseEvent, province: Province) => {
@@ -132,7 +139,7 @@ export const GameMap: React.FC<MapProps> = ({
 
   return (
     <div className="map-container" ref={containerRef}>
-      <MapModeBar mode={mapMode} onChange={setMapMode} max={mapValues.max} />
+      {!selectionMode && <MapModeBar mode={mapMode} onChange={setMapMode} max={mapValues.max} />}
       {/* === Controles de Zoom === */}
       <div className="map__zoom-controls">
         <button className="map__zoom-btn" onClick={handleZoomIn} title="Zoom In">
@@ -148,7 +155,7 @@ export const GameMap: React.FC<MapProps> = ({
 
       {/* === Instruções === */}
       <div className="map__instructions">
-        <span>Clique: selecionar · Ctrl+clique: multi-seleção · Direito: mover/substituir · Shift+direito: waypoint · Escape: limpar seleção · Shift+arrastar: mapa</span>
+        <span>{selectionMode ? 'Clique: escolher país · Shift+arrastar: mapa' : <>Clique: selecionar · Ctrl+clique: multi-seleção · Direito: mover/substituir · Shift+direito: waypoint · Escape: limpar seleção · Shift+arrastar: mapa</>}</span>
       </div>
 
       {/* === SVG do Mapa === */}
@@ -188,6 +195,7 @@ export const GameMap: React.FC<MapProps> = ({
           buildingConstructions={buildingConstructions}
           recruitments={recruitments}
           selectedProvince={selectedProvince}
+          selectedCountryTag={selectedCountryTag}
           hoveredProvince={hoveredProvince}
           mapMode={mapMode}
           mapValues={mapValues}

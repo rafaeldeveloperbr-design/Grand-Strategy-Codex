@@ -1,0 +1,20 @@
+.country-selection { height: 100dvh; display: flex; flex-direction: column; background: var(--bg-app); color: var(--text-primary); }
+.country-selection header { padding: 12px 20px; }
+.country-selection h1 { font-size: 22px; margin: 0 0 6px; }
+.country-selection h2 { font-size: 18px; margin: 12px 0; }
+.country-selection p { margin: 6px 0; }
+.country-selection__body { display: flex; flex: 1; min-height: 0; }
+.country-selection__body > .map-container { flex: 1; min-width: 0; }
+.country-selection__panel { width: 350px; padding: 16px; overflow-y: auto; background: var(--bg-panel); }
+.country-selection input { width: 100%; padding: 10px; margin-top: 6px; background: var(--bg-app); color: inherit; border: 1px solid var(--gold); border-radius: 4px; }
+.country-selection button { text-align: left; padding: 8px; color: inherit; background: var(--bg-app); border: 1px solid transparent; border-radius: 4px; cursor: pointer; }
+.country-selection button:hover, .country-selection button[aria-pressed="true"] { border-color: var(--gold); }
+.country-selection__list { height: 190px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+.country-selection__list button { flex-shrink: 0; }
+.country-selection__color { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 8px; border: 1px solid currentColor; }
+.country-selection dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; }
+.country-selection dd { margin: 0; text-align: right; }
+.country-selection .country-selection__play { width: 100%; text-align: center; background: var(--gold); color: #151515; font-weight: bold; margin-top: 16px; }
+.country-selection button:disabled { opacity: .5; cursor: default; }
+.country-selection__saves { display: flex; flex-direction: column; gap: 4px; max-height: 150px; overflow: auto; }
+@media (max-width: 700px) { .country-selection__body { flex-direction: column; overflow: auto; } .country-selection__body > .map-container { min-height: 40dvh; flex: none; } .country-selection__panel { width: 100%; } }

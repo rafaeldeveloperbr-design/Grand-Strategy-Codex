@@ -25,10 +25,6 @@ export function processSeparatistAI(
     a => isRebelArmy(a) && a.separatistMode === true
   );
 
-  if (separatistArmies.length > 0) {
-    console.log(`🎯 processSeparatistAI: processando ${separatistArmies.length} exército(s) separatista(s)`);
-  }
-
   for (const army of separatistArmies) {
     if (!army.location || army.destination || army.inCombat) continue;
 
@@ -49,15 +45,13 @@ export function processSeparatistAI(
 
     if (historicNeighborTargets.length > 0) {
       const targetId = historicNeighborTargets[0];
-      const targetProv = provinces.find(p => p.id === targetId);
-      console.log(`🎯 ESTRATÉGIA 1: ${army.name} encontrou alvo ${targetProv?.name} (owner: ${targetProv?.owner}, original: ${targetProv?.originalOwner})`);
+
       const movedArmy = moveSeparatistArmy(army, targetId, provinces);
-      console.log(`🎯 ESTRATÉGIA 1: moveSeparatistArmy retornou:`, movedArmy ? '✅ sucesso' : '❌ null');
+
       if (movedArmy) {
         const idx = updatedArmies.findIndex(a => a.id === army.id);
         if (idx !== -1) {
           updatedArmies[idx] = movedArmy;
-          console.log(`⚔️ ${army.name} ATACA ${targetProv?.name} (território histórico)!`);
         }
         continue;
       }
@@ -91,7 +85,6 @@ export function processSeparatistAI(
           const idx = updatedArmies.findIndex(a => a.id === army.id);
           if (idx !== -1) {
             updatedArmies[idx] = movedArmy;
-            console.log(`🚶 ${army.name} transitando por ${transitProv.name}`);
           }
           moved = true;
           break;
@@ -130,7 +123,6 @@ export function processSeparatistAI(
               path: bestPath,
               targetDestination: bestTarget.id,
             };
-            console.log(`🚶 ${army.name} marchando para ${bestTarget.name} (rota histórica: ${bestPath.length})`);
           }
           continue;
         }
@@ -150,7 +142,6 @@ export function processSeparatistAI(
           const idx = updatedArmies.findIndex(a => a.id === army.id);
           if (idx !== -1) {
             updatedArmies[idx] = movedArmy;
-            console.log(`🏠 ${army.name} voltando para casa`);
           }
           continue;
         }
@@ -175,14 +166,11 @@ export function processSeparatistAI(
           const idx = updatedArmies.findIndex(a => a.id === army.id);
           if (idx !== -1) {
             updatedArmies[idx] = movedArmy;
-            console.log(`🏠 ${army.name} retornando para ${bestHome.name}`);
           }
           continue;
         }
       }
     }
-
-    console.log(`🛡️ ${army.name}: aguardando em ${currentProvince.name} (nenhum território histórico ocupado)`);
   }
 
   return [...updatedArmies, ...modern];

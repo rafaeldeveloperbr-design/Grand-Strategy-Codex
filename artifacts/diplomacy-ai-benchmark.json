@@ -1,0 +1,543 @@
+{
+  "normal": {
+    "before": {
+      "samples": 3,
+      "median": 0.75649999999996,
+      "p95": 1.1071999999999207,
+      "max": 1.1071999999999207,
+      "milliseconds": [
+        1.1071999999999207,
+        0.75649999999996,
+        0.5847000000001117
+      ],
+      "profile": {
+        "date": {
+          "year": 1444,
+          "month": 11,
+          "day": 25
+        },
+        "phases": {
+          "proposalCollection": {
+            "total": 0.5211000000001604,
+            "count": 1,
+            "max": 0.5211000000001604
+          },
+          "other": {
+            "total": 0.04119999999988977,
+            "count": 1,
+            "max": 0.04119999999988977
+          },
+          "TOTAL": {
+            "total": 0.5623000000000502,
+            "count": 1,
+            "max": 0.5623000000000502
+          }
+        },
+        "counts": {
+          "countries": 201,
+          "relations": 20100,
+          "wars": 0,
+          "proposals": 0,
+          "proposalsProcessed": 0,
+          "maintenancePairs": 0,
+          "candidatePairs": 0
+        },
+        "slowest": {
+          "phase": "proposalCollection",
+          "duration": 0.5211000000001604
+        }
+      },
+      "sha256": "3a610beb59fba8f09cfd7f79f86a93df66f5dcea9d50daa3e7a4a89da404d9de"
+    },
+    "after": {
+      "samples": 9,
+      "median": 0.9698000000000775,
+      "p95": 1.1343000000001666,
+      "max": 1.1343000000001666,
+      "milliseconds": [
+        1.0729000000001179,
+        0.8131000000000768,
+        0.7689000000000306,
+        0.7204999999999018,
+        0.6867999999999483,
+        0.9698000000000775,
+        1.1343000000001666,
+        1.0949000000000524,
+        1.0978000000000065
+      ],
+      "profile": {
+        "date": {
+          "year": 1444,
+          "month": 11,
+          "day": 25
+        },
+        "phases": {
+          "proposalCollection": {
+            "total": 0.9981999999999971,
+            "count": 1,
+            "max": 0.9981999999999971
+          },
+          "other": {
+            "total": 0.06610000000000582,
+            "count": 1,
+            "max": 0.06610000000000582
+          },
+          "TOTAL": {
+            "total": 1.064300000000003,
+            "count": 1,
+            "max": 1.064300000000003
+          }
+        },
+        "counts": {
+          "countries": 201,
+          "relations": 20100,
+          "wars": 0,
+          "proposals": 0,
+          "proposalsProcessed": 0,
+          "maintenancePairs": 0,
+          "candidatePairs": 0
+        },
+        "slowest": {
+          "phase": "proposalCollection",
+          "duration": 0.9981999999999971
+        }
+      },
+      "sha256": "3a610beb59fba8f09cfd7f79f86a93df66f5dcea9d50daa3e7a4a89da404d9de"
+    }
+  },
+  "maintenance": {
+    "before": {
+      "samples": 3,
+      "median": 3621.8518999999997,
+      "p95": 3790.5224000000003,
+      "max": 3790.5224000000003,
+      "milliseconds": [
+        3790.5224000000003,
+        3561.9960999999994,
+        3621.8518999999997
+      ],
+      "profile": {
+        "date": {
+          "year": 1444,
+          "month": 12,
+          "day": 24
+        },
+        "phases": {
+          "proposalCollection": {
+            "total": 0.16679999999905704,
+            "count": 1,
+            "max": 0.16679999999905704
+          },
+          "relationEvaluation": {
+            "total": 3404.1079000004047,
+            "count": 80000,
+            "max": 0.4246000000002823,
+            "context": {
+              "from": "RUS",
+              "to": "KHM"
+            }
+          },
+          "allianceLogic": {
+            "total": 203.27889999999388,
+            "count": 188,
+            "max": 11.986399999999776,
+            "context": {
+              "from": "RUS",
+              "to": "MNG"
+            }
+          },
+          "other": {
+            "total": 14.272499999602587,
+            "count": 1,
+            "max": 14.272499999602587
+          },
+          "TOTAL": {
+            "total": 3621.8261,
+            "count": 1,
+            "max": 3621.8261
+          }
+        },
+        "counts": {
+          "countries": 201,
+          "relations": 20100,
+          "wars": 0,
+          "proposals": 0,
+          "proposalsProcessed": 0,
+          "maintenancePairs": 40000,
+          "candidatePairs": 0
+        },
+        "slowest": {
+          "phase": "allianceLogic",
+          "duration": 11.986399999999776,
+          "context": {
+            "from": "RUS",
+            "to": "MNG"
+          }
+        }
+      },
+      "sha256": "09c80916b5273aec946d9d8154a3b7d0bf8646743b6cd050d3217d0d54783f6a"
+    },
+    "after": {
+      "samples": 9,
+      "median": 260.71100000000024,
+      "p95": 274.1863000000001,
+      "max": 274.1863000000001,
+      "milliseconds": [
+        274.1863000000001,
+        267.0661,
+        262.8565000000001,
+        254.60680000000002,
+        262.87120000000004,
+        257.6803,
+        252.98599999999988,
+        258.3773000000001,
+        260.71100000000024
+      ],
+      "profile": {
+        "date": {
+          "year": 1444,
+          "month": 12,
+          "day": 24
+        },
+        "phases": {
+          "proposalCollection": {
+            "total": 0.17160000000012587,
+            "count": 1,
+            "max": 0.17160000000012587
+          },
+          "indexBuild": {
+            "total": 53.528099999999995,
+            "count": 189,
+            "max": 4.857199999999921
+          },
+          "relationEvaluation": {
+            "total": 7.380000000001473,
+            "count": 80000,
+            "max": 0.03600000000005821,
+            "context": {
+              "from": "SSD",
+              "to": "CAF"
+            }
+          },
+          "allianceLogic": {
+            "total": 189.29350000000204,
+            "count": 188,
+            "max": 7.556999999999789,
+            "context": {
+              "from": "CHN",
+              "to": "NPL"
+            }
+          },
+          "other": {
+            "total": 10.320099999996273,
+            "count": 1,
+            "max": 10.320099999996273
+          },
+          "TOTAL": {
+            "total": 260.6932999999999,
+            "count": 1,
+            "max": 260.6932999999999
+          }
+        },
+        "counts": {
+          "countries": 201,
+          "relations": 20100,
+          "wars": 0,
+          "proposals": 0,
+          "proposalsProcessed": 0,
+          "maintenancePairs": 40000,
+          "candidatePairs": 0
+        },
+        "slowest": {
+          "phase": "allianceLogic",
+          "duration": 7.556999999999789,
+          "context": {
+            "from": "CHN",
+            "to": "NPL"
+          }
+        },
+        "slowestPair": {
+          "phase": "allianceLogic",
+          "duration": 7.556999999999789,
+          "context": {
+            "from": "CHN",
+            "to": "NPL"
+          }
+        }
+      },
+      "sha256": "09c80916b5273aec946d9d8154a3b7d0bf8646743b6cd050d3217d0d54783f6a"
+    }
+  },
+  "proposalCycle": {
+    "before": {
+      "samples": 3,
+      "median": 57118.51699999999,
+      "p95": 61841.4874,
+      "max": 61841.4874,
+      "milliseconds": [
+        61841.4874,
+        57118.51699999999,
+        56643.20469999997
+      ],
+      "profile": {
+        "date": {
+          "year": 1444,
+          "month": 11,
+          "day": 24
+        },
+        "phases": {
+          "proposalCollection": {
+            "total": 0.18619999999646097,
+            "count": 1,
+            "max": 0.18619999999646097
+          },
+          "relationEvaluation": {
+            "total": 53546.52479999399,
+            "count": 160000,
+            "max": 3.9214999999967404,
+            "context": {
+              "from": "BTN",
+              "to": "TON"
+            }
+          },
+          "allianceLogic": {
+            "total": 195.97750000093947,
+            "count": 40188,
+            "max": 6.961900000023888,
+            "context": {
+              "from": "IND",
+              "to": "PAK"
+            }
+          },
+          "nonAggressionLogic": {
+            "total": 393.1542000013578,
+            "count": 40000,
+            "max": 1.4072000000160187,
+            "context": {
+              "from": "ETH",
+              "to": "DJI"
+            }
+          },
+          "accessLogic": {
+            "total": 2436.6859000009717,
+            "count": 40000,
+            "max": 14.009500000014668,
+            "context": {
+              "from": "CHN",
+              "to": "RUS"
+            }
+          },
+          "candidateSorting": {
+            "total": 0.48099999999976717,
+            "count": 1,
+            "max": 0.48099999999976717
+          },
+          "relationUpdates": {
+            "total": 7.27649999994901,
+            "count": 6,
+            "max": 1.800199999997858,
+            "context": {
+              "from": "AZE",
+              "to": "ARM"
+            }
+          },
+          "other": {
+            "total": 62.901300002791686,
+            "count": 1,
+            "max": 62.901300002791686
+          },
+          "TOTAL": {
+            "total": 56643.187399999995,
+            "count": 1,
+            "max": 56643.187399999995
+          }
+        },
+        "counts": {
+          "countries": 201,
+          "relations": 20100,
+          "wars": 0,
+          "proposals": 0,
+          "proposalsProcessed": 0,
+          "maintenancePairs": 40000,
+          "candidatePairs": 40000
+        },
+        "slowest": {
+          "phase": "accessLogic",
+          "duration": 14.009500000014668,
+          "context": {
+            "from": "CHN",
+            "to": "RUS"
+          }
+        }
+      },
+      "sha256": "70621f4cd11441149479e1f9f71eb0a5d6d7e41492887c1d556f1d657e6fe934"
+    },
+    "after": {
+      "samples": 9,
+      "median": 348.16839999999956,
+      "p95": 386.11270000000013,
+      "max": 386.11270000000013,
+      "milliseconds": [
+        386.11270000000013,
+        376.1855999999998,
+        352.71800000000076,
+        348.16839999999956,
+        347.77019999999993,
+        348.2563999999993,
+        345.8224,
+        346.0504000000001,
+        347.4927000000007
+      ],
+      "profile": {
+        "date": {
+          "year": 1444,
+          "month": 11,
+          "day": 24
+        },
+        "phases": {
+          "proposalCollection": {
+            "total": 0.19200000000000728,
+            "count": 1,
+            "max": 0.19200000000000728
+          },
+          "indexBuild": {
+            "total": 39.78989999999885,
+            "count": 192,
+            "max": 4.053299999999581
+          },
+          "relationEvaluation": {
+            "total": 12.077900000010231,
+            "count": 120000,
+            "max": 0.011899999999513966,
+            "context": {
+              "from": "VNM",
+              "to": "CRI"
+            }
+          },
+          "allianceLogic": {
+            "total": 189.8246000000181,
+            "count": 40188,
+            "max": 7.20850000000064,
+            "context": {
+              "from": "ZAF",
+              "to": "SWZ"
+            }
+          },
+          "neighborEvaluation": {
+            "total": 4.185299999946437,
+            "count": 40000,
+            "max": 0.01209999999991851,
+            "context": {
+              "from": "COD",
+              "to": "ZWE"
+            }
+          },
+          "warEvaluation": {
+            "total": 3.9271999999655236,
+            "count": 40000,
+            "max": 0.00889999999981228,
+            "context": {
+              "from": "PER",
+              "to": "LSO"
+            }
+          },
+          "politicalTie": {
+            "total": 7.343299999884039,
+            "count": 40000,
+            "max": 0.011399999999412103,
+            "context": {
+              "from": "BLZ",
+              "to": "FRA"
+            }
+          },
+          "strategicThreat": {
+            "total": 13.068499999964843,
+            "count": 40000,
+            "max": 0.01209999999991851,
+            "context": {
+              "from": "TZA",
+              "to": "ALB"
+            }
+          },
+          "nonAggressionLogic": {
+            "total": 3.219400000011774,
+            "count": 40000,
+            "max": 0.009000000000014552,
+            "context": {
+              "from": "RUS",
+              "to": "MDG"
+            }
+          },
+          "accessLogic": {
+            "total": 11.240999999988162,
+            "count": 40000,
+            "max": 0.0945000000001528,
+            "context": {
+              "from": "MNE",
+              "to": "AUT"
+            }
+          },
+          "candidateSorting": {
+            "total": 0.49179999999978463,
+            "count": 1,
+            "max": 0.49179999999978463
+          },
+          "relationUpdates": {
+            "total": 6.922899999999572,
+            "count": 6,
+            "max": 1.6145999999998821,
+            "context": {
+              "from": "AZE",
+              "to": "ARM"
+            }
+          },
+          "other": {
+            "total": 55.19330000021273,
+            "count": 1,
+            "max": 55.19330000021273
+          },
+          "TOTAL": {
+            "total": 347.47710000000006,
+            "count": 1,
+            "max": 347.47710000000006
+          }
+        },
+        "counts": {
+          "countries": 201,
+          "relations": 20100,
+          "wars": 0,
+          "proposals": 0,
+          "proposalsProcessed": 0,
+          "maintenancePairs": 40000,
+          "candidatePairs": 40000
+        },
+        "slowest": {
+          "phase": "allianceLogic",
+          "duration": 7.20850000000064,
+          "context": {
+            "from": "ZAF",
+            "to": "SWZ"
+          }
+        },
+        "slowestPair": {
+          "phase": "allianceLogic",
+          "duration": 7.20850000000064,
+          "context": {
+            "from": "ZAF",
+            "to": "SWZ"
+          }
+        }
+      },
+      "sha256": "70621f4cd11441149479e1f9f71eb0a5d6d7e41492887c1d556f1d657e6fe934"
+    }
+  },
+  "environment": {
+    "node": "v24.21.0",
+    "platform": "win32",
+    "arch": "x64",
+    "cpu": "11th Gen Intel(R) Core(TM) i5-11400F @ 2.60GHz",
+    "logicalCPUs": 12,
+    "profiling": "enabled",
+    "note": "Sample counts are recorded per scenario; input snapshot is unchanged between repetitions"
+  }
+}

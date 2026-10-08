@@ -1,14 +1,11 @@
 import { Army, Country, Province, Recruitment, BuildingConstruction } from '../../types';
 import { CountryTechState } from '../../types/technology';
 import { NATIONAL_FOCUSES, TECHNOLOGIES } from '../../data/technology';
-import { LAWS } from '../../constants/laws';
 
 import { rankRecruitmentProjects } from '../military/aiRecruitment';
 import { startBuilding } from '../buildings';
 import { calculateWorkforce, getFoodShortageStatus, normalizePopulation } from '../population';
 import { normalizeMarket } from '../market';
-import { UNIT_DEFINITIONS } from '../../data/units';
-import { getBuildingName, getUnitName } from '../../utils/translations';
 import { normalizeTechState, calculateTechBonuses, getTechnologyBlockReason, getFocusBlockReason, startNationalFocus, startTechnologyResearch } from '../technology';
 import { chooseAILaw, enactLaw } from '../government';
 import { queueRecruitment } from '../military/recruitmentEngine';
@@ -66,11 +63,6 @@ export function processAIEconomicDecisions(
       const selectedFocus = [...availableFocuses].sort((a, b) => Number(b.category === categoryPriority) - Number(a.category === categoryPriority))[0];
       const started = startNationalFocus(updatedTechState, selectedFocus.id);
       if (started) updatedTechState = started;
-
-      logs.push({
-        actionType: 'focus',
-        message: `Selecionou o Foco Nacional: ${selectedFocus.title}`,
-      });
     }
   }
 
@@ -95,7 +87,6 @@ export function processAIEconomicDecisions(
       if (research.techState) {
         updatedTechState = research.techState;
         updatedCountry = { ...updatedCountry, resources: { ...updatedCountry.resources, gold: updatedCountry.resources.gold - research.cost } };
-        logs.push({ actionType: 'tech', message: `Iniciou a pesquisa tecnológica: ${selected.title} (💰 ${research.cost})` });
       }
     }
   }
@@ -112,7 +103,6 @@ export function processAIEconomicDecisions(
     );
 
     if (result.allowed) {
-      const law = LAWS[selectedLaw];
 
       updatedCountry = {
         ...updatedCountry,
@@ -122,11 +112,6 @@ export function processAIEconomicDecisions(
           gold: result.gold,
         },
       };
-
-      logs.push({
-        actionType: 'government',
-        message: `Promulgou a lei "${law.name}" (💰 ${result.cost})`,
-      });
     }
   }
 
@@ -138,7 +123,6 @@ export function processAIEconomicDecisions(
       updatedProvinces = result.provinces;
       updatedConstructions = result.constructions;
       updatedCountry = { ...updatedCountry, resources: { ...updatedCountry.resources, gold: result.gold } };
-      logs.push({ actionType: 'building', message: getBuildingName(project.type) + ' - ' + project.province.name });
     }
   }
 
@@ -156,9 +140,6 @@ export function processAIEconomicDecisions(
             updatedCountry = result.country;
             updatedProvinces = updatedProvinces.map(province => province.id === result.province.id ? result.province : province);
             updatedRecruitments = [...updatedRecruitments, result.recruitment];
-            const def = UNIT_DEFINITIONS[chosenUnit];
-            const translatedUnit = getUnitName(chosenUnit);
-            logs.push({ actionType: 'military', message: `Iniciou treinamento de ${translatedUnit} em ${targetProvince.name} (💰 ${def.cost})` });
           }
         }
       }

@@ -184,7 +184,8 @@ describe('AI research slots', () => {
     expect(result.country.resources.gold).toBe(country.resources.gold-techs.reduce((sum,item) => sum+item.costGold,0));
     expect(start).toHaveBeenCalledTimes(2);
     expect(start.mock.calls.map(call => call[3])).toEqual([0,1]);
-    expect(block).toHaveBeenCalled(); expect(result.logs.filter(log => log.actionType === 'tech')).toHaveLength(2);
+    expect(block).toHaveBeenCalled(); expect(result.logs).toEqual([]);
+    expect(result.techState.researchSlots.filter(slot => slot.technologyId)).toHaveLength(2);
   });
   it('does not pay when canonical start fails in either slot', () => {
     vi.spyOn(engine,'startTechnologyResearch').mockReturnValue({techState:null,cost:300});

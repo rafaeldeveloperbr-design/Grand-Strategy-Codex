@@ -1,3 +1,5 @@
+import { createAITickProfiler, type AITickProfiler } from '../../engine/performance/aiTickProfiler';
+import { createMilitaryAIContext } from '../../engine/aiEngine/militaryAIContext';
 import { buildLogisticsNetworks } from '../../engine/logistics';
 import { processDiplomacyAI } from '../../engine/diplomacy';
 /**
@@ -17,7 +19,10 @@ import type { GameDate } from '../../types/date';
 import type { AIActionType } from '../../types/aiLog';
 import type { ToastType } from '../../types/toast';
 
+const defaultProfiler = createAITickProfiler(import.meta.env.DEV);
+
 type Params = {
+  profiler?: AITickProfiler;
   countries: Country[];
   provinces: Province[];
   armies: Army[];
@@ -46,21 +51,27 @@ export function processAiTick(p: Params) {
   let { countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates } = p;
   const { playerCountryTag, ceilingLogRef, snapshot, addAILog, formatGameDate } = p;
 
-  const diplomaticAI = processDiplomacyAI({relations,wars,countries,armies,provinces,date: snapshot.date},playerCountryTag);
-  const oldProposals = new Set(relations.flatMap(r => r.proposals ?? []).map(p => p.id));
-  for (const proposal of diplomaticAI.relations.flatMap(r => r.proposals ?? []).filter(q => q.to === playerCountryTag && !oldProposals.has(q.id))) {
-    const country = countries.find(c => c.tag === proposal.from);
-    p.addToast?.(`${country?.name ?? proposal.from} enviou ${proposal.kind === 'call' ? 'uma chamada à guerra' : proposal.kind === 'alliance' ? 'uma proposta de aliança' : proposal.kind === 'nap' ? 'um pacto de não agressão' : 'um pedido de acesso militar'}. Abra a diplomacia com esse país para responder.`, 'info','Diplomacia',formatGameDate(snapshot.date));
-  }
-  relations = diplomaticAI.relations; wars = diplomaticAI.wars;
-  diplomaticAI.messages.forEach(message => addAILog('Diplomacia', 'diplomacy', message, formatGameDate(snapshot.date)));
+  const profiler = p.profiler ?? defaultProfiler;
+  profiler.begin(snapshot.date);
 
-  const rebellionResponse = respondToRebellions(provinces, countries, armies, relations, p.snapshot.date, p.playerCountryTag);
+  const diplomaticAI = profiler.measure('diplomacyAI', () => processDiplomacyAI({relations,wars,countries,armies,provinces,date: snapshot.date},playerCountryTag,profiler.diplomacyProfiler));
+  profiler.measure('botLoggingFeedback', () => {
+    const oldProposals = new Set(relations.flatMap(r => r.proposals ?? []).map(p => p.id));
+    for (const proposal of diplomaticAI.relations.flatMap(r => r.proposals ?? []).filter(q => q.to === playerCountryTag && !oldProposals.has(q.id))) {
+      const country = countries.find(c => c.tag === proposal.from);
+      p.addToast?.(`${country?.name ?? proposal.from} enviou ${proposal.kind === 'call' ? 'uma chamada à guerra' : proposal.kind === 'alliance' ? 'uma proposta de aliança' : proposal.kind === 'nap' ? 'um pacto de não agressão' : 'um pedido de acesso militar'}. Abra a diplomacia com esse país para responder.`, 'info','Diplomacia',formatGameDate(snapshot.date));
+    }
+    relations = diplomaticAI.relations; wars = diplomaticAI.wars;
+    diplomaticAI.messages.forEach(message => addAILog('Diplomacia', 'diplomacy', message, formatGameDate(snapshot.date)));
+  });
+
+  const rebellionResponse = profiler.measure('rebellionResponse', () => respondToRebellions(provinces, countries, armies, relations, p.snapshot.date, p.playerCountryTag));
   ({ provinces, countries, armies } = rebellionResponse);
-  rebellionResponse.logs.forEach(message => addAILog('Rebeliões', 'government', message, formatGameDate(snapshot.date), '#e67e22'));
-  const logistics = buildLogisticsNetworks({countries,provinces,relations,wars});
+  profiler.measure('botLoggingFeedback', () => rebellionResponse.logs.forEach(message => addAILog('Rebeliões', 'government', message, formatGameDate(snapshot.date), '#e67e22')));
+  const logistics = profiler.measure('buildLogisticsNetworks', () => buildLogisticsNetworks({countries,provinces,relations,wars}));
   const activeBots = countries.filter(c => c && c.tag !== playerCountryTag);
   const dateString = formatGameDate(snapshot.date);
+  const militaryContext = profiler.militaryProfiler.measure('indexBuild', () => createMilitaryAIContext(countries, provinces, armies, relations, wars));
 
   activeBots.forEach((country: Country) => {
     const botTechState = currentBotTechStates.get(country.tag);
@@ -79,91 +90,72 @@ export function processAiTick(p: Params) {
         ceilingLogRef.current.delete(country.tag);
       }
 
-      const economicResult = processAIEconomicDecisions(country, provinces, botTechState, buildingConstructions, recruitments, dateString, canRecruitMilitary, botAtWar, logistics, armies);
+      const economicResult = profiler.measure('botEconomicDecisions', () => processAIEconomicDecisions(country, provinces, botTechState, buildingConstructions, recruitments, dateString, canRecruitMilitary, botAtWar, logistics, armies), country.tag);
       countries = countries.map(c => c.tag === country.tag ? economicResult.country : c);
+      militaryContext.countryByTag.set(country.tag, economicResult.country);
       currentBotTechStates.set(country.tag, economicResult.techState);
       buildingConstructions = economicResult.buildingConstructions;
       recruitments = economicResult.recruitments;
-      economicResult.logs.forEach(log => {
-        addAILog(
-          country.name,
-          log.actionType,
-          log.message,
-          dateString,
-          country.color
-        );
-      });
     }
 
-    const armiesBefore = armies.filter(a => a.owner === country.tag);
-    armies = processAI(country.tag,
+    armies = profiler.measure('botMilitaryAI', () => processAI(country.tag,
       armies,
       provinces,
       relations,
       wars,
-      countries,logistics);
-    const armiesAfter = armies.filter(a => a.owner === country.tag);
-    armiesAfter.forEach(armyAfter => {
-      const armyBefore = armiesBefore.find(a => a.id === armyAfter.id);
-      if (armyBefore && armyBefore.destination === null && armyAfter.destination !== null) {
-        const destProvince = provinces.find(pr => pr.id === armyAfter.destination);
-        if (destProvince) {
-          const isEnemy = destProvince.owner !== country.tag;
-          addAILog(country.name, 'military', `Exército moveu para ${destProvince.name}${isEnemy ? ' (território inimigo)' : ''}`, dateString, country.color);
-        }
-      }
-    });
+      countries,logistics,militaryContext,profiler.militaryProfiler), country.tag);
   });
 
-  const armiesToMerge = new Map<string, Army[]>();
-  for (const army of armies) {
-    if (army.owner === playerCountryTag) continue;
-    if (!army.location) continue;
-    const key = `${army.owner}_${army.location}`;
-    if (!armiesToMerge.has(key)) armiesToMerge.set(key, []);
-    armiesToMerge.get(key)!.push(army);
-  }
-  for (const [, armiesInProvince] of armiesToMerge) {
-    if (armiesInProvince.length < 2) continue;
-
-    const owner = armiesInProvince[0].owner;
-
-    const countryAtWar = wars.some(
-      war =>
-        war.attacker === owner ||
-        war.defender === owner
-    );
-
-
-
-    const totalTroops = armiesInProvince.reduce(
-      (sum, army) => sum + calculateArmySize(army),
-      0
-    );
-
-    const MAX_AI_STACK = countryAtWar
-      ? 12000
-      : 6000;
-
-    if (totalTroops > MAX_AI_STACK) {
-      continue;
+  profiler.measure('armyMerge', () => {
+    const armiesToMerge = new Map<string, Army[]>();
+    for (const army of armies) {
+      if (army.owner === playerCountryTag) continue;
+      if (!army.location) continue;
+      const key = `${army.owner}_${army.location}`;
+      if (!armiesToMerge.has(key)) armiesToMerge.set(key, []);
+      armiesToMerge.get(key)!.push(army);
     }
+    for (const [, armiesInProvince] of armiesToMerge) {
+      if (armiesInProvince.length < 2) continue;
 
-    const [primaryArmy, ...secondaryArmies] =
-      armiesInProvince;
+      const owner = armiesInProvince[0].owner;
 
-    let mergedArmy = primaryArmy;
-    for (const secondaryArmy of secondaryArmies) {
-      mergedArmy = mergeArmies(mergedArmy, secondaryArmy);
+      const countryAtWar = wars.some(
+        war =>
+          war.attacker === owner ||
+          war.defender === owner
+      );
+
+      const totalTroops = armiesInProvince.reduce(
+        (sum, army) => sum + calculateArmySize(army),
+        0
+      );
+
+      const MAX_AI_STACK = countryAtWar
+        ? 12000
+        : 6000;
+
+      if (totalTroops > MAX_AI_STACK) {
+        continue;
+      }
+
+      const [primaryArmy, ...secondaryArmies] =
+        armiesInProvince;
+
+      let mergedArmy = primaryArmy;
+      for (const secondaryArmy of secondaryArmies) {
+        mergedArmy = mergeArmies(mergedArmy, secondaryArmy);
+      }
+      const updatedPrimaryArmy = { ...mergedArmy, targetArmyId: null };
+      const secondaryIds = secondaryArmies.map(a => a.id);
+      armies = armies.filter(a => !secondaryIds.includes(a.id));
+      armies = armies.map(a => a.id === primaryArmy.id ? updatedPrimaryArmy : a);
     }
-    const updatedPrimaryArmy = { ...mergedArmy, targetArmyId: null };
-    const secondaryIds = secondaryArmies.map(a => a.id);
-    armies = armies.filter(a => !secondaryIds.includes(a.id));
-    armies = armies.map(a => a.id === primaryArmy.id ? updatedPrimaryArmy : a);
-  }
+  });
 
-  armies = processSeparatistAI(armies, provinces);
-  armies = planRebelMovement(armies, provinces, countries, relations, snapshot.date);
+  armies = profiler.measure('separatistAI', () => processSeparatistAI(armies, provinces));
+  armies = profiler.measure('rebelMovement', () => planRebelMovement(armies, provinces, countries, relations, snapshot.date));
+  profiler.finish();
 
   return { countries, provinces, armies, wars, relations, buildingConstructions, recruitments, currentBotTechStates };
 }

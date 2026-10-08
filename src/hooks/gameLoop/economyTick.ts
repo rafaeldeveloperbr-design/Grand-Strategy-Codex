@@ -51,7 +51,7 @@ type Params = {
 
 export function processEconomyTick(p: Params) {
   let { recruitments, armies, countries, provinces, buildingConstructions } = p;
-  const { playerCountryTag, date, addToast, addAILog, formatGameDate } = p;
+  const { playerCountryTag, date, addToast, formatGameDate } = p;
 
   // PASSO A: RECRUTAMENTO
   const stateFor = (tag: string) => tag === p.playerCountryTag ? p.playerTechState : p.botTechStates.get(tag);
@@ -61,6 +61,7 @@ export function processEconomyTick(p: Params) {
   recruitments = recruitResult.recruitments;
 
   for (const completed of recruitResult.completedRecruitments) {
+    if (completed.owner !== playerCountryTag) continue;
     const unitName = getUnitName(completed.unitType);
     const province = provinces.find(pr => pr.id === completed.provinceId);
     const provinceName = province?.name || 'província';
@@ -71,13 +72,6 @@ export function processEconomyTick(p: Params) {
         addToast(`Treinamento de ${completed.count}x ${unitName} concluído em ${provinceName}!`, 'success', 'Tropas Recrutadas', dateString);
       } else {
         addToast(`Treinamento de ${unitName} concluído em ${provinceName}!`, 'success', 'Tropa Recrutada', dateString);
-      }
-    }
-
-    if (completed.owner !== playerCountryTag) {
-      const country = countries.find(c => c.tag === completed.owner);
-      if (country && province) {
-        addAILog(country.name, 'military', `Recrutamento de ${unitName} concluído em ${provinceName}`, dateString, country.color);
       }
     }
   }
@@ -112,18 +106,10 @@ export function processEconomyTick(p: Params) {
         return pr;
       });
 
-      const buildingName = getBuildingName(completed.buildingType);
-      const dateString = formatGameDate(date);
-
       if (province.owner === playerCountryTag) {
+        const buildingName = getBuildingName(completed.buildingType);
+        const dateString = formatGameDate(date);
         addToast(`Construção de ${buildingName} finalizada em ${province.name}!`, 'success', 'Obra Concluída', dateString);
-      }
-
-      if (province.owner !== playerCountryTag) {
-        const country = countries.find(c => c.tag === province.owner);
-        if (country) {
-          addAILog(country.name, 'building', `Construção de ${buildingName} concluída em ${province.name}`, dateString, country.color);
-        }
       }
     }
   }

@@ -1,65 +1,38 @@
-import { createMilitaryAIContext, type MilitaryAIContext } from './militaryAIContext';
-import type { MilitaryAIProfiler } from '../performance/militaryAIProfiler';
-import { shouldUseDefensiveWarPosture } from '../diplomacy/warResolution';
-import { WAR_RESOLUTION_BALANCE as WB } from '../diplomacy/warResolutionBalance';
-import { buildLogisticsNetworks, getProvinceLogistics as rawGetProvinceLogistics, projectRouteLogistics as rawProjectRouteLogistics, LOGISTICS_BALANCE as LB, type LogisticsSnapshot } from '../logistics';
-import { getTerrainDefinition } from '../terrain';
-import { Army, Province, Country } from '../../types';
-import { DiplomaticRelation, War } from '../../types/diplomacy';
+// Frozen pre-index implementation for exact-state comparisons.
+import type { MilitaryAIProfiler } from '../../performance/militaryAIProfiler';
+import { shouldUseDefensiveWarPosture } from '../../diplomacy/warResolution';
+import { WAR_RESOLUTION_BALANCE as WB } from '../../diplomacy/warResolutionBalance';
+import { buildLogisticsNetworks, getProvinceLogistics as rawGetProvinceLogistics, projectRouteLogistics as rawProjectRouteLogistics, LOGISTICS_BALANCE as LB, type LogisticsSnapshot } from '../../logistics';
+import { getTerrainDefinition } from '../../terrain';
+import { Army, Province, Country } from '../../../types';
+import { DiplomaticRelation, War } from '../../../types/diplomacy';
+import { findPath as rawFindPath } from '../../military';
 import {
   calculateArmyCombatStats,
   calculateArmyMorale,
   calculateArmyOrganization,
   calculateArmySize,
   getArmySupply as rawGetArmySupply,
-} from '../military';
+} from '../../military';
 
-import { getBuildingLevel } from '../../data/buildings';
+import { getBuildingLevel } from '../../../data/buildings';
 import {
   canMoveToProvince as rawCanMoveToProvince,
   isAtWarWith as rawIsAtWarWith,
-} from './aiHelpers';
+} from '../../aiEngine/aiHelpers';
 
-function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfiler) {
+function createProcessor(profiler?: MilitaryAIProfiler) {
   const measure = <T>(phase: Parameters<MilitaryAIProfiler['measure']>[0], run: () => T): T => profiler ? profiler.measure(phase, run) : run();
-  let provinceTargets: Province[] | undefined;
-  const routes = new Map<string, string[]>();
-  const access = new Map<string, boolean>(), hostility = new Map<string, boolean>();
-  const canMoveToProvince = (...args: Parameters<typeof rawCanMoveToProvince>) => measure('accessChecks', () => {
-    const key = JSON.stringify(args.slice(0, 2));
-    if (!access.has(key)) { profiler?.count('relationLookups'); access.set(key, rawCanMoveToProvince(...args)); }
-    return access.get(key)!;
+  const findPath = (...args: Parameters<typeof rawFindPath>) => { profiler?.count('pathfindCalls'); profiler?.count('provinceScans', args[2].length); return measure('pathfinding', () => rawFindPath(...args)); };
+  const canMoveToProvince = (...args: Parameters<typeof rawCanMoveToProvince>) => { profiler?.count('relationLookups'); return measure('accessChecks', () => rawCanMoveToProvince(...args)); };
+  const isAtWarWith = (...args: Parameters<typeof rawIsAtWarWith>) => { profiler?.count('relationLookups'); return measure('accessChecks', () => rawIsAtWarWith(...args)); };
+  const isBorderProvince = (id: string, provinces: Province[], tag: string) => measure('borderEvaluation', () => {
+    const current = findProvince(provinces, p => p.id === id);
+    if (!current?.neighbors) return false;
+    return current.neighbors.some(n => { const p = findProvince(provinces, p => p.id === n); return p && p.owner !== tag; });
   });
-  const isAtWarWith = (...args: Parameters<typeof rawIsAtWarWith>) => measure('accessChecks', () => {
-    const key = JSON.stringify(args.slice(0, 2));
-    if (!hostility.has(key)) { profiler?.count('relationLookups'); hostility.set(key, rawIsAtWarWith(...args)); }
-    return hostility.get(key)!;
-  });
-  const findPath = (start: string, end: string, _provinces: Province[], tag: string, diplomacy: DiplomaticRelation[]): string[] => measure('pathfinding', () => {
-    const key = JSON.stringify([start, end, tag]);
-    const cached = routes.get(key);
-    if (cached) { profiler?.count('pathCacheHits'); return [...cached]; }
-    profiler?.count('pathfindCalls');
-    const index = context.pathProvinceById;
-    if (start === end || !index.has(start) || !index.has(end)) { routes.set(key, []); return []; }
-    const queue = [start], visited = new Set([start]), parent = new Map<string, string>();
-    for (let cursor = 0; cursor < queue.length; cursor++) {
-      const current = queue[cursor];
-      if (current === end) {
-        const path: string[] = [];
-        for (let node = end; node !== start; node = parent.get(node)!) path.push(node);
-        path.reverse(); routes.set(key, path); return [...path];
-      }
-      for (const neighbor of index.get(current)!.neighbors) {
-        const province = index.get(neighbor);
-        if (!province || visited.has(neighbor) || !canMoveToProvince(tag, province.owner, diplomacy)) continue;
-        visited.add(neighbor); parent.set(neighbor, current); queue.push(neighbor);
-      }
-    }
-    routes.set(key, []); return [];
-  });
-  const isBorderProvince = (id: string, _provinces: Province[], tag: string) => measure('borderEvaluation', () => context.isBorder(id, tag));
-
+  const findProvince = (rows: Province[], predicate: (p: Province) => boolean) => rows.find(p => { profiler?.count('provinceScans'); return predicate(p); });
+  const scanProvinces = (rows: Province[], predicate: (p: Province) => boolean) => rows.filter(p => { profiler?.count('provinceScans'); return predicate(p); });
   const getArmySupply = (...args: Parameters<typeof rawGetArmySupply>) => measure('logisticsChecks', () => rawGetArmySupply(...args));
   const getProvinceLogistics = (...args: Parameters<typeof rawGetProvinceLogistics>) => measure('logisticsChecks', () => rawGetProvinceLogistics(...args));
   const projectRouteLogistics = (...args: Parameters<typeof rawProjectRouteLogistics>) => measure('logisticsChecks', () => rawProjectRouteLogistics(...args));
@@ -72,12 +45,12 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     diplomacy: DiplomaticRelation[]
   ): Army {
     profiler?.count('routeChecks');
-    const destProv = context.provinceById.get(destinationId);
+    const destProv = findProvince(provinces, p => p.id === destinationId);
     if (destProv && !canMoveToProvince(botCountryId, destProv.owner, diplomacy)) {
       return army;
     }
 
-    const currentProv = army.location === null ? undefined : context.provinceById.get(army.location);
+    const currentProv = findProvince(provinces, p => p.id === army.location);
     if (currentProv && currentProv.neighbors.includes(destinationId)) {
       return {
         ...army,
@@ -118,7 +91,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     const organization = calculateArmyOrganization(army);
     const morale = calculateArmyMorale(army);
 
-    const friendlyArmies = (context.armiesByProvince.get(province.id) ?? []).filter(
+    const friendlyArmies = allArmies.filter(
       other =>
         other.owner === army.owner &&
         other.location === province.id
@@ -176,7 +149,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     diplomacy: DiplomaticRelation[],
     logistics?: LogisticsSnapshot,
   ): Province | null {
-    const homeProvinces = context.provincesByOwner.get(botCountryId) ?? [];
+    const homeProvinces = scanProvinces(provinces, 
+      province => province.owner === botCountryId
+    );
 
     let bestProvince: Province | null = null;
     let bestScore = -Infinity;
@@ -207,7 +182,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
         'infrastructure'
       );
 
-      const friendlySupport = (context.armiesByProvince.get(province.id) ?? [])
+      const friendlySupport = armies
         .filter(
           other =>
             other.owner === botCountryId &&
@@ -261,7 +236,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
   ): Army | null {
     if (!army.location) return null;
 
-    const candidates = (context.armiesByOwner.get(botCountryId) ?? []).filter(other =>
+    const candidates = armies.filter(other =>
       other.owner === botCountryId &&
       other.id !== army.id &&
       !reserved.has(other.id) &&
@@ -292,7 +267,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       let dangerPenalty = 0;
 
       for (const provinceId of path) {
-        const province = context.provinceById.get(provinceId);
+        const province = findProvince(provinces, 
+          p => p.id === provinceId
+        );
 
         if (!province) continue;
 
@@ -300,7 +277,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
           dangerPenalty += 3;
         }
 
-        const enemyTroops = (context.armiesByProvince.get(province.id) ?? [])
+        const enemyTroops = armies
           .filter(
             other =>
               other.owner !== botCountryId &&
@@ -342,7 +319,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       return -Infinity;
     }
 
-    const enemyProvince = context.provinceById.get(enemyArmy.location);
+    const enemyProvince = findProvince(provinces, 
+      p => p.id === enemyArmy.location
+    );
 
     if (!enemyProvince) {
       return -Infinity;
@@ -385,7 +364,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       diplomacy
     );
 
-    const aiProvince = context.provinceById.get(aiArmy.location);
+    const aiProvince = findProvince(provinces, 
+      p => p.id === aiArmy.location
+    );
 
     if (!aiProvince) {
       return -Infinity;
@@ -487,7 +468,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
 
   function scoreStrategicProvinceTarget(
     province: Province,
-    botCountryId: string
+    botCountryId: string,
+    armies: Army[],
+    countries: Country[]
   ): number {
     let score = 0;
 
@@ -513,7 +496,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
 
 
 
-    const enemyTroops = (context.armiesByProvince.get(province.id) ?? [])
+    const enemyTroops = armies
       .filter(
         army =>
           army.location === province.id &&
@@ -531,7 +514,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       score -= Math.min(50, enemyTroops / 200);
     }
 
-    const ownerCountry = context.countryByTag.get(province.owner);
+    const ownerCountry = countries.find(
+      country => country.tag === province.owner
+    );
 
     if (ownerCountry) {
       const capitalId = getCountryCapitalId(ownerCountry);
@@ -554,9 +539,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     logistics?: LogisticsSnapshot,
     movingArmy?: Army,
   ): Province | null {
-    const candidates = provinceTargets ??= provinces
-      .filter((province): province is Province => {
-        profiler?.count('provinceScans');
+    const candidates = scanProvinces(provinces, (province): province is Province => {
         if (!province) return false;
 
         return (
@@ -580,7 +563,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     for (const province of candidates) {
       let score = scoreStrategicProvinceTarget(
         province,
-        botCountryId
+        botCountryId,
+        armies,
+        countries
       );
 
       const path = findPath(
@@ -629,7 +614,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     countries: Country[],
     diplomacy: DiplomaticRelation[]
   ): Province | null {
-    const botCountry = context.countryByTag.get(botCountryId);
+    const botCountry = countries.find(
+      country => country.tag === botCountryId
+    );
 
     if (!botCountry) return null;
 
@@ -637,11 +624,13 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
 
     if (!capitalId) return null;
 
-    const capitalProvince = context.provinceById.get(capitalId);
+    const capitalProvince = findProvince(provinces, 
+      province => province.id === capitalId
+    );
 
     if (!capitalProvince) return null;
 
-    const enemyPresent = (context.armiesByProvince.get(capitalProvince.id) ?? []).some(
+    const enemyPresent = armies.some(
       army =>
         isAtWarWith(botCountryId, army.owner, diplomacy) &&
         army.location === capitalProvince.id &&
@@ -654,7 +643,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
 
     const enemyAdjacent = capitalProvince.neighbors.some(
       neighborId => {
-        return (context.armiesByProvince.get(neighborId) ?? []).some(
+        return armies.some(
           army =>
             isAtWarWith(botCountryId, army.owner, diplomacy) &&
             army.location === neighborId &&
@@ -746,7 +735,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     let danger = 0;
 
     for (const provinceId of path) {
-      const province = context.provinceById.get(provinceId);
+      const province = findProvince(provinces, 
+        p => p.id === provinceId
+      );
 
       if (!province) {
         danger += 25;
@@ -764,7 +755,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
         danger += 12;
       }
 
-      const hostileArmies = (context.armiesByProvince.get(province.id) ?? []).filter(
+      const hostileArmies = armies.filter(
         army =>
           army.owner !== botCountryId &&
           army.location === province.id &&
@@ -813,7 +804,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       return !projected || projected.ratio < LB.aiMinimumOffensiveSupplyRatio;
     })) return false;
 
-    const currentProvince = context.provinceById.get(army.location);
+    const currentProvince = findProvince(provinces, 
+      province => province.id === army.location
+    );
 
     if (!currentProvince) return false;
 
@@ -830,11 +823,13 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     const intermediatePath = path.slice(0, -1);
 
     for (const provinceId of intermediatePath) {
-      const province = context.provinceById.get(provinceId);
+      const province = findProvince(provinces, 
+        p => p.id === provinceId
+      );
 
       if (!province) return false;
 
-      const hostileArmies = (context.armiesByProvince.get(province.id) ?? []).filter(
+      const hostileArmies = armies.filter(
         other =>
           other.owner !== botCountryId &&
           other.location === province.id &&
@@ -885,19 +880,22 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     }
     // Only armies consume this snapshot; retain every army owner's network so
     // enemy power and allied reinforcement estimates remain identical.
-    const logistics = suppliedLogistics ?? (countries.length ? measure('logisticsChecks', () => {
-      const armyOwners = new Set([botCountryId,...context.armiesByOwner.keys()]);
-      return buildLogisticsNetworks({countries:countries.filter(country => armyOwners.has(country.tag)),provinces,relations:diplomacy,wars});
-    }) : undefined);
+    const armyOwners = new Set([botCountryId,...armies.map(army => army.owner)]);
+    const logistics = suppliedLogistics ?? (countries.length ? buildLogisticsNetworks({countries:countries.filter(country => armyOwners.has(country.tag)),provinces,relations:diplomacy,wars}) : undefined);
     // All tactical access/hostility queries below use this bot as the visitor.
     // Preserve row order/duplicates, but skip unrelated world pairs in those scans.
     // Logistics above still receives the complete relations for other army owners.
-    diplomacy = context.relationsByCountry.get(botCountryId) ?? [];
+    diplomacy = diplomacy.filter(r => r.countryA === botCountryId || r.countryB === botCountryId);
     const defensiveWar = measure('warStateEvaluation', () => shouldUseDefensiveWarPosture(botCountryId,wars,provinces,countries,armies));
     const reinforcementOrders = new Map<string, string>();
     const reservedReinforcements = new Set<string>();
 
-    const enemyCountries = (context.warsByCountry.get(botCountryId) ?? [])
+    const enemyCountries = wars
+      .filter(
+        war =>
+          war.attacker === botCountryId ||
+          war.defender === botCountryId
+      )
       .map(
         war =>
           war.attacker === botCountryId
@@ -905,28 +903,29 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
             : war.attacker
       );
 
-    const isAtWar = measure('warStateEvaluation', () => diplomacy.some(r => r.status === 'war' &&
-      (r.countryA === botCountryId || r.countryB === botCountryId)));
     profiler?.count('bots');
-    profiler?.count(isAtWar ? 'warBots' : 'peaceBots');
-    const ownArmies = context.armiesByOwner.get(botCountryId) ?? [];
-    const botArmies = measure('ownArmyCollection', () => ownArmies.filter(
+    profiler?.count(diplomacy.some(r => r.status === 'war') ? 'warBots' : 'peaceBots');
+    const botArmies = measure('ownArmyCollection', () => armies.filter(
       army =>
         army.owner === botCountryId &&
         army.location !== null &&
         army.destination === null &&
         !army.inCombat
     ));
-    profiler?.count('armiesEvaluated', ownArmies.length);
+    profiler?.count('armiesEvaluated', armies.filter(a => a.owner === botCountryId).length);
 
-    const enemyTags = new Set(enemyCountries);
-    const enemySlots = [...enemyTags].flatMap(tag => context.armySlotsByOwner.get(tag) ?? []).sort((a, b) => a - b);
-    const enemyArmies = enemySlots.map(slot => armies[slot]).filter(army => army.location !== null);
+    const enemyArmies = armies.filter(
+      army =>
+        enemyCountries.includes(army.owner) &&
+        army.location !== null
+    );
 
     for (const army of botArmies) {
       if (!army.location || reservedReinforcements.has(army.id)) continue;
 
-      const armyProvince = context.provinceById.get(army.location);
+      const armyProvince = findProvince(provinces, 
+        province => province.id === army.location
+      );
 
       if (!armyProvince) continue;
 
@@ -942,7 +941,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
 
       if (!bestEnemy?.location) continue;
 
-      const enemyProvince = context.provinceById.get(bestEnemy.location);
+      const enemyProvince = findProvince(provinces, 
+        province => province.id === bestEnemy.location
+      );
 
       if (!enemyProvince) continue;
 
@@ -1014,7 +1015,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
 
     let reservedCapitalDefense = 0;
 
-    const decide = (army: Army): Army => {
+    return measure('movementDecision', () => armies.map(army => {
       // Ignora exércitos de outros países ou que já estejam se movendo.
       if (
         army.owner !== botCountryId ||
@@ -1042,7 +1043,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
           reservedCapitalDefense;
 
         if (projectedDefense < desiredDefense) {
-          const armyProvince = army.location === null ? undefined : context.provinceById.get(army.location);
+          const armyProvince = findProvince(provinces, 
+            province => province.id === army.location
+          );
 
           if (!armyProvince) {
             return army;
@@ -1089,7 +1092,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       // The requesting force holds its rendezvous instead of leaving as support arrives.
       if (reservedReinforcements.has(army.id)) return army;
 
-      const currentProv = army.location === null ? undefined : context.provinceById.get(army.location);
+      const currentProv = findProvince(provinces, 
+        province => province.id === army.location
+      );
 
       if (
         !currentProv ||
@@ -1105,6 +1110,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
         const refuge = chooseDefensiveProvince(army,botCountryId,provinces,armies,diplomacy,logistics);
         return refuge && refuge.id !== army.location ? createArmyWithRoute(army,refuge.id,provinces,botCountryId,diplomacy) : army;
       }
+
+      const isAtWar = diplomacy.some(relation => relation.status === 'war' &&
+        (relation.countryA === botCountryId || relation.countryB === botCountryId));
 
       // =========================================================
       // GUERRA
@@ -1131,7 +1139,9 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
           );
 
           if (bestEnemy?.location) {
-            const enemyProvince = context.provinceById.get(bestEnemy.location);
+            const enemyProvince = findProvince(provinces, 
+              province => province.id === bestEnemy.location
+            );
 
             if (enemyProvince) {
               const aiArmyPower =
@@ -1258,27 +1268,21 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       }
 
       // Choose a reachable frontier once, rather than randomly walking back and forth.
-      const frontier = measure('idleDecision', () => (context.provincesByOwner.get(botCountryId) ?? []).filter(province => province.owner === botCountryId &&
+      const frontier = scanProvinces(provinces, province => province.owner === botCountryId &&
         isBorderProvince(province.id, provinces, botCountryId))
         .map(province => ({ province, path: findPath(currentProv.id, province.id, provinces, botCountryId, diplomacy) }))
         .filter(candidate => candidate.path.length > 0 && (!logistics || getProvinceLogistics(logistics,botCountryId,candidate.province.id)?.connected))
-        .sort((a, b) => (getProvinceLogistics(logistics,botCountryId,b.province.id)?.efficiency ?? 1) - (getProvinceLogistics(logistics,botCountryId,a.province.id)?.efficiency ?? 1) || a.path.length - b.path.length || a.province.id.localeCompare(b.province.id))[0]);
+        .sort((a, b) => (getProvinceLogistics(logistics,botCountryId,b.province.id)?.efficiency ?? 1) - (getProvinceLogistics(logistics,botCountryId,a.province.id)?.efficiency ?? 1) || a.path.length - b.path.length || a.province.id.localeCompare(b.province.id))[0];
       if (frontier) return createArmyWithRoute(army, frontier.province.id, provinces, botCountryId, diplomacy);
 
       return army;
-    };
-    const result = measure('stateMutation', () => armies.slice());
-    for (const slot of context.armySlotsByOwner.get(botCountryId) ?? []) {
-      result[slot] = measure('movementDecision', () => decide(armies[slot]));
-    }
-    measure('stateMutation', () => context.publishArmies(botCountryId, armies, result));
-    return result;
+    }));
   }
   function projectedSupplyImpl(army: Army,path: string[],provinces: Province[],armies: Army[],logistics: LogisticsSnapshot) {
     if (!army.location) return;
     const connection = projectRouteLogistics(logistics,army.owner,army.location,path);
     if (!connection?.connected) return;
-    const destination = context.provinceById.get((path[path.length-1] ?? army.location));
+    const destination = findProvince(provinces, p => p.id === (path[path.length-1] ?? army.location));
     if (!destination) return;
     return getArmySupply({...army,location:destination.id},destination,armies.filter(a => a.id !== army.id),logistics,connection);
   }
@@ -1301,13 +1305,6 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
 
   return (...args: Parameters<typeof processAI>) => measure('TOTAL', () => processAI(...args));
 }
-export function processAI(
-  botCountryId: string, armies: Army[], provinces: Province[], diplomacy: DiplomaticRelation[],
-  wars: War[] = [], countries: Country[] = [], suppliedLogistics?: LogisticsSnapshot,
-  suppliedContext?: MilitaryAIContext, profiler?: MilitaryAIProfiler,
-): Army[] {
-  if (!botCountryId || !Array.isArray(armies) || !Array.isArray(provinces) || !Array.isArray(diplomacy)) return armies;
-  const context = suppliedContext ?? createMilitaryAIContext(countries, provinces, armies, diplomacy, wars);
-  return createProcessor(context, profiler)(botCountryId, armies, provinces, diplomacy, wars, countries, suppliedLogistics);
-}
+export function processAI(...args: Parameters<ReturnType<typeof createProcessor>>) { return createProcessor()(...args); }
+export function processProfiledMilitaryAI(profiler: MilitaryAIProfiler, ...args: Parameters<ReturnType<typeof createProcessor>>) { return createProcessor(profiler)(...args); }
 export function getCountryCapitalId(country: Country): string | null { return country.capitalId ?? country.capital ?? null; }

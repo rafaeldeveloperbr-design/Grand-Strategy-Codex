@@ -1,0 +1,642 @@
+{
+  "environment": {
+    "node": "v26.8.2",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+    "samples": 7,
+    "profiling": "enabled; phases inclusive",
+    "warmups": 2
+  },
+  "peace": {
+    "countries": 201,
+    "provinces": 494,
+    "armies": 201,
+    "before": {
+      "median": 648.1626999999999,
+      "max": 695.8571000000002,
+      "milliseconds": [
+        321.87570000000005,
+        306.33410000000003,
+        688.9097000000002,
+        646.0488,
+        665.9655000000002,
+        695.8571000000002,
+        648.1626999999999
+      ],
+      "profile": {
+        "phases": {
+          "indexBuild": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "ownArmyCollection": {
+            "total": 0.9257000000006883,
+            "count": 200,
+            "max": 0.018199999999524152
+          },
+          "warStateEvaluation": {
+            "total": 0.34240000000318105,
+            "count": 200,
+            "max": 0.006900000000314321
+          },
+          "enemyEvaluation": {
+            "total": 0.09770000000298751,
+            "count": 200,
+            "max": 0.004899999999906868
+          },
+          "borderEvaluation": {
+            "total": 6.801400000005742,
+            "count": 270,
+            "max": 0.11620000000038999
+          },
+          "targetSelection": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "pathfinding": {
+            "total": 2.0375000000012733,
+            "count": 36,
+            "max": 0.1783000000004904
+          },
+          "accessChecks": {
+            "total": 461.6229999999259,
+            "count": 161611,
+            "max": 0.07570000000032451
+          },
+          "logisticsChecks": {
+            "total": 2.1475999999847772,
+            "count": 442,
+            "max": 0.027399999999943248
+          },
+          "movementDecision": {
+            "total": 16.247599999996964,
+            "count": 207,
+            "max": 2.149800000000141
+          },
+          "defensiveDecision": {
+            "total": 506.3874000000078,
+            "count": 200,
+            "max": 5.979500000000371
+          },
+          "offensiveDecision": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "idleDecision": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "stateMutation": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "TOTAL": {
+            "total": 647.5244999999995,
+            "count": 200,
+            "max": 6.660600000000159
+          }
+        },
+        "counts": {
+          "bots": 200,
+          "warBots": 0,
+          "peaceBots": 200,
+          "armiesEvaluated": 200,
+          "pathfindCalls": 36,
+          "pathCacheHits": 0,
+          "routeChecks": 7,
+          "provinceScans": 325765,
+          "relationLookups": 161611
+        }
+      }
+    },
+    "after": {
+      "median": 15.260099999999511,
+      "max": 17.813500000000204,
+      "milliseconds": [
+        15.260099999999511,
+        17.504899999999907,
+        13.559399999999187,
+        13.82300000000032,
+        17.813500000000204,
+        17.29360000000088,
+        13.78479999999945
+      ],
+      "profile": {
+        "phases": {
+          "indexBuild": {
+            "total": 5.466199999999844,
+            "count": 1,
+            "max": 5.466199999999844
+          },
+          "ownArmyCollection": {
+            "total": 0.04739999999037536,
+            "count": 200,
+            "max": 0.0010000000002037268
+          },
+          "warStateEvaluation": {
+            "total": 0.9616999999989275,
+            "count": 400,
+            "max": 0.016599999999925785
+          },
+          "enemyEvaluation": {
+            "total": 0.03959999999278807,
+            "count": 200,
+            "max": 0.0003999999998995918
+          },
+          "borderEvaluation": {
+            "total": 0.3288000000147804,
+            "count": 270,
+            "max": 0.0052999999998064595
+          },
+          "targetSelection": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "pathfinding": {
+            "total": 0.4754000000011729,
+            "count": 36,
+            "max": 0.040899999999965075
+          },
+          "accessChecks": {
+            "total": 3.4774000000015803,
+            "count": 951,
+            "max": 0.045900000000074215
+          },
+          "logisticsChecks": {
+            "total": 1.363099999996848,
+            "count": 442,
+            "max": 0.026200000000244472
+          },
+          "movementDecision": {
+            "total": 2.557499999999891,
+            "count": 207,
+            "max": 0.287199999999757
+          },
+          "defensiveDecision": {
+            "total": 3.6388000000006286,
+            "count": 200,
+            "max": 0.07819999999992433
+          },
+          "offensiveDecision": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "idleDecision": {
+            "total": 0.7484000000004016,
+            "count": 10,
+            "max": 0.27040000000033615
+          },
+          "stateMutation": {
+            "total": 0.11070000000381697,
+            "count": 400,
+            "max": 0.0024999999995998223
+          },
+          "TOTAL": {
+            "total": 7.977500000003602,
+            "count": 200,
+            "max": 0.30829999999969004
+          }
+        },
+        "counts": {
+          "bots": 200,
+          "warBots": 0,
+          "peaceBots": 200,
+          "armiesEvaluated": 200,
+          "pathfindCalls": 36,
+          "pathCacheHits": 0,
+          "routeChecks": 7,
+          "provinceScans": 0,
+          "relationLookups": 591
+        }
+      }
+    }
+  },
+  "wars": {
+    "countries": 201,
+    "provinces": 494,
+    "armies": 201,
+    "before": {
+      "median": 683.9321,
+      "max": 691.8176999999996,
+      "milliseconds": [
+        644.2083999999995,
+        683.9321,
+        685.8322000000007,
+        691.8176999999996,
+        660.7744000000002,
+        678.5970000000016,
+        689.1518999999989
+      ],
+      "profile": {
+        "phases": {
+          "indexBuild": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "ownArmyCollection": {
+            "total": 1.0677000000014232,
+            "count": 200,
+            "max": 0.019099999999525608
+          },
+          "warStateEvaluation": {
+            "total": 2.3473999999914668,
+            "count": 200,
+            "max": 0.10850000000027649
+          },
+          "enemyEvaluation": {
+            "total": 3.641299999993862,
+            "count": 206,
+            "max": 0.4642999999996391
+          },
+          "borderEvaluation": {
+            "total": 6.640700000010838,
+            "count": 259,
+            "max": 0.1033000000006723
+          },
+          "targetSelection": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "pathfinding": {
+            "total": 2.753500000004351,
+            "count": 50,
+            "max": 0.16450000000077125
+          },
+          "accessChecks": {
+            "total": 499.2262000004757,
+            "count": 161645,
+            "max": 0.3081999999994878
+          },
+          "logisticsChecks": {
+            "total": 4.412099999986822,
+            "count": 649,
+            "max": 0.04310000000077707
+          },
+          "movementDecision": {
+            "total": 19.237600000011298,
+            "count": 207,
+            "max": 2.0041000000001077
+          },
+          "defensiveDecision": {
+            "total": 540.4694999999829,
+            "count": 205,
+            "max": 6.826100000000224
+          },
+          "offensiveDecision": {
+            "total": 1.481900000002497,
+            "count": 12,
+            "max": 0.20150000000103319
+          },
+          "idleDecision": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "stateMutation": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "TOTAL": {
+            "total": 688.5292999999892,
+            "count": 200,
+            "max": 7.537100000001374
+          }
+        },
+        "counts": {
+          "bots": 200,
+          "warBots": 6,
+          "peaceBots": 194,
+          "armiesEvaluated": 200,
+          "pathfindCalls": 50,
+          "pathCacheHits": 0,
+          "routeChecks": 19,
+          "provinceScans": 343241,
+          "relationLookups": 161645
+        }
+      }
+    },
+    "after": {
+      "median": 20.506499999999505,
+      "max": 22.85230000000047,
+      "milliseconds": [
+        17.635299999999916,
+        21.22609999999986,
+        22.85230000000047,
+        20.730499999999665,
+        20.506499999999505,
+        17.37379999999939,
+        17.482500000000073
+      ],
+      "profile": {
+        "phases": {
+          "indexBuild": {
+            "total": 5.636599999999817,
+            "count": 1,
+            "max": 5.636599999999817
+          },
+          "ownArmyCollection": {
+            "total": 0.06750000000283762,
+            "count": 200,
+            "max": 0.0015000000003055902
+          },
+          "warStateEvaluation": {
+            "total": 2.099899999970148,
+            "count": 400,
+            "max": 0.08909999999923457
+          },
+          "enemyEvaluation": {
+            "total": 1.6933999999982916,
+            "count": 206,
+            "max": 0.23549999999886495
+          },
+          "borderEvaluation": {
+            "total": 0.43879999998534913,
+            "count": 259,
+            "max": 0.003800000000410364
+          },
+          "targetSelection": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "pathfinding": {
+            "total": 1.0421000000005733,
+            "count": 50,
+            "max": 0.08790000000044529
+          },
+          "accessChecks": {
+            "total": 3.5530999999937194,
+            "count": 1097,
+            "max": 0.025499999999738066
+          },
+          "logisticsChecks": {
+            "total": 2.7656000000260974,
+            "count": 649,
+            "max": 0.04340000000047439
+          },
+          "movementDecision": {
+            "total": 3.650100000008024,
+            "count": 207,
+            "max": 0.3735999999989872
+          },
+          "defensiveDecision": {
+            "total": 3.7272000000066328,
+            "count": 205,
+            "max": 0.13190000000031432
+          },
+          "offensiveDecision": {
+            "total": 0.7608999999956723,
+            "count": 12,
+            "max": 0.09939999999915017
+          },
+          "idleDecision": {
+            "total": 0.9729999999999563,
+            "count": 9,
+            "max": 0.3569000000006781
+          },
+          "stateMutation": {
+            "total": 0.13949999999931606,
+            "count": 400,
+            "max": 0.003899999999703141
+          },
+          "TOTAL": {
+            "total": 11.47280000000137,
+            "count": 200,
+            "max": 0.5427999999992608
+          }
+        },
+        "counts": {
+          "bots": 200,
+          "warBots": 6,
+          "peaceBots": 194,
+          "armiesEvaluated": 200,
+          "pathfindCalls": 43,
+          "pathCacheHits": 7,
+          "routeChecks": 19,
+          "provinceScans": 0,
+          "relationLookups": 639
+        }
+      }
+    }
+  },
+  "manyArmies": {
+    "countries": 201,
+    "provinces": 494,
+    "armies": 695,
+    "before": {
+      "median": 1888.8935999999994,
+      "max": 2030.966199999999,
+      "milliseconds": [
+        1805.740099999999,
+        1814.0089000000007,
+        2030.966199999999,
+        1990.2828999999983,
+        1928.0846999999994,
+        1866.0614000000023,
+        1888.8935999999994
+      ],
+      "profile": {
+        "phases": {
+          "indexBuild": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "ownArmyCollection": {
+            "total": 2.8812000000252738,
+            "count": 200,
+            "max": 0.027700000002369052
+          },
+          "warStateEvaluation": {
+            "total": 3.0877999999829626,
+            "count": 200,
+            "max": 0.16319999999905122
+          },
+          "enemyEvaluation": {
+            "total": 71.15910000001168,
+            "count": 673,
+            "max": 4.98750000000291
+          },
+          "borderEvaluation": {
+            "total": 23.35809999999765,
+            "count": 901,
+            "max": 0.10749999999825377
+          },
+          "targetSelection": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "pathfinding": {
+            "total": 40.24300000000949,
+            "count": 848,
+            "max": 2.0213000000003376
+          },
+          "accessChecks": {
+            "total": 1455.7613000002966,
+            "count": 558359,
+            "max": 0.7157000000006519
+          },
+          "logisticsChecks": {
+            "total": 46.45420000002923,
+            "count": 4117,
+            "max": 0.075700000001234
+          },
+          "movementDecision": {
+            "total": 70.93470000000889,
+            "count": 241,
+            "max": 7.822799999998097
+          },
+          "defensiveDecision": {
+            "total": 1601.5480999999818,
+            "count": 237,
+            "max": 22.20140000000174
+          },
+          "offensiveDecision": {
+            "total": 33.953400000027614,
+            "count": 208,
+            "max": 0.39540000000124564
+          },
+          "idleDecision": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "stateMutation": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "TOTAL": {
+            "total": 1887.7548999999672,
+            "count": 200,
+            "max": 33.79539999999906
+          }
+        },
+        "counts": {
+          "bots": 200,
+          "warBots": 6,
+          "peaceBots": 194,
+          "armiesEvaluated": 677,
+          "pathfindCalls": 848,
+          "pathCacheHits": 0,
+          "routeChecks": 249,
+          "provinceScans": 1518958,
+          "relationLookups": 558359
+        }
+      }
+    },
+    "after": {
+      "median": 52.28570000000036,
+      "max": 70.40439999999944,
+      "milliseconds": [
+        61.07459999999992,
+        52.1079000000027,
+        52.28570000000036,
+        50.66909999999916,
+        70.40439999999944,
+        52.51670000000013,
+        51.38790000000154
+      ],
+      "profile": {
+        "phases": {
+          "indexBuild": {
+            "total": 6.16899999999805,
+            "count": 1,
+            "max": 6.16899999999805
+          },
+          "ownArmyCollection": {
+            "total": 0.12080000001151348,
+            "count": 200,
+            "max": 0.0023999999975785613
+          },
+          "warStateEvaluation": {
+            "total": 2.744200000008277,
+            "count": 400,
+            "max": 0.14319999999861466
+          },
+          "enemyEvaluation": {
+            "total": 27.429300000057992,
+            "count": 673,
+            "max": 2.536499999998341
+          },
+          "borderEvaluation": {
+            "total": 1.047599999968952,
+            "count": 901,
+            "max": 0.007099999998899875
+          },
+          "targetSelection": {
+            "total": 0,
+            "count": 0,
+            "max": 0
+          },
+          "pathfinding": {
+            "total": 5.382500000043365,
+            "count": 848,
+            "max": 0.08729999999923166
+          },
+          "accessChecks": {
+            "total": 5.4905999998045445,
+            "count": 7404,
+            "max": 0.05190000000220607
+          },
+          "logisticsChecks": {
+            "total": 32.04840000002878,
+            "count": 4117,
+            "max": 1.9514000000017404
+          },
+          "movementDecision": {
+            "total": 10.027600000012171,
+            "count": 718,
+            "max": 1.0168000000012398
+          },
+          "defensiveDecision": {
+            "total": 5.017099999997299,
+            "count": 237,
+            "max": 0.2923000000009779
+          },
+          "offensiveDecision": {
+            "total": 16.92609999999695,
+            "count": 208,
+            "max": 0.16539999999804422
+          },
+          "idleDecision": {
+            "total": 2.2136999999929685,
+            "count": 38,
+            "max": 0.23869999999806168
+          },
+          "stateMutation": {
+            "total": 0.30820000005769543,
+            "count": 400,
+            "max": 0.0054000000018277206
+          },
+          "TOTAL": {
+            "total": 44.82800000001589,
+            "count": 200,
+            "max": 7.129800000002433
+          }
+        },
+        "counts": {
+          "bots": 200,
+          "warBots": 6,
+          "peaceBots": 194,
+          "armiesEvaluated": 677,
+          "pathfindCalls": 679,
+          "pathCacheHits": 169,
+          "routeChecks": 249,
+          "provinceScans": 0,
+          "relationLookups": 814
+        }
+      }
+    }
+  }
+}

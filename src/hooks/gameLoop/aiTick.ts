@@ -1,4 +1,5 @@
 import { createAITickProfiler, type AITickProfiler } from '../../engine/performance/aiTickProfiler';
+import { createMilitaryAIContext } from '../../engine/aiEngine/militaryAIContext';
 import { buildLogisticsNetworks } from '../../engine/logistics';
 import { processDiplomacyAI } from '../../engine/diplomacy';
 /**
@@ -70,6 +71,7 @@ export function processAiTick(p: Params) {
   const logistics = profiler.measure('buildLogisticsNetworks', () => buildLogisticsNetworks({countries,provinces,relations,wars}));
   const activeBots = countries.filter(c => c && c.tag !== playerCountryTag);
   const dateString = formatGameDate(snapshot.date);
+  const militaryContext = profiler.militaryProfiler.measure('indexBuild', () => createMilitaryAIContext(countries, provinces, armies, relations, wars));
 
   activeBots.forEach((country: Country) => {
     const botTechState = currentBotTechStates.get(country.tag);
@@ -90,6 +92,7 @@ export function processAiTick(p: Params) {
 
       const economicResult = profiler.measure('botEconomicDecisions', () => processAIEconomicDecisions(country, provinces, botTechState, buildingConstructions, recruitments, dateString, canRecruitMilitary, botAtWar, logistics, armies), country.tag);
       countries = countries.map(c => c.tag === country.tag ? economicResult.country : c);
+      militaryContext.countryByTag.set(country.tag, economicResult.country);
       currentBotTechStates.set(country.tag, economicResult.techState);
       buildingConstructions = economicResult.buildingConstructions;
       recruitments = economicResult.recruitments;
@@ -100,7 +103,7 @@ export function processAiTick(p: Params) {
       provinces,
       relations,
       wars,
-      countries,logistics), country.tag);
+      countries,logistics,militaryContext,profiler.militaryProfiler), country.tag);
   });
 
   profiler.measure('armyMerge', () => {

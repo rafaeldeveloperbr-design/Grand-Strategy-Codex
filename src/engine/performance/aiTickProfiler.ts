@@ -1,4 +1,5 @@
 import { createDiplomacyAIProfiler } from './diplomacyAIProfiler';
+import { createMilitaryAIProfiler } from './militaryAIProfiler';
 import { profilerNow } from './aiTickProfilerClock';
 export { profilerNow } from './aiTickProfilerClock';
 import type { GameDate } from '../../types/date';
@@ -22,6 +23,7 @@ export function createAITickProfiler(enabled: boolean, options: {
 } = {}) {
   const clock = options.now ?? profilerNow;
   const diplomacyProfiler = createDiplomacyAIProfiler(enabled, { now: clock });
+  const militaryProfiler = createMilitaryAIProfiler(enabled, clock);
   const reportSpike = options.reportSpike ?? (spike => console.warn('[AI Slow Phase]', spike));
   let started = 0, date: GameDate = { year: 0, month: 0, day: 0 };
   let current: AITickProfile | undefined;
@@ -34,10 +36,12 @@ export function createAITickProfiler(enabled: boolean, options: {
   };
   return {
     diplomacyProfiler,
+    militaryProfiler,
     get last() { return last; },
     begin(gameDate: GameDate) {
       if (!enabled) return;
       started = clock(); date = { ...gameDate }; warned.clear();
+      militaryProfiler.begin();
       current = { phases: Object.fromEntries(AI_PHASES.map(phase => [phase, 0])) as Record<AIPhase, number> };
       last = undefined;
     },
@@ -57,6 +61,7 @@ export function createAITickProfiler(enabled: boolean, options: {
     },
     finish() {
       if (!enabled || !current) return;
+      militaryProfiler.finish();
       current.phases.TOTAL = clock() - started;
       // Includes setup, force-target checks, state assignment, iteration and measurement overhead.
       // Report it explicitly so named call costs are not confused with all AI work.

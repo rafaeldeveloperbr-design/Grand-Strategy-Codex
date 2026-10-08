@@ -1,4 +1,5 @@
 import type { DiplomacyAIProfile } from './diplomacyAIProfiler';
+import type { MilitaryAIProfile } from './militaryAIProfiler';
 import { AI_PHASES, createAITickProfiler, profilerNow, type AIPhase, type SlowestBot } from './aiTickProfiler';
 
 export const GAME_LOOP_PHASES = ['economy', 'politics', 'unrest', 'diplomacyTechnology', 'AI',
@@ -10,6 +11,7 @@ export type PhaseStats = { count: number; total: number; average: number; max: n
 export type AIBreakdown = {
   diplomacyAI?: DiplomacyAIProfile;
   diplomacyAIMax?: DiplomacyAIProfile;
+  militaryAI?: MilitaryAIProfile;
   phases: Partial<Record<AIPhase, PhaseStats>>;
   slowestEconomicBot?: SlowestBot;
   slowestMilitaryBot?: SlowestBot;
@@ -47,6 +49,20 @@ export function createGameLoopProfiler(enabled: boolean, options: {
       speedCounts[speed] = (speedCounts[speed] ?? 0) + 1;
       const ai = aiProfiler.last;
       if (ai) {
+        const military = aiProfiler.militaryProfiler.last;
+        if (military) {
+          const aggregate = aiBreakdown.militaryAI ?? structuredClone(military);
+          if (aiBreakdown.militaryAI) {
+            for (const key of Object.keys(military.counts) as (keyof MilitaryAIProfile['counts'])[]) aggregate.counts[key] += military.counts[key];
+            for (const key of Object.keys(military.phases) as (keyof MilitaryAIProfile['phases'])[]) {
+              const next = military.phases[key]!;
+              const stat = aggregate.phases[key] ?? { total: 0, count: 0, max: 0 };
+              stat.total += next.total; stat.count += next.count; stat.max = Math.max(stat.max, next.max);
+              aggregate.phases[key] = stat;
+            }
+          }
+          aiBreakdown.militaryAI = aggregate;
+        }
         const diplomacy = aiProfiler.diplomacyProfiler.last;
         aiBreakdown.diplomacyAI = diplomacy;
         if (diplomacy && (!aiBreakdown.diplomacyAIMax || (diplomacy.phases.TOTAL?.total ?? 0) > (aiBreakdown.diplomacyAIMax.phases.TOTAL?.total ?? 0))) {

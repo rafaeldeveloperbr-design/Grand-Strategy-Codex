@@ -84,7 +84,10 @@ export function buildLogisticsNetworks(ctx: LogisticsContext): LogisticsSnapshot
     if (country.tag.startsWith('rebel_')) continue;
     const origin = resolveLogisticsOrigin(country,provinces),network: CountryLogisticsNetwork = {tag: country.tag,originId: origin?.id ?? null,provinces: new Map()};
     networks.set(country.tag,network);
-    const allowed = new Set(owners.filter(tag => !tag.startsWith('rebel_') && !hostile.get(country.tag)?.has(tag) && hasMilitaryAccess(ctx.relations,country.tag,tag)));
+    // Keep the canonical access check and first-record semantics, but avoid
+    // rescanning unrelated pairs for every possible owner in the expanded world.
+    const countryRelations = ctx.relations.filter(r => r.countryA === country.tag || r.countryB === country.tag);
+    const allowed = new Set(owners.filter(tag => !tag.startsWith('rebel_') && !hostile.get(country.tag)?.has(tag) && hasMilitaryAccess(countryRelations,country.tag,tag)));
     allowedOwners.set(country.tag,allowed);
     if (!origin) continue;
     const queue = [origin.id],parents = new Map<string,string>();

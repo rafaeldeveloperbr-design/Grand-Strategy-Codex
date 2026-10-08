@@ -12,7 +12,7 @@ This source represents contemporary country positions, not the game's 1444 histo
 `southAmerica.provinces.json` stores regional seeds and approximate gameplay values.
 `southAmerica.outlines.json` stores the checked-in country outlines for offline,
 repeatable generation. Internal provinces are simplified gameplay partitions,
-not official state/department borders. Both regions now use `world_projection.py`:
+not official state/department borders. All four regions use `world_projection.py`:
 x = (longitude + 180) * 14, y = (90 - latitude) * 14.
 Global bounds are 5040 × 2520; future continents use the same SVG space.
 
@@ -49,7 +49,7 @@ python tools/map/audit_world.py
 Python/Shapely are authoring requirements only. The North America generator writes
 `geometry.ts` and `definitions.ts`, auditing coverage, polygon validity, interior
 centers and overlap. `audit_world.py` separately checks actual rounded SVG outputs
-for both regions. Three-decimal rounding can produce tiny boundary slivers under
+for all four regions. Three-decimal rounding can produce tiny boundary slivers under
 0.05 square SVG units, never structural overlap.
 
 Topology remains explicitly authored in each region's `topology.ts`; contact
@@ -58,3 +58,40 @@ diagnostics never create neighbors. `crossRegionConnections.ts` declares
 Expected landmasses are declared in `MapRegion.landmasses`. Islands never receive
 fake mainland edges; split mainlands and unexpected landmass connections fail
 validation.
+
+## Europe + Africa V1 (Step 2)
+
+`europe.outlines.json` and `africa.outlines.json` are checked-in extracts of the
+same Natural Earth Admin 0 1:110m GeoJSON. Country selection uses `ADM0_A3`;
+the largest polygon is retained, except Denmark, whose two polygons deliberately
+retain Jutland and Zealand. Its seeds specify `outlinePart` (0 = Jutland,
+1 = Zealand), so Voronoi clipping never assigns Jutland fragments to Copenhagen.
+Northern Ireland, Sicily/Sardinia, Corsica, Svalbard, Cabinda and other detached
+territories are omitted. Countries not in the gameplay roster remain gaps, not
+new territory assigned to a neighbor. Russia is deferred to Asia/Eurasia.
+
+`europe.provinces.json` contains 56 seeds for 28 countries; `africa.provinces.json`
+contains 49 seeds for 34 countries, including Madagascar. Capitals and gameplay
+values are independent of historic census/budgets. Regeneration is offline:
+
+```sh
+python tools/map/generate_south_america.py
+python tools/map/generate_north_america.py
+python tools/map/generate_europe.py
+python tools/map/generate_africa.py
+python tools/map/audit_world.py
+```
+
+The two new wrappers call `generate_region.py`, reusing the existing half-plane
+partitioning/SVG helpers and `world_projection.py`. Only polygonal parts of
+clipped GeometryCollections are serialized; zero-area line fragments are ignored.
+Country coverage tolerance is 1e-6 square degrees for numerical clipping slivers;
+the output audit independently checks all 196 shapes, IDs, interior centers,
+bounds, structural overlap, and geometric contact of the new **authored** land
+edges. It never builds or rewrites neighbors.
+
+Mainland Europe and Scandinavia are separate **modeled** land components until
+Russia's real land bridge is available. No Denmark–Sweden or Channel crossing is
+invented. Ireland, Great Britain, Zealand and Madagascar are also explicit groups.
+Africa remains one continental component. Inland lake borders (e.g. Congo–Tanzania)
+follow the existing coarse land-border model; there are no maritime edges.

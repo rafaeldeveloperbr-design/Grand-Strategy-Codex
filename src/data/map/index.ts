@@ -2,11 +2,13 @@ import type { Country, Province } from '../../types';
 import type { MapRegion, Landmass, MapValidationOptions, TopologyProvince, TopologyCountry } from './types';
 import { southAmerica } from './regions/southAmerica';
 import { northAmerica } from './regions/northAmerica';
+import { europe } from './regions/europe';
+import { africa } from './regions/africa';
 import { worldMapMetadata } from './worldMetadata';
 import { crossRegionConnections } from './crossRegionConnections';
 import { validateMapTopology as auditTopology } from './validation';
 
-export const mapRegions: readonly MapRegion[] = [southAmerica,northAmerica];
+export const mapRegions: readonly MapRegion[] = [southAmerica,northAmerica,europe,africa];
 export const mapMetadata = worldMapMetadata;
 const landmassIds = [...new Set(mapRegions.flatMap(r => r.landmasses?.map(l => l.id) ?? []))];
 export const mapLandmasses: readonly Landmass[] = landmassIds.map(id => ({

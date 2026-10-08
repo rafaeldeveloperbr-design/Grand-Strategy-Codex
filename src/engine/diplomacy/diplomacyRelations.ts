@@ -4,7 +4,9 @@ export const diplomacyDay = (date: GameDate): number => Math.floor(Date.UTC(date
 export const clampOpinion = (n: number): number => Math.max(-100, Math.min(100, Number.isFinite(n) ? n : 0));
 export const clampTrust = (n: number): number => Math.max(0, Math.min(100, Number.isFinite(n) ? n : 50));
 export function getRelation(relations: DiplomaticRelation[], a: string, b: string): DiplomaticRelation | undefined {
-  const key = relationKey(a,b); return relations.find(r => relationKey(r.countryA,r.countryB) === key);
+  // The growing world calls this inside logistics/trade loops. Compare the
+  // unordered pair directly instead of allocating/sorting JSON for every row.
+  return relations.find(r => r.countryA === a && r.countryB === b || r.countryA === b && r.countryB === a);
 }
 export function createRelation(a: string, b: string): DiplomaticRelation {
   if (a === b) throw new Error('Two distinct countries required.');

@@ -1,0 +1,13 @@
+{
+  "browser": "Chrome headless / actual React UI / real daily ticks",
+  "checks": [
+    "New Game BRA: land move to São Paulo, Embark, no land marker, FleetPanel cargo/capacity",
+    "Fleet moves through Atlantic; Save V3 / manual Load preserves exactly one embarked army",
+    "Return to friendly port and per-army Disembark restores land presence",
+    "Real UI war declaration against Argentina before planning invasion",
+    "War/access fixture: Plan Invasion UI, actual voyage, five-day Tierra del Fuego landing and empty target occupation",
+    "Real Port A → Tierra del Fuego voyage, five-day beach landing and occupation; five-day extraction with mid-countdown Save V3/load; real voyage to distinct friendly Port C and Disembark; no stale state or new Port",
+    "Labeled fragile-transport/enemy save fixture: real NavalBattle destroys Transport and embarked Army, reports troop losses"
+  ],
+  "errors": []
+}

@@ -1,3 +1,4 @@
+import { cancelBeachExtraction, beachExtractionTick, BEACH_EXTRACTION_LABEL } from './engine/naval/beachExtraction';
 import { createInitialAirState, cancelAirMission, startAirProduction, cancelAirProduction, resolveAirTarget, airZoneById } from './engine/air';
 import type { AirWing, AirMission, AircraftType } from './types/air';
 import type { AirState } from './types/air';
@@ -158,13 +159,16 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
     if (!updated) { addToast('Ordem naval inválida: verifique destino, acesso ao porto e status da frota.', 'warning'); return; }
     const next = { ...navalStateRef.current, ...(cancelInvasion ? { invasions: navalStateRef.current.invasions?.filter(o => o.fleetId !== fleet.id) } : {}), fleets: navalStateRef.current.fleets.map(f => f.id === fleet.id ? updated : f) };
     navalStateRef.current = next; setNavalState(next);
+    const extraction = beachExtractionTick({ armies: armiesRef.current, naval: next, provinces: provincesRef.current, wars: warsRef.current, relations: diplomaticRelationsRef.current, activeBattles: activeBattlesRef.current }, new Set(), false);
+    armiesRef.current = extraction.armies; setArmies(extraction.armies);
+    for (const feedback of extraction.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
   };
   const transportContext = () => ({ armies: armiesRef.current, naval: navalStateRef.current, provinces: provincesRef.current, wars: warsRef.current, relations: diplomaticRelationsRef.current, actor: playerCountryTag, activeBattles: activeBattlesRef.current });
   const transportArmy = (armyId: string, fleetId?: string) => {
     const result = fleetId ? embarkArmy(transportContext(), armyId, fleetId) : disembarkArmy(transportContext(), armyId);
     if (result.error) { addToast(result.error, 'warning', 'Transporte naval'); return; }
     armiesRef.current = result.armies; setArmies(result.armies);
-    addToast(fleetId ? 'Army embarcado; ordem terrestre cancelada.' : 'Desembarque concluído.', 'success', 'Transporte naval');
+    addToast(result.armies.find(a => a.id === armyId)?.beachExtraction ? BEACH_EXTRACTION_LABEL : fleetId ? 'Army embarcado; ordem terrestre cancelada.' : 'Desembarque concluído.', 'success', 'Transporte naval');
   };
   const invade = (armyIds: string[], provinceId: string) => {
     const result = planInvasion(transportContext(), selectedFleetId ?? '', armyIds, provinceId);
@@ -290,7 +294,7 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
               {selectedArmyLogistics && <div className="army-info-panel__stat"><span>Logística:</span><span>{selectedArmyLogistics.connected ? 'Conectada' : 'Desconectada'} · Distância {selectedArmyLogistics.distance ?? '—'}</span></div>}
               {selectedArmyData.destination && <div className="army-info-panel__stat"><span>Destino:</span><span>{provinces.find(p => p.id === selectedArmyData.destination)?.name} ({Math.round(selectedArmyData.movementProgress * 100)}%)</span></div>}
               {selectedArmyData.path.length > 0 && <div className="army-info-panel__stat"><span>Rota:</span><span className="army-info-panel__path">{selectedArmyData.path.map(pid => provinces.find(p => p.id === pid)?.name).join(' → ')}</span></div>}
-              <ArmyTransportPanel army={selectedArmyData} armies={armies} fleets={navalState.fleets} provinces={provinces} owner={selectedArmyData.owner===playerCountryTag} onEmbark={id=>transportArmy(selectedArmyData.id,id)} onDisembark={()=>transportArmy(selectedArmyData.id)} /><ArmyMovementPlanPanel army={selectedArmyData} provinces={provinces} onClear={armyActions.handleClearRoutes} />
+              <ArmyTransportPanel army={selectedArmyData} armies={armies} fleets={navalState.fleets} provinces={provinces} owner={selectedArmyData.owner===playerCountryTag} onEmbark={id=>transportArmy(selectedArmyData.id,id)} onDisembark={()=>transportArmy(selectedArmyData.id)}  wars={wars} relations={diplomaticRelations} activeBattles={activeBattles} onCancelExtraction={()=>{const updated = cancelBeachExtraction(armiesRef.current, selectedArmyData.id, playerCountryTag); armiesRef.current=updated;setArmies(updated);addToast('Extra\u00e7\u00e3o pela praia cancelada.', 'info', 'Transporte naval');}}  navalState={navalState} /><ArmyMovementPlanPanel army={selectedArmyData} provinces={provinces} onClear={armyActions.handleClearRoutes} />
               <div className="army-info-panel__regiments">
                 <strong>Regimentos:</strong>
 

@@ -1,0 +1,121 @@
+{
+  "environment": {
+    "node": "v24.21.0",
+    "platform": "win32"
+  },
+  "provinces": 494,
+  "cases": [
+    {
+      "activeExtractions": 0,
+      "totalFleets": 1000,
+      "tick": {
+        "samples": 200,
+        "medianMs": 0.0003000000001520675,
+        "p95Ms": 0.001099999999951251,
+        "meanMs": 0.00046850000000063117
+      },
+      "cleanup": {
+        "samples": 200,
+        "medianMs": 0.00029999999992469384,
+        "p95Ms": 0.0003000000001520675,
+        "meanMs": 0.00026549999999815556
+      },
+      "completion": {
+        "samples": 200,
+        "medianMs": 0.0001999999999497959,
+        "p95Ms": 0.0003000000001520675,
+        "meanMs": 0.00021599999999693864
+      },
+      "destroyedFleetCancellation": {
+        "samples": 200,
+        "medianMs": 0.00029999999992469384,
+        "p95Ms": 0.0003000000001520675,
+        "meanMs": 0.00027999999999792633
+      }
+    },
+    {
+      "activeExtractions": 20,
+      "totalFleets": 20,
+      "tick": {
+        "samples": 200,
+        "medianMs": 0.062099999999873035,
+        "p95Ms": 0.0806999999999789,
+        "meanMs": 0.06444949999999153
+      },
+      "cleanup": {
+        "samples": 200,
+        "medianMs": 0.05989999999997053,
+        "p95Ms": 0.07869999999979882,
+        "meanMs": 0.0698415
+      },
+      "completion": {
+        "samples": 200,
+        "medianMs": 0.06310000000007676,
+        "p95Ms": 0.08819999999991524,
+        "meanMs": 0.06921449999999595
+      },
+      "destroyedFleetCancellation": {
+        "samples": 200,
+        "medianMs": 0.01880000000005566,
+        "p95Ms": 0.02790000000004511,
+        "meanMs": 0.01985499999999092
+      }
+    },
+    {
+      "activeExtractions": 50,
+      "totalFleets": 50,
+      "tick": {
+        "samples": 200,
+        "medianMs": 0.1313000000000102,
+        "p95Ms": 0.17409999999995307,
+        "meanMs": 0.13470250000000647
+      },
+      "cleanup": {
+        "samples": 200,
+        "medianMs": 0.0987999999999829,
+        "p95Ms": 0.11809999999991305,
+        "meanMs": 0.10231250000000613
+      },
+      "completion": {
+        "samples": 200,
+        "medianMs": 0.09950000000003456,
+        "p95Ms": 0.1333999999999378,
+        "meanMs": 0.10953550000000974
+      },
+      "destroyedFleetCancellation": {
+        "samples": 200,
+        "medianMs": 0.023899999999912325,
+        "p95Ms": 0.029899999999997817,
+        "meanMs": 0.023445000000004938
+      }
+    },
+    {
+      "activeExtractions": 20,
+      "totalFleets": 1000,
+      "tick": {
+        "samples": 200,
+        "medianMs": 0.10360000000014224,
+        "p95Ms": 0.1254999999998745,
+        "meanMs": 0.10772699999998395
+      },
+      "cleanup": {
+        "samples": 200,
+        "medianMs": 0.10279999999988831,
+        "p95Ms": 0.13640000000009422,
+        "meanMs": 0.1086150000000032
+      },
+      "completion": {
+        "samples": 200,
+        "medianMs": 0.10419999999999163,
+        "p95Ms": 0.13379999999983738,
+        "meanMs": 0.1095379999999966
+      },
+      "destroyedFleetCancellation": {
+        "samples": 200,
+        "medianMs": 0.022100000000136788,
+        "p95Ms": 0.024100000000089494,
+        "meanMs": 0.022457000000001698
+      }
+    }
+  ]
+}

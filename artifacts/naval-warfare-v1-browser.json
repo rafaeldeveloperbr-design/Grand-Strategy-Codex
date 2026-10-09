@@ -18,15 +18,15 @@
   "errors": [],
   "performance": {
     "normalMode": {
-      "frames": 16,
-      "maxFrameGapMs": 383.3000000000011,
-      "over50ms": 7,
+      "frames": 18,
+      "maxFrameGapMs": 316.7000000000007,
+      "over50ms": 9,
       "renderedNavalEdges": 0
     },
     "navalMode": {
-      "frames": 18,
-      "maxFrameGapMs": 366.6999999999989,
-      "over50ms": 10,
+      "frames": 19,
+      "maxFrameGapMs": 383.2999999999993,
+      "over50ms": 13,
       "renderedNavalEdges": 70
     }
   },

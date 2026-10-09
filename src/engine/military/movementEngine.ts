@@ -86,6 +86,7 @@ export function moveArmy(
 
     return {
       ...army,
+      beachExtraction: undefined,
       destination: destinationId,
       targetDestination: destinationId,
       movementProgress: 0,
@@ -103,6 +104,7 @@ export function moveArmy(
 
   return {
     ...army,
+    beachExtraction: undefined,
     destination: nextDestination,
     targetDestination: destinationId,
     movementProgress: 0,

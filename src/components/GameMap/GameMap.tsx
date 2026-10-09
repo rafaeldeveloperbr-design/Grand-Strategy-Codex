@@ -3,6 +3,7 @@ import type { MapViewBox } from '../../data/map/types';
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { Province, Country, Army, Recruitment, BuildingConstruction, ActiveBattle, War, DiplomaticRelation } from '../../types';
 import { useMapControls } from './useMapControls';
+import { blocksMapKeyboard, regionalBounds } from './camera';
 import { ProvinceLayer } from './ProvinceLayer';
 import { ArmyMovementLayer } from './ArmyMovementLayer';
 import { BattleMarkersOverlay } from './BattleMarkersOverlay';
@@ -86,12 +87,15 @@ export const GameMap: React.FC<MapProps> = ({
   useEffect(() => { if (!onToggleArmy) closeStack(); }, [selectedProvince, selectedArmy, onToggleArmy, closeStack]);
   const openGroup = openStack ? presentation.groups.find(group => group.key === openStack.key && group.armies.length > 1) : undefined;
   useEffect(() => { if (openStack && !openGroup) closeStack(); }, [openStack, openGroup, closeStack]);
-  const openStackAt = (group: ArmyVisualGroup, x: number, y: number) => {
+  const openStackAt = useCallback((group: ArmyVisualGroup, x: number, y: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
     setTooltip(null);
     setOpenStack({ key: group.key, anchor: { x: rect ? x - rect.left + 12 : 12, y: rect ? y - rect.top + 12 : 70 } });
-  };
-  const selectArmy = (id: string, additive = false) => { closeStack(); if (additive && onToggleArmy) onToggleArmy(id); else onArmyClick(id); };
+  }, []);
+  const selectArmy = useCallback((id: string, additive = false) => { closeStack(); if (additive && onToggleArmy) onToggleArmy(id); else onArmyClick(id); }, [closeStack, onToggleArmy, onArmyClick]);
+  const handleStackOpen = useCallback((group: ArmyVisualGroup, x: number, y: number) => {
+    onToggleStack?.(group.armies.map(army => army.id)); openStackAt(group, x, y);
+  }, [onToggleStack, openStackAt]);
 
   const {
     viewBox,
@@ -101,10 +105,44 @@ export const GameMap: React.FC<MapProps> = ({
     handleMouseDown,
     handleMouseMovePan,
     handleMouseUp,
+    handleClickCapture,
+    isPanning,
+    isDragging,
+    unitsPerPixel,
+    panBy, focusProvince, focusCountry, fitBounds,
   } = useMapControls(svgRef, initialViewBox);
+  const focusPlayer = useCallback(() => {
+    const country = countryByTag.get(playerCountryTag ?? '');
+    if (country) focusCountry(country, provinces);
+  }, [countryByTag, playerCountryTag, focusCountry, provinces]);
+  const focusSelected = useCallback(() => {
+    const army = selectedArmy ? presentation.armyById.get(selectedArmy) : undefined;
+    const province = presentation.provinceById.get(army?.location ?? selectedProvince ?? '');
+    if (province) focusProvince(province);
+  }, [selectedArmy, selectedProvince, presentation, focusProvince]);
+  useEffect(() => {
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || blocksMapKeyboard(event.target)
+        || window.cheatPanelOpen || document.querySelector('[role="dialog"], .modal-overlay')) return;
+      const directions: Record<string, [number, number]> = { ArrowLeft: [-80, 0], ArrowRight: [80, 0], ArrowUp: [0, -80], ArrowDown: [0, 80] };
+      if (directions[event.key]) panBy(...directions[event.key]);
+      else if (event.key === '0') handleResetZoom();
+      else if (event.key === '+' || event.key === '=') handleZoomIn();
+      else if (event.key === '-') handleZoomOut();
+      else if (!selectionMode && event.key === 'Home') focusPlayer();
+      else if (!selectionMode && event.key.toLowerCase() === 'f') focusSelected();
+      else return;
+      event.preventDefault();
+    };
+    window.addEventListener('keydown', keyboard);
+    return () => window.removeEventListener('keydown', keyboard);
+  }, [panBy, handleResetZoom, handleZoomIn, handleZoomOut, selectionMode, focusPlayer, focusSelected]);
   const capitalIds = war.capitals;
+  const capitalProvinces = useMemo(() => provinces.filter(p => capitalIds.has(p.id)), [provinces, capitalIds]);
+  const logisticsOrigins = useMemo(() => provinces.filter(p => mapValues.origins.has(p.id)), [provinces, mapValues]);
 
-  const handleMouseEnter = (e: React.MouseEvent, province: Province) => {
+  const handleMouseEnter = useCallback((e: React.MouseEvent, province: Province) => {
+    if (isDragging()) return;
     onProvinceHover(province.id);
     const rect = svgRef.current?.getBoundingClientRect();
     if (rect) {
@@ -114,9 +152,10 @@ export const GameMap: React.FC<MapProps> = ({
         province,
       });
     }
-  };
+  }, [onProvinceHover, isDragging]);
 
-  const handleMouseMove = (e: React.MouseEvent, province: Province) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent, province: Province) => {
+    if (isDragging()) return;
     const rect = svgRef.current?.getBoundingClientRect();
     if (rect) {
       setTooltip({
@@ -125,17 +164,18 @@ export const GameMap: React.FC<MapProps> = ({
         province,
       });
     }
-  };
+  }, [isDragging]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
+    if (isDragging()) return;
     onProvinceHover(null);
     setTooltip(null);
-  };
+  }, [onProvinceHover, isDragging]);
 
-  const handleClick = (provinceId: string) => {
+  const handleClick = useCallback((provinceId: string) => {
     closeStack();
     onProvinceClick(provinceId);
-  };
+  }, [closeStack, onProvinceClick]);
 
   return (
     <div className="map-container" ref={containerRef}>
@@ -148,24 +188,41 @@ export const GameMap: React.FC<MapProps> = ({
         <button className="map__zoom-btn" onClick={handleZoomOut} title="Zoom Out">
           🔍−
         </button>
-        <button className="map__zoom-btn" onClick={handleResetZoom} title="Reset">
+        <button className="map__zoom-btn" onClick={handleResetZoom} title="Reset" aria-label="Reset View">
           ⟲
         </button>
+        {!selectionMode && <>
+          <button className="map__zoom-btn" onClick={focusPlayer} title="Focus Player (Home)" aria-label="Focus Player" disabled={!playerCountryTag}>◎</button>
+          <button className="map__zoom-btn" onClick={focusSelected} title="Locate selected Army / Province (F)" aria-label="Locate selected entity" disabled={!selectedArmy && !selectedProvince}>⌖</button>
+          <select aria-label="Regional jump" value="" onChange={event => {
+            if (event.target.value === 'World') handleResetZoom();
+            else if (regionalBounds[event.target.value]) fitBounds(regionalBounds[event.target.value]);
+          }}><option value="" disabled>Region…</option>{['Americas', 'Europe', 'Africa', 'Asia', 'Oceania', 'World'].map(name => <option key={name}>{name}</option>)}</select>
+          {activeBattles.length > 0 && <select aria-label="Locate battle" value="" onChange={event => {
+            const province = presentation.provinceById.get(event.target.value); if (province) focusProvince(province);
+          }}><option value="" disabled>Battle…</option>{activeBattles.map(battle => <option key={battle.id} value={battle.provinceId}>{presentation.provinceById.get(battle.provinceId)?.name ?? battle.provinceId}</option>)}</select>}
+        </>}
       </div>
 
       {/* === Instruções === */}
       <div className="map__instructions">
-        <span>{selectionMode ? 'Clique: escolher país · Shift+arrastar: mapa' : <>Clique: selecionar · Ctrl+clique: multi-seleção · Direito: mover/substituir · Shift+direito: waypoint · Escape: limpar seleção · Shift+arrastar: mapa</>}</span>
+        <span>{selectionMode ? 'Clique: escolher país · Arrastar: mapa · Wheel: zoom · Setas: navegar' : <>Clique: selecionar · Ctrl+clique: multi-seleção · Direito: mover/substituir · Shift+direito: waypoint · Escape: limpar seleção · Arrastar: mapa · Wheel: zoom · Setas: navegar</>}</span>
       </div>
 
       {/* === SVG do Mapa === */}
       <svg
         ref={svgRef}
         className="map__svg"
-        style={{ background: "#1a3a5c" }}
+        style={{ background: "#1a3a5c", cursor: isPanning ? 'grabbing' : 'grab', userSelect: 'none' }}
         aria-label={mapMetadata.name}
         viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
         onMouseDown={handleMouseDown}
+        onClickCapture={handleClickCapture}
+        onDoubleClick={event => {
+          const id = (event.target as Element).closest('[data-province-id]')?.getAttribute('data-province-id');
+          const province = id ? presentation.provinceById.get(id) : undefined;
+          if (province) focusProvince(province);
+        }}
         onMouseMove={handleMouseMovePan}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -200,19 +257,19 @@ export const GameMap: React.FC<MapProps> = ({
           mapMode={mapMode}
           mapValues={mapValues}
           onProvinceClick={handleClick}
+          labelSize={Math.min(8, 12 * unitsPerPixel)}
           onMouseEnter={handleMouseEnter}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         />
         <OperationalOverlay provinces={provinces} war={war} selectedArmyLocation={selectedArmy ? presentation.armyById.get(selectedArmy)?.location : null} />
-        {mapMode === 'logistics' && provinces.filter(p => mapValues.origins.has(p.id)).map(p => <g key={`logistics-${p.id}`} aria-label={`Origem logística: ${p.name}`} pointerEvents="none">
+        {mapMode === 'logistics' && logisticsOrigins.map(p => <g key={`logistics-${p.id}`} aria-label={`Origem logística: ${p.name}`} pointerEvents="none">
           <circle cx={p.center.x} cy={p.center.y - 15} r="10" fill="none" stroke="#ffe088" strokeWidth="2" />
           <text x={p.center.x + 14} y={p.center.y - 15} fontSize="9" fill="#ffe088">★</text>
         </g>)}
 
         {/* === Marcadores de capitais === */}
-        {provinces
-          .filter((p) => capitalIds.has(p.id))
+        {capitalProvinces
           .map((province) => (
             <g key={`cap-${province.id}`}>
               <circle
@@ -240,16 +297,14 @@ export const GameMap: React.FC<MapProps> = ({
 
         {/* === Linhas e Marcadores de Exércitos === */}
         <ArmyMovementLayer
+          markerScale={unitsPerPixel}
           presentation={presentation}
           countries={countryByTag}
           selectedArmy={selectedArmy}
           selectedArmyIds={selectedArmyIds}
           hoveredArmyId={hoveredArmyId}
           openStackKey={openGroup?.key ?? null}
-          onStackOpen={(group, x, y) => {
-            onToggleStack?.(group.armies.map(army => army.id));
-            openStackAt(group, x, y);
-          }}
+          onStackOpen={handleStackOpen}
           onStackToggleAdditive={onToggleStackAdditive}
           onArmyClick={selectArmy}
           onArmyHover={setHoveredArmyId}

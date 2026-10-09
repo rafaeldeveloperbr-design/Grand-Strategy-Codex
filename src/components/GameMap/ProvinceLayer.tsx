@@ -8,6 +8,7 @@ import { numericMapColor, buildMapValues, type MapMode } from './mapPresentation
 import { logisticsCategory } from '../../engine/logistics';
 
 interface ProvinceLayerProps {
+  labelSize?: number;
   provinces: Province[];
   countries: Country[];
   buildingConstructions: BuildingConstruction[];
@@ -23,7 +24,8 @@ interface ProvinceLayerProps {
   onMouseLeave: () => void;
 }
 
-export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
+export const ProvinceLayer: React.FC<ProvinceLayerProps> = React.memo(function ProvinceLayer({
+  labelSize = 8,
   provinces,
   countries,
   buildingConstructions,
@@ -37,7 +39,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
   onMouseEnter,
   onMouseMove,
   onMouseLeave,
-}) => {
+}: ProvinceLayerProps) {
   const values = useMemo(() => mapValues ?? buildMapValues(provinces, mapMode), [mapValues, provinces, mapMode]);
   const countriesByTag = useMemo(() => new Map(countries.map(c => [c.tag, c])), [countries]);
   const provincesById = useMemo(() => new Map(provinces.map(p => [p.id, p])), [provinces]);
@@ -137,7 +139,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
               onMouseLeave={onMouseLeave}
               onClick={() => onProvinceClick(province.id)}
               style={{
-                cursor: 'pointer',
+                cursor: 'inherit',
                 transition: 'fill 0.2s ease, stroke-width 0.15s ease',
               }}
             />
@@ -149,7 +151,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
               dominantBaseline="middle"
               className="map__province-label"
               fill="var(--text-primary)"
-              fontSize="8"
+              fontSize={labelSize}
               fontWeight="bold"
               pointerEvents="none"
             >
@@ -275,4 +277,4 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = ({
       })}
     </g>
   );
-};
+});

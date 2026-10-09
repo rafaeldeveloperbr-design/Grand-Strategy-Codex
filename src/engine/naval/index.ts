@@ -11,10 +11,13 @@ export const fleetSpeed = (f: Fleet): number => f.units.length ? Math.min(...f.u
 export const fleetStrength = (f: Fleet): number => f.units.reduce((s,u)=>s+u.strength,0);
 export const fleetOrganization = (f: Fleet): number => f.units.length ? f.units.reduce((s,u)=>s+u.organization/u.maxOrganization,0)/f.units.length*100 : 0;
 export const fleetPower = (f: Fleet): number => f.units.reduce((s,u)=>s+u.attack*u.strength/u.maxStrength*(.25+.75*u.organization/u.maxOrganization),0);
+/** Logical node occupancy excludes ports and transit, regardless of rendered position. */
+export const fleetCombatNode = (f: Fleet): string | undefined =>
+  f.status!=='DOCKED'&&!f.portProvinceId&&f.movementProgress===0&&seaNodeById.has(f.locationSeaNodeId??'') ? f.locationSeaNodeId : undefined;
 export function buildNavalIndexes(fleets: readonly Fleet[]) {
   const byCountry=new Map<string,Fleet[]>(), bySeaNode=new Map<string,Fleet[]>(), byPort=new Map<string,Fleet[]>(), byId=new Map<string,Fleet>();
   const add=(index: Map<string,Fleet[]>, key:string, f:Fleet) => {const list=index.get(key)??[];list.push(f);index.set(key,list);};
-  for(const f of fleets) {byId.set(f.id,f);add(byCountry,f.countryTag,f);if(f.portProvinceId) add(byPort,f.portProvinceId,f);else if(f.locationSeaNodeId&&f.movementProgress===0) add(bySeaNode,f.locationSeaNodeId,f);}
+  for(const f of fleets) {byId.set(f.id,f);add(byCountry,f.countryTag,f);if(f.portProvinceId) add(byPort,f.portProvinceId,f);const node=fleetCombatNode(f);if(node)add(bySeaNode,node,f);}
   return {byCountry,bySeaNode,byPort,byId};
 }
 export function buildNavalHostility(wars: readonly War[]): Map<string,Set<string>> {
@@ -71,6 +74,20 @@ export function orderFleetMove(f:Fleet,nodeId:string,actor:string):Fleet|null {
   const path=findSeaRoute(start,nodeId);if(!path) return null;
   const route=underway ? [underway,...path] : f.portProvinceId ? [start,...path] : path;
   return {...f,route,destinationSeaNodeId:nodeId,destinationPortId:undefined,movementProgress:underway?f.movementProgress:0,status:'MOVING'};
+}
+/** V1 interception snapshots a logical endpoint; it does not track the target dynamically. */
+export function resolveFleetIntercept(own:Fleet|undefined,target:Fleet|undefined,actor:string,wars:readonly War[]):{nodeId:string;error?:never}|{error:string;nodeId?:never} {
+  if(!own||own.countryTag!==actor)return {error:'Selecione uma frota própria.'};
+  if(!target)return {error:'A frota alvo não existe mais.'};
+  if(!buildNavalHostility(wars).get(actor)?.has(target.countryTag))return {error:'A frota alvo não é hostil.'};
+  if(own.status==='COMBAT')return {error:'A frota própria está ocupada em combate.'};
+  if(own.status==='RETREATING')return {error:'A frota própria está em retirada.'};
+  if(own.movementProgress>0&&!own.route.length&&own.destinationPortId)return {error:'A frota própria está entrando no porto.'};
+  if(!seaNodeById.has(own.locationSeaNodeId??portByProvince.get(own.portProvinceId??'')?.seaNodeId??''))return {error:'A frota própria não tem node válido.'};
+  const nodeId=target.portProvinceId ? portByProvince.get(target.portProvinceId)?.seaNodeId
+    : target.status==='MOVING'||target.status==='RETREATING'&&target.movementProgress>0
+      ? target.route[0]??target.destinationSeaNodeId??target.locationSeaNodeId : target.locationSeaNodeId;
+  return nodeId&&seaNodeById.has(nodeId)?{nodeId}:{error:'A frota alvo não tem node válido.'};
 }
 export function orderFleetReturn(f:Fleet,provinces:readonly Province[],relations:readonly DiplomaticRelation[],wars:readonly War[],actor:string,portId?:string):Fleet|null {
   if(f.countryTag!==actor||f.status==='COMBAT'||f.status==='RETREATING') return null;
@@ -165,9 +182,21 @@ export function navalCombatTick(state:NavalState,wars:readonly War[],day:number,
   let battles=structuredClone(state.battles);const engaged=new Set<string>();
   // Existing engagements end as soon as hostility, location or participation disappears.
   for(const battle of battles.filter(b=>b.status==='ACTIVE')) {
-    const a=battle.sideA.map(id=>indexes.byId.get(id)).filter((f):f is Fleet=>!!f&&!f.portProvinceId&&f.locationSeaNodeId===battle.seaNodeId), b=battle.sideB.map(id=>indexes.byId.get(id)).filter((f):f is Fleet=>!!f&&!f.portProvinceId&&f.locationSeaNodeId===battle.seaNodeId);
+    const a=battle.sideA.map(id=>indexes.byId.get(id)).filter((f):f is Fleet=>!!f&&fleetCombatNode(f)===battle.seaNodeId), b=battle.sideB.map(id=>indexes.byId.get(id)).filter((f):f is Fleet=>!!f&&fleetCombatNode(f)===battle.seaNodeId);
     if(!a.length||!b.length||!a.every(f=>b.every(e=>hostility.get(f.countryTag)?.has(e.countryTag)))) {battle.status='ENDED';for(const f of [...a,...b]) if(f.status==='COMBAT') f.status='HOLDING';}
-    else for(const f of [...a,...b]) engaged.add(f.id);
+    else {
+      // Keep destroyed participants in the report, but do not damage fleets in transit.
+      const stillHere=(id:string)=>{const f=indexes.byId.get(id);return !f||fleetCombatNode(f)===battle.seaNodeId;};
+      battle.sideA=battle.sideA.filter(stillHere);battle.sideB=battle.sideB.filter(stillHere);
+      for(const f of [...a,...b]) engaged.add(f.id);
+      // Join the existing engagement before detecting new ones; otherwise an arrival
+      // has no unengaged opponent, or two arrivals create a duplicate battle.
+      for(const f of [...(indexes.bySeaNode.get(battle.seaNodeId)??[])].sort((a,b)=>a.id.localeCompare(b.id))) {
+        if(engaged.has(f.id)||(f.retreatUntil!==undefined&&f.retreatUntil>day))continue;
+        if(b.every(e=>hostility.get(f.countryTag)?.has(e.countryTag))&&a.every(e=>!hostility.get(f.countryTag)?.has(e.countryTag))) {a.push(f);battle.sideA.push(f.id);engaged.add(f.id);}
+        else if(a.every(e=>hostility.get(f.countryTag)?.has(e.countryTag))&&b.every(e=>!hostility.get(f.countryTag)?.has(e.countryTag))) {b.push(f);battle.sideB.push(f.id);engaged.add(f.id);}
+      }
+    }
   }
   for(const [node,bucket] of indexes.bySeaNode) {
     const sorted=bucket.filter(f=>!engaged.has(f.id)&&(f.retreatUntil===undefined||f.retreatUntil<=day)).sort((a,b)=>a.id.localeCompare(b.id));

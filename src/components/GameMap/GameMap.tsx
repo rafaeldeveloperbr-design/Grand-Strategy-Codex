@@ -27,6 +27,7 @@ export interface MapProps {
   selectedFleetId?: string | null;
   onFleetSelect?: (id: string | null) => void;
   onFleetOrder?: (nodeId: string) => void;
+  onFleetIntercept?: (fleetId: string) => void;
   onFleetReturn?: (portId?: string) => void;
   onFleetCancel?: () => void;
   initialViewBox?: MapViewBox;
@@ -61,6 +62,7 @@ export const GameMap: React.FC<MapProps> = ({
   selectedFleetId = null,
   onFleetSelect,
   onFleetOrder,
+  onFleetIntercept,
   onFleetReturn,
   onFleetCancel,
   initialViewBox,
@@ -344,7 +346,7 @@ export const GameMap: React.FC<MapProps> = ({
           countries={countries}
           provinces={provinces}
         />
-        {!selectionMode && navalState && <NavalLayer fleets={navalState.fleets} battles={navalState.battles} wars={wars} viewport={viewBox} mode={navalMode} selected={selectedFleetId} countries={countryByTag} provinces={provinces} scale={unitsPerPixel} onSelect={id=>{closeStack();setSelectedNavalBattle(null);onFleetSelect?.(id);}} onOrder={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetOrder?.(id);}} onPort={onProvinceClick} onReturnPort={id=>onFleetReturn?.(id)} onBattle={id=>{onFleetSelect?.(null);setSelectedNavalBattle(id);const b=navalState.battles.find(b=>b.id===id),n=b?seaNodeById.get(b.seaNodeId):undefined;if(n)focusWorldPoint(n);}}/>}
+        {!selectionMode && navalState && <NavalLayer fleets={navalState.fleets} battles={navalState.battles} wars={wars} viewport={viewBox} mode={navalMode} selected={selectedFleetId} countries={countryByTag} provinces={provinces} scale={unitsPerPixel} onSelect={id=>{closeStack();setSelectedNavalBattle(null);onFleetSelect?.(id);}} onOrder={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetOrder?.(id);}} onIntercept={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetIntercept?.(id);}} onPort={onProvinceClick} onReturnPort={id=>onFleetReturn?.(id)} onBattle={id=>{onFleetSelect?.(null);setSelectedNavalBattle(id);const b=navalState.battles.find(b=>b.id===id),n=b?seaNodeById.get(b.seaNodeId):undefined;if(n)focusWorldPoint(n);}}/>}
 
         {/* === Filtro de Glow para exércitos elevados === */}
         <defs>

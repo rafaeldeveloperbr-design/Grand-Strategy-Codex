@@ -1,0 +1,9 @@
+{
+  "browser": "Chrome headless physical contextmenu and click",
+  "checks": [
+    "Declare war through UI; physical right click hostile anchor creates route to logical node",
+    "x3 encounter starts battle automatically; physical click on battle marker opens ACTIVE panel",
+    "Save/load preserves active NavalBattle"
+  ],
+  "errors": []
+}

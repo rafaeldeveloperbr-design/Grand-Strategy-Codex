@@ -9,7 +9,7 @@ export function FleetPanel({fleet,country,provinces,owner,onReturn,onCancel,onLo
     <p>Destino: {fleet.destinationPortId?provinces.find(p=>p.id===fleet.destinationPortId)?.name:fleet.destinationSeaNodeId??'—'}</p>
     <ul>{fleet.units.map(u=><li key={u.id}>{u.type}: {u.strength.toFixed(0)}/{u.maxStrength} · Org {u.organization.toFixed(0)}</li>)}</ul>
     <div className="naval-panel__actions"><button onClick={onLocate}>Locate (F)</button>{owner&&<><button disabled={fleet.status==='COMBAT'||fleet.status==='RETREATING'} onClick={onReturn}>Return to Port</button><button disabled={fleet.status==='COMBAT'||fleet.status==='RETREATING'} onClick={onCancel}>Cancel Order</button></>}</div>
-    {owner&&<p className="naval-panel__hint">Ative Naval Mode e clique com o botão direito num SeaNode para mover ou num porto para atracar.</p>}
+    {owner&&<p className="naval-panel__hint">Ative Naval Mode e clique com o botão direito num SeaNode para mover, num porto para atracar ou numa frota hostil para interceptar seu node lógico atual/próximo.</p>}
   </aside>;
 }
 export function NavalBattlePanel({battle,fleets,onLocate,onClose}:{battle:NavalBattle;fleets:readonly Fleet[];onLocate:()=>void;onClose:()=>void}) {

@@ -1,3 +1,6 @@
+import { AMPHIBIOUS_PORT_LANDING_DAYS, AMPHIBIOUS_BEACH_LANDING_DAYS } from './amphibiousRules';
+export { AMPHIBIOUS_PORT_LANDING_DAYS, AMPHIBIOUS_BEACH_LANDING_DAYS, LANDING_DAYS } from './amphibiousRules';
+import { ashoreArmy } from './friendlyBeachLanding';
 import { startBeachExtraction } from './beachExtraction';
 import type { ActiveBattle, Army, DiplomaticRelation, Province, War } from '../../types';
 import type { AmphibiousCounters, Fleet, InvasionOrder, NavalState } from '../../types/naval';
@@ -7,26 +10,27 @@ import { buildNavalHostility, canUseNavalPort, orderFleetMove } from './index';
 import { coastalLandingError, resolveAmphibiousLandingSeaNode, portByProvince } from './world';
 
 export const TRANSPORT_CAPACITY = 5000;
-export const AMPHIBIOUS_PORT_LANDING_DAYS = 3;
-export const AMPHIBIOUS_BEACH_LANDING_DAYS = 5;
-export const LANDING_DAYS = AMPHIBIOUS_PORT_LANDING_DAYS;
 export const amphibiousLandingDays = (type?: InvasionOrder['landingType']): number => type === 'BEACH' ? AMPHIBIOUS_BEACH_LANDING_DAYS : AMPHIBIOUS_PORT_LANDING_DAYS;
 export const amphibiousLandingLabel = (type?: InvasionOrder['landingType']): string => `Desembarque ${type === 'BEACH' ? 'na praia' : 'pelo porto'} \u2014 ${amphibiousLandingDays(type)} dias`;
 export const fleetTransportCapacity = (fleet: Fleet): number => fleet.units.reduce((sum, unit) => sum + (unit.type === 'TRANSPORT' && unit.strength > 0 ? TRANSPORT_CAPACITY : 0), 0);
 export const fleetTransportUsed = (armies: readonly Army[]): number => armies.reduce((sum, army) => sum + calculateArmySize(army), 0);
 export function buildTransportIndexes(armies: readonly Army[]) {
-  const byId = new Map<string, Army>(), byFleet = new Map<string, Army[]>(), extractionsByFleet = new Map<string, Army[]>();
+  const byId = new Map<string, Army>(), byFleet = new Map<string, Army[]>(), extractionsByFleet = new Map<string, Army[]>(), friendlyLandingsByFleet = new Map<string, Army[]>();
   for (const army of armies) {
     if (army.beachExtraction) {
       const bucket = extractionsByFleet.get(army.beachExtraction.fleetId) ?? [];
       bucket.push(army); extractionsByFleet.set(army.beachExtraction.fleetId, bucket);
     }
     if (!army.embarkedFleetId) continue;
+    if (army.friendlyBeachLanding) {
+      const bucket = friendlyLandingsByFleet.get(army.embarkedFleetId) ?? [];
+      bucket.push(army); friendlyLandingsByFleet.set(army.embarkedFleetId, bucket);
+    }
     byId.set(army.id, army);
     const bucket = byFleet.get(army.embarkedFleetId) ?? [];
     bucket.push(army); byFleet.set(army.embarkedFleetId, bucket);
   }
-  return { byId, byFleet, extractionsByFleet };
+  return { byId, byFleet, extractionsByFleet, friendlyLandingsByFleet };
 }
 export type TransportContext = { armies: Army[]; naval: NavalState; provinces: Province[]; wars: War[]; relations: DiplomaticRelation[]; actor: string; activeBattles?: readonly ActiveBattle[] };
 export function embarkArmy(ctx: TransportContext, armyId: string, fleetId: string): { armies: Army[]; error?: string } {
@@ -49,7 +53,7 @@ export function embarkArmy(ctx: TransportContext, armyId: string, fleetId: strin
   return { armies: ctx.armies.map(a => a.id === armyId ? aboardFleet(a, fleetId) : a) };
 }
 /** Canonical completion shared by instant port embark and delayed beach extraction. */
-export const aboardFleet = (army: Army, fleetId: string): Army => ({ ...army, beachExtraction: undefined, embarkedFleetId: fleetId, location: null, destination: null, targetDestination: null, path: [], movementPlan: undefined, movementProgress: 0, position: null, targetArmyId: null, targetProvinceId: null });
+export const aboardFleet = (army: Army, fleetId: string): Army => ({ ...army, friendlyBeachLanding: undefined, beachExtraction: undefined, embarkedFleetId: fleetId, location: null, destination: null, targetDestination: null, path: [], movementPlan: undefined, movementProgress: 0, position: null, targetArmyId: null, targetProvinceId: null });
 /** Pure command validation for the UI; successful probe state is discarded. */
 export const getArmyEmbarkError = (ctx: TransportContext, armyId: string, fleetId: string): string | undefined => embarkArmy(ctx, armyId, fleetId).error;
 export function disembarkArmy(ctx: TransportContext, armyId: string): { armies: Army[]; error?: string } {
@@ -60,13 +64,14 @@ export function disembarkArmy(ctx: TransportContext, armyId: string): { armies: 
   if (fleet.status !== 'DOCKED' || !province) return fail('Fleet precisa estar DOCKED para desembarcar.');
   if (ctx.naval.invasions?.some(o => o.fleetId === fleet.id)) return fail('Cancele a invasão antes de desembarcar.');
   if (!canUseNavalPort(ctx.actor, province, ctx.relations, buildNavalHostility(ctx.wars))) return fail('Acesso ao porto inválido: desembarque exige porto próprio, aliado ou military access.');
-  return { armies: ctx.armies.map(a => a.id === armyId ? { ...a, embarkedFleetId: undefined, location: province.id } : a) };
+  return { armies: ctx.armies.map(a => a.id === armyId ? ashoreArmy(a, province.id) : a) };
 }
 export function planInvasion(ctx: TransportContext, fleetId: string, armyIds: string[], targetProvinceId: string): { naval: NavalState; error?: string } {
   const fail = (error: string) => ({ naval: ctx.naval, error });
   const fleet = ctx.naval.fleets.find(f => f.id === fleetId), target = ctx.provinces.find(p => p.id === targetProvinceId);
   if (!fleet || fleet.countryTag !== ctx.actor) return fail('Selecione uma Fleet própria.');
   if (fleet.status === 'COMBAT' || fleet.status === 'RETREATING') return fail('Fleet em combate ou retirada.');
+  if (ctx.armies.some(a => a.embarkedFleetId === fleetId && a.friendlyBeachLanding)) return fail('Cancele o desembarque amig\u00e1vel antes de planejar invas\u00e3o.');
   if (ctx.naval.invasions?.some(o => o.fleetId === fleetId)) return fail('Fleet já está comprometida com invasão.');
   if (!target) return fail('Alvo não costeiro.');
   const coastError = coastalLandingError(target.id);
@@ -155,7 +160,7 @@ export function amphibiousAITick(ctx: Omit<TransportContext, 'actor'>, full: Rea
   let naval = ctx.naval;
   const cargo = buildTransportIndexes(ctx.armies), hostility = buildNavalHostility(ctx.wars);
   for (const fleet of naval.fleets) {
-    if (fleet.countryTag === player || !full.has(fleet.countryTag) || !['DOCKED', 'HOLDING'].includes(fleet.status) || naval.invasions?.some(o => o.fleetId === fleet.id)) continue;
+    if (fleet.countryTag === player || !full.has(fleet.countryTag) || !['DOCKED', 'HOLDING'].includes(fleet.status) || naval.invasions?.some(o => o.fleetId === fleet.id) || cargo.friendlyLandingsByFleet.has(fleet.id)) continue;
     const armies = cargo.byFleet.get(fleet.id);
     if (!armies?.length) continue;
     const targets = ctx.provinces.filter(p => hostility.get(fleet.countryTag)?.has(p.owner) && !coastalLandingError(p.id))

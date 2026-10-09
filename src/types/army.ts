@@ -80,6 +80,8 @@ export interface ArmyMovementPlan {
 }
 
 export interface Army {
+  /** Peaceful landing; the army remains cargo until completion. */
+  friendlyBeachLanding?: { provinceId: string; seaNodeId: string; elapsedDays: number };
   /** Land-present operation; reservation is derived from live troops. */
   beachExtraction?: { fleetId: string; seaNodeId: string; provinceId: string; elapsedDays: number };
   /** Canonical transport association; an embarked army has no land location. */

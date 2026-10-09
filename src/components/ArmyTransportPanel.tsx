@@ -1,20 +1,20 @@
 import { useMemo, useState } from 'react';
 import type { ActiveBattle, Army, DiplomaticRelation, Province, War } from '../types';
 import type { Fleet, NavalState } from '../types/naval';
-import { buildNavalIndexes, buildTransportIndexes, fleetTransportCapacity, fleetTransportUsed, getArmyEmbarkError, portByProvince, coastalLandingError, resolveAmphibiousLandingSeaNode, AMPHIBIOUS_BEACH_EXTRACTION_DAYS, BEACH_EXTRACTION_LABEL } from '../engine/naval';
+import { buildNavalIndexes, buildTransportIndexes, fleetTransportCapacity, fleetTransportUsed, getArmyEmbarkError, portByProvince, coastalLandingError, resolveAmphibiousLandingSeaNode, AMPHIBIOUS_BEACH_EXTRACTION_DAYS, BEACH_EXTRACTION_LABEL, FRIENDLY_BEACH_LANDING_LABEL, AMPHIBIOUS_FRIENDLY_BEACH_LANDING_DAYS } from '../engine/naval';
 
 type Props = {
   army: Army; armies: Army[]; fleets: Fleet[]; provinces: Province[]; owner: boolean;
   navalState?: NavalState; wars?: War[]; relations?: DiplomaticRelation[]; activeBattles?: readonly ActiveBattle[];
-  onEmbark: (fleetId: string) => void; onDisembark: () => void; onCancelExtraction?: () => void;
+  onEmbark: (fleetId: string) => void; onDisembark: () => void; onCancelExtraction?: () => void; onCancelFriendlyLanding?: () => void;
 };
-export function ArmyTransportPanel({ army, armies, fleets, provinces, owner, navalState, wars = [], relations = [], activeBattles = [], onEmbark, onDisembark, onCancelExtraction }: Props) {
+export function ArmyTransportPanel({ army, armies, fleets, provinces, owner, navalState, wars = [], relations = [], activeBattles = [], onEmbark, onDisembark, onCancelExtraction, onCancelFriendlyLanding }: Props) {
   const [chosen, setChosen] = useState('');
   const fleetIndexes = useMemo(() => buildNavalIndexes(fleets), [fleets]);
   const cargo = useMemo(() => buildTransportIndexes(armies), [armies]);
   if (army.embarkedFleetId) {
     const fleet = fleetIndexes.byId.get(army.embarkedFleetId);
-    return <section aria-label="Army transport"><p>Embarked on {fleet?.name ?? army.embarkedFleetId}</p><p>{fleet?.status} · {provinces.find(p => p.id === fleet?.portProvinceId)?.name ?? fleet?.locationSeaNodeId ?? 'Em movimento naval'}</p>{owner && fleet?.status === 'DOCKED' && <button onClick={onDisembark}>Disembark</button>}</section>;
+    return <section aria-label="Army transport"><p>Embarked on {fleet?.name ?? army.embarkedFleetId}</p><p>{fleet?.status} · {provinces.find(p => p.id === fleet?.portProvinceId)?.name ?? fleet?.locationSeaNodeId ?? 'Em movimento naval'}</p>{army.friendlyBeachLanding ? <><p>{FRIENDLY_BEACH_LANDING_LABEL}</p><p>{provinces.find(p => p.id === army.friendlyBeachLanding!.provinceId)?.name} {army.friendlyBeachLanding.elapsedDays}/{AMPHIBIOUS_FRIENDLY_BEACH_LANDING_DAYS} dias</p>{owner && <button onClick={onCancelFriendlyLanding}>Cancelar desembarque</button>}</> : owner && <>{fleet?.status === 'DOCKED' && <><p>Desembarcar pelo porto</p><button onClick={onDisembark}>Disembark</button></>}<p>Clique com o botão direito numa província costeira amiga para desembarcar.</p></>}</section>;
   }
   if (army.beachExtraction) {
     const order = army.beachExtraction, fleet = fleetIndexes.byId.get(order.fleetId);

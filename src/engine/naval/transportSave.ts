@@ -1,3 +1,4 @@
+import { AMPHIBIOUS_FRIENDLY_BEACH_LANDING_DAYS } from './friendlyBeachLanding';
 import type { Army, Province, ActiveBattle } from '../../types';
 import type { NavalState } from '../../types/naval';
 import { AMPHIBIOUS_BEACH_EXTRACTION_DAYS } from './beachExtraction';
@@ -11,6 +12,13 @@ export function validateTransportSave(armies: Army[], naval: NavalState, provinc
   for (const army of armies) {
     if (ids.has(army.id)) throw new Error('Army duplicado no save');
     ids.add(army.id);
+    if (army.friendlyBeachLanding !== undefined) {
+      const order = army.friendlyBeachLanding, fleet = fleets.get(army.embarkedFleetId ?? '');
+      if (!order || typeof order !== 'object' || typeof order.provinceId !== 'string' || typeof order.seaNodeId !== 'string' || !Number.isInteger(order.elapsedDays) || order.elapsedDays < 0 || order.elapsedDays >= AMPHIBIOUS_FRIENDLY_BEACH_LANDING_DAYS) throw new Error('Friendly landing metadata invalid');
+      if (!fleet || army.beachExtraction || fleet.status !== 'HOLDING' || fleet.locationSeaNodeId !== order.seaNodeId || fleet.portProvinceId || fleet.route.length || fleet.movementProgress !== 0 || naval.invasions?.some(o => o.fleetId === fleet.id) || armies.some(a => a.beachExtraction?.fleetId === fleet.id)) throw new Error('Friendly landing Fleet invalid');
+      if (!provinceIds.has(order.provinceId) || resolveAmphibiousLandingSeaNode(order.provinceId)?.id !== order.seaNodeId) throw new Error('Friendly landing coast invalid');
+      if (army.retreatProtectionDays) throw new Error('Friendly landing Army protected');
+    }
     if (army.beachExtraction !== undefined) {
       const order = army.beachExtraction;
       if (!order || typeof order !== 'object' || typeof order.fleetId !== 'string' || typeof order.provinceId !== 'string' || typeof order.seaNodeId !== 'string' || !Number.isInteger(order.elapsedDays) || order.elapsedDays < 0 || order.elapsedDays >= AMPHIBIOUS_BEACH_EXTRACTION_DAYS) throw new Error('Beach extraction metadata invalid');

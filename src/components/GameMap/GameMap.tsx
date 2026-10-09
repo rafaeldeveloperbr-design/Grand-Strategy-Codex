@@ -1,3 +1,4 @@
+import { getFriendlyDisembarkError, FRIENDLY_BEACH_LANDING_LABEL } from '../../engine/naval/friendlyBeachLanding';
 import { ActiveBattlePanel } from '../ActiveBattlePanel';
 import { mapMetadata } from '../../data/map';
 import type { MapViewBox } from '../../data/map/types';
@@ -38,6 +39,7 @@ export interface MapProps {
   onAirCancel?: () => void;
   onAirFeedback?: (message: string, error: boolean) => void;
   onDisembark?: (armyId: string) => void;
+  onFriendlyLanding?: (armyIds: string[], provinceId: string) => void;
   onInvasion?: (armyIds: string[], provinceId: string) => void;
   navalState?: NavalState;
   selectedFleetId?: string | null;
@@ -75,7 +77,7 @@ export interface MapProps {
 
 export const GameMap: React.FC<MapProps> = ({
   airState, selectedAirWingId, onAirWingSelect, onAirMission, onAirRebase, onAirCancel, onAirFeedback,
-  onDisembark, onInvasion,
+  onDisembark, onInvasion, onFriendlyLanding,
   navalState,
   selectedFleetId = null,
   onFleetSelect,
@@ -123,6 +125,9 @@ export const GameMap: React.FC<MapProps> = ({
   const selectedWingZone=airWing?.assignedAirZoneId ?? airZoneByProvinceId.get(airWing?.baseProvinceId ?? '')?.id ?? null;
   const airContext = { provinces, countries, armies, wars, relations: diplomaticRelations };
   const [invasionSelection, setInvasionSelection] = useState<{fleetId:string;armyIds:string[]}|null>(null);
+  const [friendlySelection, setFriendlySelection] = useState<{fleetId:string;armyIds:string[]}|null>(null);
+  const embarkedSelection = selectedArmy ? armies.find(a => a.id === selectedArmy && a.embarkedFleetId && a.owner === playerCountryTag) : undefined;
+  const friendlyTargetIds = friendlySelection?.fleetId === selectedFleetId ? friendlySelection.armyIds : embarkedSelection && !embarkedSelection.friendlyBeachLanding ? [embarkedSelection.id] : undefined;
   const transportIndexes = useMemo(()=>buildTransportIndexes(armies),[armies]);
   const [selectedNavalBattle, setSelectedNavalBattle] = useState<string | null>(null);
   const selectedFleet = navalState?.fleets.find(f => f.id === selectedFleetId);
@@ -250,6 +255,7 @@ export const GameMap: React.FC<MapProps> = ({
     if (dispatchAirTarget(provinceId)) return;
     closeStack();
     if (invasionSelection && invasionSelection.fleetId === selectedFleetId) { onInvasion?.(invasionSelection.armyIds, provinceId); setInvasionSelection(null); return; }
+    if (friendlySelection && friendlySelection.fleetId === selectedFleetId) { onFriendlyLanding?.(friendlySelection.armyIds, provinceId); setFriendlySelection(null); return; }
     onProvinceClick(provinceId);
   };
 
@@ -317,7 +323,8 @@ export const GameMap: React.FC<MapProps> = ({
           const target = e.target as SVGElement;
           const provinceId = target.closest?.('[data-province-id]')?.getAttribute('data-province-id');
           if (airTarget) { if (provinceId) dispatchAirTarget(provinceId); return; }
-          if (provinceId && invasionSelection) { handleClick(provinceId); return; }
+          if (provinceId && (invasionSelection?.fleetId === selectedFleetId || friendlySelection?.fleetId === selectedFleetId)) { handleClick(provinceId); return; }
+          if (provinceId && embarkedSelection && onFriendlyLanding) { onFriendlyLanding([embarkedSelection.id], provinceId); return; }
           if (provinceId) { if (selectedFleetId && onFleetReturn) onFleetReturn(provinceId); else if (e.shiftKey) onProvinceRightClick(provinceId, true); else onProvinceRightClick(provinceId); }
         }}
       >
@@ -416,7 +423,8 @@ export const GameMap: React.FC<MapProps> = ({
           </filter>
         </defs>
       </svg>
-      {invasionSelection&&invasionSelection.fleetId===selectedFleetId&&<div className="amphibious-target-hint" role="status">Amphibious Invasion: clique com botão esquerdo ou direito numa província costeira inimiga. {hoveredProvince && <span>{planInvasion({ armies, naval: navalState!, provinces, wars, relations: diplomaticRelations, actor: playerCountryTag ?? '' }, invasionSelection.fleetId, invasionSelection.armyIds, hoveredProvince).error ?? amphibiousLandingLabel(portByProvince.has(hoveredProvince) ? 'PORT' : 'BEACH')}</span>} <button onClick={()=>setInvasionSelection(null)}>Cancelar seleção</button></div>}{!selectionMode && selectedFleet && <FleetPanel key={selectedFleet.id} onSelectArmy={selectArmy} embarkedArmies={transportIndexes.byFleet.get(selectedFleet.id)??[]} extractingArmies={transportIndexes.extractionsByFleet.get(selectedFleet.id)??[]} invasion={navalState?.invasions?.find(o=>o.fleetId===selectedFleet.id)} onDisembark={onDisembark} onPlanInvasion={armyIds=>setInvasionSelection({fleetId:selectedFleet.id,armyIds})} reinforcements={navalState?.construction?.builds.filter(b=>b.targetFleetId===selectedFleet.id)} fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
+      {friendlyTargetIds && navalState && <div className="amphibious-target-hint" role="status">Desembarque amigável: clique com o botão direito numa província costeira acessível. {hoveredProvince && <span>{getFriendlyDisembarkError({ armies, naval: navalState, provinces, wars, relations: diplomaticRelations, activeBattles, actor: playerCountryTag ?? '' }, friendlyTargetIds, hoveredProvince) ?? (selectedFleet?.status === 'DOCKED' && selectedFleet.portProvinceId === hoveredProvince || navalState.fleets.some(f => f.id === embarkedSelection?.embarkedFleetId && f.status === 'DOCKED' && f.portProvinceId === hoveredProvince) ? 'Desembarcar pelo porto' : FRIENDLY_BEACH_LANDING_LABEL)}</span>} {friendlySelection && <button onClick={()=>setFriendlySelection(null)}>Cancelar seleção</button>}</div>}
+      {invasionSelection&&invasionSelection.fleetId===selectedFleetId&&<div className="amphibious-target-hint" role="status">Amphibious Invasion: clique com botão esquerdo ou direito numa província costeira inimiga. {hoveredProvince && <span>{planInvasion({ armies, naval: navalState!, provinces, wars, relations: diplomaticRelations, actor: playerCountryTag ?? '' }, invasionSelection.fleetId, invasionSelection.armyIds, hoveredProvince).error ?? amphibiousLandingLabel(portByProvince.has(hoveredProvince) ? 'PORT' : 'BEACH')}</span>} <button onClick={()=>setInvasionSelection(null)}>Cancelar seleção</button></div>}{!selectionMode && selectedFleet && <FleetPanel key={selectedFleet.id} onSelectArmy={selectArmy} embarkedArmies={transportIndexes.byFleet.get(selectedFleet.id)??[]} extractingArmies={transportIndexes.extractionsByFleet.get(selectedFleet.id)??[]} invasion={navalState?.invasions?.find(o=>o.fleetId===selectedFleet.id)} onDisembark={onDisembark} onPlanFriendlyLanding={armyIds=>{setInvasionSelection(null);setFriendlySelection({fleetId:selectedFleet.id,armyIds});}} onPlanInvasion={armyIds=>{setFriendlySelection(null);setInvasionSelection({fleetId:selectedFleet.id,armyIds});}} reinforcements={navalState?.construction?.builds.filter(b=>b.targetFleetId===selectedFleet.id)} fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
       {!selectionMode && airWing && airState && <AirWingPanel key={airWing.id} wing={airWing} state={airState} ctx={airContext} owner={airWing.countryTag===playerCountryTag}
         onTargetMission={mission=>{if(canStartAirTarget(airWing,playerCountryTag??'',mission)){setAirMode(true);setAirFeedback('');setAirTarget({wingId:airWing.id,kind:'MISSION',mission});}}}
         onTargetRebase={()=>{if(canStartAirTarget(airWing,playerCountryTag??'')){setAirMode(true);setAirFeedback('');setAirTarget({wingId:airWing.id,kind:'REBASE'});}}}

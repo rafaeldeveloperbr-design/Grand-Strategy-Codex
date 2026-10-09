@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import type { Fleet } from '../../types/naval';
+import { ProvinceNavalConstruction } from './ProvinceNavalConstruction';
+import type { NavalState, NavalUnitType, Fleet } from '../../types/naval';
 import { portByProvince } from '../../engine/naval';
 import { NAVAL_BALANCE } from '../../data/navalUnits';
 import type { LogisticsSnapshot } from '../../engine/logistics';
@@ -14,6 +15,9 @@ import { getProvinceRebellion, type RebellionAction } from '../../engine/rebelli
 import type { CountryTechState } from '../../types/technology';
 
 export interface ProvincePanelProps {
+  navalState?: NavalState;
+  onNavalBuild?: (provinceId: string, type: NavalUnitType | 'UPGRADE', targetFleetId?: string) => void;
+  onNavalCancel?: (id: string) => void;
   fleets?: readonly Fleet[];
   onSelectFleet?: (id: string) => void;
   logistics?: LogisticsSnapshot;
@@ -40,6 +44,7 @@ export interface ProvincePanelProps {
 type PanelTab = 'info' | 'buildings' | 'military';
 
 export const ProvincePanel: React.FC<ProvincePanelProps> = ({
+  navalState, onNavalBuild, onNavalCancel,
   fleets = [],
   onSelectFleet,
   logistics,
@@ -98,6 +103,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
         <strong>Porto · nível {portByProvince.get(province.id)!.level} · operacional</strong>
         <p>Recuperação: {NAVAL_BALANCE.recoveryOrganization*portByProvince.get(province.id)!.level} organização e até {(NAVAL_BALANCE.repairStrength*portByProvince.get(province.id)!.level).toFixed(1)} força/navio/dia. Reparo: {NAVAL_BALANCE.repairGoldPerStrength} ouro/força; requer porto amigo.</p>
         {fleets.filter(f=>f.portProvinceId===province.id).map(f=><button key={f.id} onClick={()=>onSelectFleet?.(f.id)}>{f.name}</button>)}
+        {navalState && ownerCountry && <ProvinceNavalConstruction key={province.id} province={province} country={ownerCountry} actor={playerCountry.tag} naval={navalState} onBuild={onNavalBuild} onCancel={onNavalCancel}/>}
       </section>}
 
       {/* Layout Principal */}

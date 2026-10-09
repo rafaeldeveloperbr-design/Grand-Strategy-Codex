@@ -356,7 +356,7 @@ export const GameMap: React.FC<MapProps> = ({
           </filter>
         </defs>
       </svg>
-      {!selectionMode && selectedFleet && <FleetPanel fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
+      {!selectionMode && selectedFleet && <FleetPanel reinforcements={navalState?.construction?.builds.filter(b=>b.targetFleetId===selectedFleet.id)} fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
       {!selectionMode && navalBattle && navalState && <NavalBattlePanel battle={navalBattle} fleets={navalState.fleets} onLocate={()=>{const n=seaNodeById.get(navalBattle.seaNodeId);if(n)focusWorldPoint(n);}} onClose={()=>setSelectedNavalBattle(null)}/>}
 
       {/* === Tooltip === */}

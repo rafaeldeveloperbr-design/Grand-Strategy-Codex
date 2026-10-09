@@ -4,7 +4,7 @@ import type { MilitaryAIProfile } from './militaryAIProfiler';
 import { AI_PHASES, createAITickProfiler, profilerNow, type AIPhase, type SlowestBot, type AITickProfile } from './aiTickProfiler';
 
 export const GAME_LOOP_PHASES = ['economy', 'politics', 'unrest', 'diplomacyTechnology', 'AI',
-  'navalAI', 'movement', 'navalMovement', 'battleArrival', 'battleContinuous', 'navalCombat', 'warResolution', 'rebellion', 'cleanup',
+  'navalConstruction', 'navalAI', 'movement', 'navalMovement', 'battleArrival', 'battleContinuous', 'navalCombat', 'warResolution', 'rebellion', 'cleanup',
   'statePublication', 'TOTAL'] as const;
 type Phase = typeof GAME_LOOP_PHASES[number];
 export type PhaseStats = { count: number; total: number; average: number; max: number; last: number };
@@ -24,7 +24,7 @@ export type AIBreakdown = {
 /** Production uses an inert instance; every report resets the recent window. */
 export function createGameLoopProfiler(enabled: boolean, options: {
   now?: () => number; reportEvery?: number;
-  report?: (summary: { speed: number; targetInterval: number; total: PhaseStats | undefined; slowTicks: number; speedCounts: Record<number, number>; aiBreakdown: AIBreakdown; navalCounters: NavalCounters; phases: Partial<Record<Phase, PhaseStats>> }) => void;
+  report?: (summary: { speed: number; targetInterval: number; total: PhaseStats | undefined; slowTicks: number; speedCounts: Record<number, number>; aiBreakdown: AIBreakdown; navalCounters: NavalCounters; navalConstruction: { activeNavalBuilds: number; queuedNavalBuilds: number; completedShips: number; shipyardUpgrades: number }; phases: Partial<Record<Phase, PhaseStats>> }) => void;
 } = {}) {
   const clock = options.now ?? profilerNow;
   const phases: Partial<Record<Phase, PhaseStats>> = {};
@@ -35,6 +35,7 @@ export function createGameLoopProfiler(enabled: boolean, options: {
   let started = 0, phaseStarted = 0;
   let politicalActivationDuration = 0;
   let navalCounters: NavalCounters = { fleets: 0, movingFleets: 0, navalAIBots: 0, activeNavalBattles: 0, pathfindCalls: 0 };
+  let navalConstruction = { activeNavalBuilds: 0, queuedNavalBuilds: 0, completedShips: 0, shipyardUpgrades: 0 };
   const record = (phase: Phase, duration: number) => {
     const stat = phases[phase] ?? { count: 0, total: 0, average: 0, max: 0, last: 0 };
     stat.count++; stat.total += duration; stat.average = stat.total / stat.count;
@@ -43,6 +44,7 @@ export function createGameLoopProfiler(enabled: boolean, options: {
   };
   return {
     phases, aiProfiler,
+    recordNavalConstruction(counters: typeof navalConstruction) { if (enabled) for (const key of Object.keys(counters) as (keyof typeof navalConstruction)[]) navalConstruction[key] += counters[key]; },
     recordNaval(counters: NavalCounters) { if (enabled) for (const key of Object.keys(counters) as (keyof NavalCounters)[]) navalCounters[key] += counters[key]; },
     begin() { if (enabled) { started = phaseStarted = clock(); politicalActivationDuration = 0; } },
     measureSimulationActivation<T>(run: () => T): T {
@@ -97,7 +99,7 @@ export function createGameLoopProfiler(enabled: boolean, options: {
       }
       if (duration > target) slowTicks++;
       if (ticks % (options.reportEvery ?? 60) === 0) {
-        const summary = { speed, targetInterval: target, total: phases.TOTAL ? { ...phases.TOTAL } : undefined, slowTicks, speedCounts: { ...speedCounts }, aiBreakdown: structuredClone(aiBreakdown), navalCounters: { ...navalCounters }, phases: structuredClone(phases) };
+        const summary = { speed, targetInterval: target, total: phases.TOTAL ? { ...phases.TOTAL } : undefined, slowTicks, speedCounts: { ...speedCounts }, aiBreakdown: structuredClone(aiBreakdown), navalCounters: { ...navalCounters }, navalConstruction: { ...navalConstruction }, phases: structuredClone(phases) };
         if (options.report) options.report(summary);
         else {
           const breakdown = AI_PHASES
@@ -114,6 +116,7 @@ export function createGameLoopProfiler(enabled: boolean, options: {
         // Each report contains a fresh, non-overlapping window (60 ticks by default).
         for (const phase of GAME_LOOP_PHASES) delete phases[phase];
         ticks = 0; slowTicks = 0; speedCounts = {}; aiBreakdown = { phases: {} };
+        navalConstruction = { activeNavalBuilds: 0, queuedNavalBuilds: 0, completedShips: 0, shipyardUpgrades: 0 };
         navalCounters = { fleets: 0, movingFleets: 0, navalAIBots: 0, activeNavalBattles: 0, pathfindCalls: 0 };
       }
     },

@@ -108,7 +108,7 @@ describe('game loop profiler', () => {
     for (const cost of [2, 4]) {
       profiler.begin();
       for (const phase of GAME_LOOP_PHASES.filter(p => p !== 'TOTAL')) { time += cost; profiler.endPhase(phase); }
-      profiler.finish(5, 30);
+      profiler.finish(5, (GAME_LOOP_PHASES.length - 1) * 3);
     }
     const phases = report.mock.calls[0][0].phases;
     expect(phases.economy).toEqual({ count: 2, total: 6, average: 3, max: 4, last: 4 });
@@ -117,6 +117,7 @@ describe('game loop profiler', () => {
     expect(phases.navalAI).toEqual(phases.economy);
     expect(phases.navalMovement).toEqual(phases.economy);
     expect(phases.navalCombat).toEqual(phases.economy);
+    expect(phases.navalConstruction).toEqual(phases.economy);
     expect(report).toHaveBeenCalledTimes(1);
     expect(report.mock.calls[0][0].slowTicks).toBe(1);
   });

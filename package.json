@@ -15,7 +15,9 @@
     "benchmark:simulation-activation": "node scripts/benchmark-simulation-activation.mjs",
     "generate:naval": "node tools/map/generate_naval.mjs",
     "validate:naval": "node tools/map/generate_naval.mjs --check",
-    "benchmark:naval": "node scripts/benchmark-naval.mjs"
+    "benchmark:naval": "node scripts/benchmark-naval.mjs",
+    "benchmark:naval-construction": "node scripts/benchmark-naval-construction.mjs",
+    "smoke:naval-construction": "node scripts/smoke-naval-construction.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",

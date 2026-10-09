@@ -7,6 +7,7 @@ import { findSeaRoute, seaRouteDistance } from './pathfinding';
 import { edgeKey, navalPorts, portByProvince, seaEdgeByPair, seaNodeById } from './world';
 export * from './world';
 export * from './pathfinding';
+export * from './construction';
 export const fleetSpeed = (f: Fleet): number => f.units.length ? Math.min(...f.units.map(u=>u.speed)) : 0;
 export const fleetStrength = (f: Fleet): number => f.units.reduce((s,u)=>s+u.strength,0);
 export const fleetOrganization = (f: Fleet): number => f.units.length ? f.units.reduce((s,u)=>s+u.organization/u.maxOrganization,0)/f.units.length*100 : 0;
@@ -241,7 +242,7 @@ export function navalCombatTick(state:NavalState,wars:readonly War[],day:number,
     }
   }
   battles=[...battles.filter(b=>b.status==='ENDED').slice(-B.historyLimit),...battles.filter(b=>b.status==='ACTIVE')];
-  return {fleets:fleets.filter(f=>f.units.length),battles};
+  return {...state,fleets:fleets.filter(f=>f.units.length),battles};
 }
 export function cleanupNavalState(state:NavalState,provinces:readonly Province[],wars:readonly War[]):NavalState {
   const territory=new Set(provinces.map(p=>p.owner));
@@ -252,5 +253,10 @@ export function cleanupNavalState(state:NavalState,provinces:readonly Province[]
     return !a.length||!opposite.length||!a.every(f=>opposite.every(e=>hostility.get(f.countryTag)?.has(e.countryTag))) ? {...b,status:'ENDED' as const} : b;
   });
   const engaged=new Set(battles.filter(b=>b.status==='ACTIVE').flatMap(b=>[...b.sideA,...b.sideB]));
-  return {battles,fleets:fleets.map(f=>f.status==='COMBAT'&&!engaged.has(f.id)?{...f,status:'HOLDING' as const}:f)};
+  const owners=new Map(provinces.map(p=>[p.id,p.owner]));
+  const construction=state.construction ? {...state.construction,
+    builds:state.construction.builds.filter(b=>owners.get(b.provinceId)===b.countryTag),
+    upgrades:state.construction.upgrades.filter(b=>owners.get(b.provinceId)===b.countryTag),
+  } : undefined;
+  return {...state,...(construction?{construction}:{}),battles,fleets:fleets.map(f=>f.status==='COMBAT'&&!engaged.has(f.id)?{...f,status:'HOLDING' as const}:f)};
 }

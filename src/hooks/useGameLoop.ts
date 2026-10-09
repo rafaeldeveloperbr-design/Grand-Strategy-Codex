@@ -3,7 +3,7 @@ import { processPoliticalTick } from '../engine/politics';
 import { buildSimulationActivation } from '../engine/simulationActivation';
 import { cleanupDiplomacy } from '../engine/diplomacy';
 import type { NavalState } from '../types/naval';
-import { cleanupNavalState, navalAITick, navalMovementTick, navalCombatTick, navalRecoveryTick, resetNavalPathfindCalls, getNavalPathfindCalls } from '../engine/naval';
+import { processNavalConstructionTick, navalConstructionAI, cleanupNavalState, navalAITick, navalMovementTick, navalCombatTick, navalRecoveryTick, resetNavalPathfindCalls, getNavalPathfindCalls } from '../engine/naval';
 import { diplomacyDay } from '../engine/diplomacy/diplomacyRelations';
 import {
   useCallback,
@@ -241,6 +241,12 @@ export function useGameLoop(props: Props) {
     profiler.endPhase('AI');
 
     const navalActivation = buildSimulationActivation({ countries, provinces, armies, wars, relations, playerCountryTag, date: snapshot.date });
+    const navalProductionAI = props.navalStateRef ? navalConstructionAI(naval, provinces, countries, navalActivation.fullCountryTags, playerCountryTag, wars, diplomacyDay(snapshot.date)) : { naval, provinces, countries };
+    naval = navalProductionAI.naval; provinces = navalProductionAI.provinces; countries = navalProductionAI.countries;
+    const navalProduction = processNavalConstructionTick(naval, provinces, countries);
+    naval = navalProduction.naval;
+    profiler.recordNavalConstruction(navalProduction.counters);
+    profiler.endPhase('navalConstruction');
     // War participants already activate every country eligible for a hostile naval engagement.
     const navalAI = navalAITick(naval.fleets, navalActivation.fullCountryTags, playerCountryTag, provinces, relations, wars);
     naval = { ...naval, fleets: navalAI.fleets };

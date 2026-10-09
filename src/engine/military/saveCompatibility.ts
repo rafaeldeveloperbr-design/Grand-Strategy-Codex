@@ -1,8 +1,11 @@
 import { isRecognizedUnitType } from '../../data/units';
+import { readNavalSave } from '../naval/saveCompatibility';
 
 export class MilitarySaveCompatibilityError extends Error {}
 /** Validate military IDs throughout raw saves, before migrations can index catalogs. */
 export function validateMilitarySave(value: unknown, path = 'save', provinceIds?: Set<string>): void {
+  // The naval namespace has its own unit catalog and validated additive V3 schema.
+  if (path === 'save.naval') { readNavalSave(value); return; }
   if (path === 'save' && value && typeof value === 'object' && !Array.isArray(value)) {
     const raw = value as Record<string, unknown>;
     const world = raw.world && typeof raw.world === 'object' ? raw.world as Record<string, unknown> : undefined;

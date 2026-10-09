@@ -1,3 +1,4 @@
+import { diplomacyDay } from './engine/diplomacy/diplomacyRelations';
 import { initializePolitics } from './engine/politics';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useGameRefs } from './hooks/useGameRefs';
@@ -61,7 +62,7 @@ import { useSaveSystem } from './hooks/app/useSaveSystem';
 import { CampaignEntry, type CampaignStart } from './components/CampaignEntry';
 import { getCountryInitialView } from './engine/countrySelection';
 import type { NavalState, Fleet } from './types/naval';
-import { createInitialNavies, resolveFleetIntercept, orderFleetMove, orderFleetReturn, cancelNavalOrder } from './engine/naval';
+import { createInitialNavies, createInitialShipyards, startNavalConstruction, cancelNavalConstruction, resolveFleetIntercept, orderFleetMove, orderFleetReturn, cancelNavalOrder } from './engine/naval';
 
 
 export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlayerTag, saved }) => {
@@ -81,7 +82,7 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
     }))
   );
   const [armies, setArmies] = useState<Army[]>(() => saved?.military.armies ?? createInitialArmies(initialCountries));
-  const [navalState, setNavalState] = useState<NavalState>(() => saved ? saved.naval ?? { fleets: [], battles: [] } : { fleets: createInitialNavies(initialCountries, provincesData), battles: [] });
+  const [navalState, setNavalState] = useState<NavalState>(() => saved ? saved.naval ?? { fleets: [], battles: [] } : { fleets: createInitialNavies(initialCountries, provincesData), battles: [], construction: createInitialShipyards(initialCountries, provincesData) });
   const [selectedFleetId, setSelectedFleetId] = useState<string | null>(null);
   useEffect(() => { if (selectedFleetId && !navalState.fleets.some(f => f.id === selectedFleetId)) setSelectedFleetId(null); }, [navalState, selectedFleetId]);
   const [recruitments, setRecruitments] = useState<Recruitment[]>(saved?.military.recruitments ?? []);
@@ -129,6 +130,13 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
     fleetCommand(() => moved);
     addToast(`Interceptando ${target!.name}`, 'info');
   };
+  const buildNaval = (provinceId: string, type: import('./types/naval').NavalUnitType | 'UPGRADE', targetFleetId?: string) => {
+    const next = startNavalConstruction(navalStateRef.current, provincesRef.current, countriesRef.current, playerCountryTag, provinceId, type, diplomacyDay(dateRef.current), targetFleetId);
+    if (next.error) { addToast(next.error, 'warning'); return; }
+    navalStateRef.current = next.naval; provincesRef.current = next.provinces; countriesRef.current = next.countries;
+    setNavalState(next.naval); setProvinces(next.provinces); setAllCountries(next.countries);
+  };
+  const cancelNavalBuild = (id: string) => { const next = cancelNavalConstruction(navalStateRef.current, id, playerCountryTag); navalStateRef.current = next; setNavalState(next); };
   const returnFleet = (portId?: string) => fleetCommand(f => orderFleetReturn(f, provincesRef.current, diplomaticRelationsRef.current, warsRef.current, playerCountryTag, portId));
 
 
@@ -217,7 +225,7 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
         onEconomyClick={() => setShowEconomyPanel(true)}
       />      <div className="game__main">
         <GameMap navalState={navalState} selectedFleetId={selectedFleetId} onFleetSelect={selectFleet} onFleetOrder={id=>fleetCommand(f=>orderFleetMove(f,id,playerCountryTag))} onFleetIntercept={interceptFleet} onFleetReturn={returnFleet} onFleetCancel={()=>fleetCommand(cancelNavalOrder)} key={playerCountryTag} initialViewBox={initialMapView} logistics={logistics} provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} wars={wars} diplomaticRelations={diplomaticRelations} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} selectedArmyIds={selection.selectedArmyIds} playerCountryTag={playerCountryTag} onToggleArmy={value=>{setSelectedFleetId(null);selection.toggleArmySelection(value);}} onToggleStack={value=>{setSelectedFleetId(null);selection.toggleStackSelection(value);}} onToggleStackAdditive={value=>{setSelectedFleetId(null);selection.toggleStackAdditive(value);}} onClearSelection={()=>{setSelectedFleetId(null);selection.clearArmySelection();}} onProvinceHover={selection.handleProvinceHover} onProvinceClick={id=>{setSelectedFleetId(null);selection.handleProvinceClick(id);}} onArmyClick={id=>{setSelectedFleetId(null);selection.handleArmyClick(id);}} onProvinceRightClick={armyActions.handleProvinceRightClick} />
-        {selection.isPanelOpen && selectedProvinceData && <ProvincePanel fleets={navalState.fleets} onSelectFleet={selectFleet} selectedArmyIds={selection.selectedArmyIds} onSelectArmy={id=>{setSelectedFleetId(null);selection.toggleArmySelection(id);}} logistics={logistics} onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
+        {selection.isPanelOpen && selectedProvinceData && <ProvincePanel navalState={navalState} onNavalBuild={buildNaval} onNavalCancel={cancelNavalBuild} fleets={navalState.fleets} onSelectFleet={selectFleet} selectedArmyIds={selection.selectedArmyIds} onSelectArmy={id=>{setSelectedFleetId(null);selection.toggleArmySelection(id);}} logistics={logistics} onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
         {selection.selectedArmyIds.length > 1 && <ArmySelectionSummary armies={armies.filter(a => selection.selectedArmyIds.includes(a.id) && a.owner === playerCountryTag)} allArmies={armies} provinces={provinces} logistics={logistics} onClear={selection.clearArmySelection} onClearRoutes={armyActions.handleClearRoutes}><ArmyReorganizationPanel selectedIds={selection.selectedArmyIds} context={{armies, provinces, playerCountryTag, activeBattles}} onConfirm={armyActions.handleReorganize} /></ArmySelectionSummary>}
         {selection.selectedArmyIds.length === 1 && selectedArmyData && (
           <div className="army-info-panel">

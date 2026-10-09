@@ -1,5 +1,6 @@
 import type { NavalState } from '../../types/naval';
 import { NAVAL_UNIT_STATS } from '../../data/navalUnits';
+import { NAVAL_BUILD_CONFIG, NAVAL_QUEUE_LIMIT } from '../../data/navalConstruction';
 import { edgeKey, portByProvince, seaEdgeByPair, seaNodeById } from './world';
 const record = (v:unknown):v is Record<string,unknown> => typeof v==='object'&&v!==null;
 const strings = (v:unknown):v is string[] => Array.isArray(v)&&v.every(i=>typeof i==='string');
@@ -28,6 +29,33 @@ export function readNavalSave(value:unknown):NavalState {
       if(!record(u)||typeof u.id!=='string'||unitIds.has(u.id)||typeof u.type!=='string'||!Object.prototype.hasOwnProperty.call(NAVAL_UNIT_STATS,u.type)) throw new Error('Unidade naval inválida');
       unitIds.add(u.id);
       if(!['strength','maxStrength','organization','maxOrganization','attack','defense','speed'].every(k=>finite(u[k])&&(u[k] as number)>=0)||!finite(u.maxStrength)||u.maxStrength<=0||!finite(u.maxOrganization)||u.maxOrganization<=0||!finite(u.strength)||u.strength<=0||u.strength>u.maxStrength||!finite(u.organization)||u.organization>u.maxOrganization||!finite(u.speed)||u.speed<=0) throw new Error('Stats navais inválidos');
+    }
+  }
+  if (value.construction !== undefined) {
+    const c = value.construction;
+    if (!record(c) || !Array.isArray(c.shipyards) || !Array.isArray(c.builds) || !Array.isArray(c.upgrades) || !Number.isSafeInteger(c.nextId) || (c.nextId as number) < 1) throw new Error('Construção naval inválida');
+    const yards = new Map<string,number>(), orderIds = new Set<string>(), upgradePorts = new Set<string>(), queueSizes = new Map<string,number>();
+    for (const s of c.shipyards) {
+      if (!record(s) || typeof s.provinceId !== 'string' || !portByProvince.has(s.provinceId) || yards.has(s.provinceId) || !Number.isInteger(s.level) || (s.level as number) < 0 || (s.level as number) > 3) throw new Error('Shipyard inválido');
+      yards.set(s.provinceId,s.level as number);
+    }
+    for (const order of [...c.builds,...c.upgrades]) {
+      if (!record(order) || typeof order.id !== 'string' || !/^naval-build-\d+$/.test(order.id) || Number(order.id.slice(12)) >= (c.nextId as number) || orderIds.has(order.id) || typeof order.countryTag !== 'string' || typeof order.provinceId !== 'string' || !portByProvince.has(order.provinceId) || !finite(order.progress) || !finite(order.requiredProgress) || order.requiredProgress <= 0 || order.progress < 0 || order.progress >= order.requiredProgress || !finite(order.startedAt)) throw new Error('Ordem naval inválida');
+      orderIds.add(order.id);
+    }
+    for (const order of c.builds) {
+      if (!record(order) || typeof order.unitType !== 'string' || !Object.prototype.hasOwnProperty.call(NAVAL_UNIT_STATS,order.unitType) || order.targetFleetId !== undefined && typeof order.targetFleetId !== 'string') throw new Error('Navio em construção inválido');
+      const id = String(order.provinceId), size=(queueSizes.get(id)??0)+1;
+      if(size>NAVAL_QUEUE_LIMIT || (yards.get(id)??0)<NAVAL_BUILD_CONFIG[order.unitType as keyof typeof NAVAL_BUILD_CONFIG].level)throw new Error('Fila naval inválida');
+      queueSizes.set(id,size);
+    }
+    for (const order of c.upgrades) {
+      if (!record(order) || !Number.isInteger(order.targetLevel) || (order.targetLevel as number)<1 || (order.targetLevel as number)>3 || order.targetLevel !== (yards.get(String(order.provinceId))??0)+1 || upgradePorts.has(String(order.provinceId))) throw new Error('Upgrade naval inválido');
+      upgradePorts.add(String(order.provinceId));
+    }
+    for (const id of [...ids,...unitIds]) {
+      const serial=id.match(/^(?:fleet-built-|ship-naval-build-)(\d+)$/)?.[1];
+      if(serial && Number(serial)>=(c.nextId as number))throw new Error('Contador naval inválido');
     }
   }
   const battleIds=new Set<string>();

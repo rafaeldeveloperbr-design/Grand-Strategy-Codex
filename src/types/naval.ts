@@ -19,5 +19,9 @@ export interface NavalBattle {
   days: number; status: 'ACTIVE' | 'ENDED'; lossesA: number; lossesB: number;
   winner?: 'A' | 'B' | 'DRAW';
 }
-export interface NavalState { fleets: Fleet[]; battles: NavalBattle[] }
+export interface NavalShipyard { provinceId: string; level: number }
+export interface NavalBuildOrder { id: string; countryTag: string; provinceId: string; unitType: NavalUnitType; progress: number; requiredProgress: number; startedAt: number; targetFleetId?: string }
+export interface NavalShipyardUpgrade { id: string; countryTag: string; provinceId: string; targetLevel: number; progress: number; requiredProgress: number; startedAt: number }
+export interface NavalConstructionState { shipyards: NavalShipyard[]; builds: NavalBuildOrder[]; upgrades: NavalShipyardUpgrade[]; nextId: number }
+export interface NavalState { fleets: Fleet[]; battles: NavalBattle[]; construction?: NavalConstructionState }
 export interface NavalCounters { fleets: number; movingFleets: number; navalAIBots: number; activeNavalBattles: number; pathfindCalls: number }

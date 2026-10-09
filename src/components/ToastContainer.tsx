@@ -15,7 +15,7 @@ export const ToastContainer: React.FC = () => {
 
   return (
     <div className="toast-container">
-      {toasts.map((toast) => (
+      {toasts.slice(-4).map((toast) => (
         <div key={toast.id} className={`toast toast-${toast.type}`}>
           <div className="toast-content">
             {toast.title && <strong className="toast-title">{toast.title}</strong>}

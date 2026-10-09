@@ -8,6 +8,7 @@ import { edgeKey, navalPorts, portByProvince, seaEdgeByPair, seaNodeById } from 
 export * from './world';
 export * from './pathfinding';
 export * from './construction';
+export * from './transport';
 export const fleetSpeed = (f: Fleet): number => f.units.length ? Math.min(...f.units.map(u=>u.speed)) : 0;
 export const fleetStrength = (f: Fleet): number => f.units.reduce((s,u)=>s+u.strength,0);
 export const fleetOrganization = (f: Fleet): number => f.units.length ? f.units.reduce((s,u)=>s+u.organization/u.maxOrganization,0)/f.units.length*100 : 0;
@@ -161,10 +162,10 @@ export function navalRecoveryTick(fleets:readonly Fleet[],countries:readonly Cou
   });
   return {fleets:result,countries:countries.map(c=>countryByTag.get(c.tag)!)};
 }
-export function navalAITick(fleets:readonly Fleet[],full:Set<string>,player:string,provinces:readonly Province[],relations:readonly DiplomaticRelation[],wars:readonly War[]) {
+export function navalAITick(fleets:readonly Fleet[],full:Set<string>,player:string,provinces:readonly Province[],relations:readonly DiplomaticRelation[],wars:readonly War[],committed:ReadonlySet<string>=new Set()) {
   const hostility=buildNavalHostility(wars), indexes=buildNavalIndexes(fleets), bots=new Set<string>();
   const result=fleets.map(f=> {
-    if(f.countryTag===player||!full.has(f.countryTag)) return f;
+    if(f.countryTag===player||!full.has(f.countryTag)||committed.has(f.id)) return f;
     bots.add(f.countryTag);if(['COMBAT','RETREATING','MOVING'].includes(f.status)) return f;
     if(fleetOrganization(f)<50||f.units.some(u=>u.strength<u.maxStrength*.65)) return orderFleetReturn(f,provinces,relations,wars,f.countryTag)??f;
     const home=portByProvince.get(f.portProvinceId??''), origin=f.locationSeaNodeId??home?.seaNodeId;if(!origin) return f;

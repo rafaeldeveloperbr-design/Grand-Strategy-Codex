@@ -2,6 +2,7 @@ import type { NavalState } from '../../types/naval';
 import { NAVAL_UNIT_STATS } from '../../data/navalUnits';
 import { NAVAL_BUILD_CONFIG, NAVAL_QUEUE_LIMIT } from '../../data/navalConstruction';
 import { edgeKey, portByProvince, seaEdgeByPair, seaNodeById } from './world';
+import { LANDING_DAYS } from './transport';
 const record = (v:unknown):v is Record<string,unknown> => typeof v==='object'&&v!==null;
 const strings = (v:unknown):v is string[] => Array.isArray(v)&&v.every(i=>typeof i==='string');
 const finite = (v:unknown):v is number => typeof v==='number'&&Number.isFinite(v);
@@ -59,9 +60,20 @@ export function readNavalSave(value:unknown):NavalState {
     }
   }
   const battleIds=new Set<string>();
+  if (value.invasions !== undefined) {
+    if (!Array.isArray(value.invasions)) throw new Error('Invasões inválidas');
+    const committed = new Set<string>(), armies = new Set<string>();
+    for (const order of value.invasions) {
+      if (!record(order) || typeof order.fleetId !== 'string' || !ids.has(order.fleetId) || committed.has(order.fleetId) || !strings(order.armyIds) || !order.armyIds.length || order.armyIds.some(id => armies.has(id)) || new Set(order.armyIds).size !== order.armyIds.length || typeof order.targetProvinceId !== 'string' || typeof order.seaNodeId !== 'string' || !seaNodeById.has(order.seaNodeId) || portByProvince.get(order.targetProvinceId)?.seaNodeId !== order.seaNodeId || typeof order.targetOwner !== 'string' || !['SAILING', 'LANDING'].includes(String(order.status)) || !Number.isInteger(order.landingDays) || (order.landingDays as number) < 0 || (order.landingDays as number) >= LANDING_DAYS || order.status === 'SAILING' && order.landingDays !== 0 || order.status === 'LANDING' && order.landingDays === 0) throw new Error('Ordem/progresso de invasão inválido');
+      committed.add(order.fleetId); order.armyIds.forEach(id => armies.add(id));
+      const fleet = value.fleets.find(f => f.id === order.fleetId);
+      if (!fleet || ['COMBAT', 'RETREATING'].includes(fleet.status) || order.status === 'LANDING' && (fleet.status !== 'HOLDING' || fleet.locationSeaNodeId !== order.seaNodeId || fleet.movementProgress !== 0)) throw new Error('Fleet incompatível com landing');
+    }
+  }
   for(const b of value.battles) {
     if(!record(b)||typeof b.id!=='string'||battleIds.has(b.id)||!seaNodeById.has(String(b.seaNodeId))||!strings(b.sideA)||!strings(b.sideB)||!['ACTIVE','ENDED'].includes(String(b.status))||!finite(b.startedAt)||!['days','lossesA','lossesB'].every(k=>finite(b[k])&&(b[k] as number)>=0)) throw new Error('NavalBattle inválida');
     battleIds.add(b.id);
+    if (b.embarkedTroopLosses !== undefined && (!finite(b.embarkedTroopLosses) || b.embarkedTroopLosses < 0)) throw new Error('Baixas embarcadas inválidas');
     if(new Set([...b.sideA,...b.sideB]).size!==b.sideA.length+b.sideB.length) throw new Error('Participante naval duplicado');
     if(b.status==='ACTIVE'&&(!b.sideA.some(id=>ids.has(id))||!b.sideB.some(id=>ids.has(id)))) throw new Error('Fleet de batalha ausente');
   }

@@ -8,6 +8,7 @@ export function orderArmyGroup(ids: readonly string[], armies: Army[], owner: st
   for (const id of new Set(ids)) {
     const army = armies.find(a => a.id === id);
     if (!army || army.owner !== owner) continue;
+    if (army.embarkedFleetId) { failures.push({ name: army.name, reason: 'Army embarcado não recebe ordem terrestre' }); continue; }
     const moved = command === 'clear' ? clearMovementPlan(army) : command === 'append' ? appendWaypoint(army, destination, provinces, relations) : issueMoveCommand(army, destination, provinces, relations);
     if (moved) updates.set(id, moved);
     else failures.push({ name: army.name, reason: !provinces.some(p => p.id === destination) ? 'destino inválido' : army.inCombat ? 'em batalha' : army.location === destination ? 'já está no destino' : 'sem rota ou acesso válido' });

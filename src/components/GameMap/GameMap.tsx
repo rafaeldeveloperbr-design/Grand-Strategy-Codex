@@ -14,7 +14,7 @@ import { ArmyStackPopover } from '../ArmyStackPopover';
 import { OperationalOverlay } from './OperationalOverlay';
 import { buildLogisticsNetworks, type LogisticsSnapshot } from '../../engine/logistics';
 import type { NavalState } from '../../types/naval';
-import { fleetPosition, seaNodeById } from '../../engine/naval';
+import { buildTransportIndexes, fleetPosition, seaNodeById } from '../../engine/naval';
 import { NavalLayer } from './NavalLayer';
 import { FleetPanel, NavalBattlePanel } from '../FleetPanel';
 import '../../styles/naval.css';
@@ -23,6 +23,8 @@ const NO_WARS: War[] = [];
 const NO_RELATIONS: DiplomaticRelation[] = [];
 
 export interface MapProps {
+  onDisembark?: (armyId: string) => void;
+  onInvasion?: (armyIds: string[], provinceId: string) => void;
   navalState?: NavalState;
   selectedFleetId?: string | null;
   onFleetSelect?: (id: string | null) => void;
@@ -58,6 +60,7 @@ export interface MapProps {
 }
 
 export const GameMap: React.FC<MapProps> = ({
+  onDisembark, onInvasion,
   navalState,
   selectedFleetId = null,
   onFleetSelect,
@@ -97,6 +100,8 @@ export const GameMap: React.FC<MapProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [mapMode, setMapMode] = useState<MapMode>('political');
   const [navalMode, setNavalMode] = useState(false);
+  const [invasionSelection, setInvasionSelection] = useState<{fleetId:string;armyIds:string[]}|null>(null);
+  const transportIndexes = useMemo(()=>buildTransportIndexes(armies),[armies]);
   const [selectedNavalBattle, setSelectedNavalBattle] = useState<string | null>(null);
   const selectedFleet = navalState?.fleets.find(f => f.id === selectedFleetId);
   const navalBattle = navalState?.battles.find(b => b.id === selectedNavalBattle);
@@ -201,8 +206,9 @@ export const GameMap: React.FC<MapProps> = ({
 
   const handleClick = useCallback((provinceId: string) => {
     closeStack();
+    if (invasionSelection && invasionSelection.fleetId === selectedFleetId) { onInvasion?.(invasionSelection.armyIds, provinceId); setInvasionSelection(null); return; }
     onProvinceClick(provinceId);
-  }, [closeStack, onProvinceClick]);
+  }, [closeStack, onProvinceClick, invasionSelection, selectedFleetId, onInvasion]);
 
   return (
     <div className="map-container" ref={containerRef}>
@@ -346,7 +352,7 @@ export const GameMap: React.FC<MapProps> = ({
           countries={countries}
           provinces={provinces}
         />
-        {!selectionMode && navalState && <NavalLayer fleets={navalState.fleets} battles={navalState.battles} wars={wars} viewport={viewBox} mode={navalMode} selected={selectedFleetId} countries={countryByTag} provinces={provinces} scale={unitsPerPixel} onSelect={id=>{closeStack();setSelectedNavalBattle(null);onFleetSelect?.(id);}} onOrder={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetOrder?.(id);}} onIntercept={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetIntercept?.(id);}} onPort={onProvinceClick} onReturnPort={id=>onFleetReturn?.(id)} onBattle={id=>{onFleetSelect?.(null);setSelectedNavalBattle(id);const b=navalState.battles.find(b=>b.id===id),n=b?seaNodeById.get(b.seaNodeId):undefined;if(n)focusWorldPoint(n);}}/>}
+        {!selectionMode && navalState && <NavalLayer fleets={navalState.fleets} battles={navalState.battles} wars={wars} viewport={viewBox} mode={navalMode} selected={selectedFleetId} countries={countryByTag} provinces={provinces} scale={unitsPerPixel} onSelect={id=>{closeStack();setSelectedNavalBattle(null);onFleetSelect?.(id);}} onOrder={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetOrder?.(id);}} onIntercept={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetIntercept?.(id);}} onPort={handleClick} onReturnPort={id=>onFleetReturn?.(id)} onBattle={id=>{onFleetSelect?.(null);setSelectedNavalBattle(id);const b=navalState.battles.find(b=>b.id===id),n=b?seaNodeById.get(b.seaNodeId):undefined;if(n)focusWorldPoint(n);}}/>}
 
         {/* === Filtro de Glow para exércitos elevados === */}
         <defs>
@@ -356,8 +362,8 @@ export const GameMap: React.FC<MapProps> = ({
           </filter>
         </defs>
       </svg>
-      {!selectionMode && selectedFleet && <FleetPanel reinforcements={navalState?.construction?.builds.filter(b=>b.targetFleetId===selectedFleet.id)} fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
-      {!selectionMode && navalBattle && navalState && <NavalBattlePanel battle={navalBattle} fleets={navalState.fleets} onLocate={()=>{const n=seaNodeById.get(navalBattle.seaNodeId);if(n)focusWorldPoint(n);}} onClose={()=>setSelectedNavalBattle(null)}/>}
+      {invasionSelection&&invasionSelection.fleetId===selectedFleetId&&<div className="amphibious-target-hint" role="status">Amphibious Invasion: clique numa província costeira inimiga com porto. <button onClick={()=>setInvasionSelection(null)}>Cancelar seleção</button></div>}{!selectionMode && selectedFleet && <FleetPanel key={selectedFleet.id} onSelectArmy={onArmyClick} embarkedArmies={transportIndexes.byFleet.get(selectedFleet.id)??[]} invasion={navalState?.invasions?.find(o=>o.fleetId===selectedFleet.id)} onDisembark={onDisembark} onPlanInvasion={armyIds=>setInvasionSelection({fleetId:selectedFleet.id,armyIds})} reinforcements={navalState?.construction?.builds.filter(b=>b.targetFleetId===selectedFleet.id)} fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
+      {!selectionMode && navalBattle && navalState && <NavalBattlePanel armies={armies} battle={navalBattle} fleets={navalState.fleets} onLocate={()=>{const n=seaNodeById.get(navalBattle.seaNodeId);if(n)focusWorldPoint(n);}} onClose={()=>setSelectedNavalBattle(null)}/>}
 
       {/* === Tooltip === */}
       {!openGroup && <GameMapTooltip tooltip={tooltip} countries={countryByTag} presentation={presentation} war={war} logistics={networks} />}

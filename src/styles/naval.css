@@ -5,5 +5,6 @@
 .naval-panel button:disabled { opacity:.4; cursor:default; }
 .naval-panel__actions { display:flex; flex-wrap:wrap; gap:7px; }
 .naval-panel__hint { color:#b6cddd; font-size:12px; }
+.amphibious-target-hint { position:absolute; left:50%; top:12px; transform:translateX(-50%); z-index:35; background:#16283bf2; color:#edf4fc; border:1px solid #739bad; border-radius:6px; padding:10px; }
 .naval-port-info { border:1px solid #486e81; background:#1d3545; color:#dcebf2; border-radius:6px; padding:10px; margin:8px; font-size:12px; }
 .naval-port-info button { display:block; margin-top:5px; }

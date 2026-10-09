@@ -15,6 +15,7 @@ export interface SeaNode { id: string; x: number; y: number; neighbors: string[]
 export interface NavalPort { provinceId: string; level: number; seaNodeId: string; x: number; y: number }
 export interface SeaEdge { a: string; b: string; distance: number; logical?: boolean }
 export interface NavalBattle {
+  embarkedTroopLosses?: number;
   id: string; seaNodeId: string; sideA: string[]; sideB: string[]; startedAt: number;
   days: number; status: 'ACTIVE' | 'ENDED'; lossesA: number; lossesB: number;
   winner?: 'A' | 'B' | 'DRAW';
@@ -23,5 +24,7 @@ export interface NavalShipyard { provinceId: string; level: number }
 export interface NavalBuildOrder { id: string; countryTag: string; provinceId: string; unitType: NavalUnitType; progress: number; requiredProgress: number; startedAt: number; targetFleetId?: string }
 export interface NavalShipyardUpgrade { id: string; countryTag: string; provinceId: string; targetLevel: number; progress: number; requiredProgress: number; startedAt: number }
 export interface NavalConstructionState { shipyards: NavalShipyard[]; builds: NavalBuildOrder[]; upgrades: NavalShipyardUpgrade[]; nextId: number }
-export interface NavalState { fleets: Fleet[]; battles: NavalBattle[]; construction?: NavalConstructionState }
+export interface InvasionOrder { fleetId: string; armyIds: string[]; targetProvinceId: string; targetOwner: string; seaNodeId: string; status: 'SAILING' | 'LANDING'; landingDays: number }
+export interface AmphibiousCounters { embarkedArmies: number; transportedTroops: number; activeLandings: number; completedLandings: number; troopLossesAtSea: number }
+export interface NavalState { fleets: Fleet[]; battles: NavalBattle[]; construction?: NavalConstructionState; invasions?: InvasionOrder[] }
 export interface NavalCounters { fleets: number; movingFleets: number; navalAIBots: number; activeNavalBattles: number; pathfindCalls: number }

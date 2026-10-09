@@ -3,6 +3,7 @@ import { processPoliticalTick } from '../engine/politics';
 import { buildSimulationActivation } from '../engine/simulationActivation';
 import { cleanupDiplomacy } from '../engine/diplomacy';
 import type { NavalState } from '../types/naval';
+import { amphibiousTick, resolveTransportLosses } from '../engine/naval/transport';
 import { processNavalConstructionTick, navalConstructionAI, cleanupNavalState, navalAITick, navalMovementTick, navalCombatTick, navalRecoveryTick, resetNavalPathfindCalls, getNavalPathfindCalls } from '../engine/naval';
 import { diplomacyDay } from '../engine/diplomacy/diplomacyRelations';
 import {
@@ -248,7 +249,7 @@ export function useGameLoop(props: Props) {
     profiler.recordNavalConstruction(navalProduction.counters);
     profiler.endPhase('navalConstruction');
     // War participants already activate every country eligible for a hostile naval engagement.
-    const navalAI = navalAITick(naval.fleets, navalActivation.fullCountryTags, playerCountryTag, provinces, relations, wars);
+    const navalAI = navalAITick(naval.fleets, navalActivation.fullCountryTags, playerCountryTag, provinces, relations, wars, new Set(naval.invasions?.map(o => o.fleetId)));
     naval = { ...naval, fleets: navalAI.fleets };
     profiler.endPhase('navalAI');
 
@@ -261,6 +262,22 @@ export function useGameLoop(props: Props) {
     naval = { ...naval, fleets: navalMovementTick(naval.fleets, provinces, relations, wars) };
     profiler.endPhase('navalMovement');
 
+    const previousNavalDays = new Map(naval.battles.map(b => [b.id, b.days]));
+    naval = navalCombatTick(naval, wars, diplomacyDay(snapshot.date), provinces, relations);
+    const engagedThisTick = new Set(naval.battles.filter(b => b.status === 'ACTIVE' || b.days > (previousNavalDays.get(b.id) ?? 0)).flatMap(b => [...b.sideA, ...b.sideB]));
+    const transportLosses = resolveTransportLosses(naval, armies, provinces);
+    ({ naval, armies, provinces } = transportLosses);
+    const recovery = navalRecoveryTick(naval.fleets, countries, provinces, relations, wars);
+    naval = { ...naval, fleets: recovery.fleets }; countries = recovery.countries;
+    profiler.endPhase('navalCombat');
+    const landing = amphibiousTick(naval, armies, provinces, wars, engagedThisTick);
+    naval = landing.naval; armies = landing.armies; arrivedArmies.push(...landing.arrivals);
+    profiler.recordAmphibious({ ...landing.counters, troopLossesAtSea: transportLosses.troopLossesAtSea });
+    for (const feedback of [...transportLosses.messages, ...landing.messages]) {
+      if (feedback.owner === playerCountryTag) addToast(feedback.message, 'info', 'Transporte naval');
+    }
+    profiler.endPhase('amphibious');
+
     // 9. COMBAT - só depois de mover
     const arr = processBattleArrival({ arrivedArmies, armies, provinces, countries, wars, relations, recruitments, buildingConstructions, currentActiveBattles, snapshot, playerCountryTag, allCountries, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities });
     armies = arr.armies; provinces = arr.provinces; countries = arr.countries; currentActiveBattles = arr.currentActiveBattles; recruitments = arr.recruitments; buildingConstructions = arr.buildingConstructions;
@@ -271,11 +288,6 @@ export function useGameLoop(props: Props) {
     armies = cont.armies; provinces = cont.provinces; countries = cont.countries; currentActiveBattles = cont.currentActiveBattles; wars = cont.wars; recruitments = cont.recruitments; buildingConstructions = cont.buildingConstructions;
 
     profiler.endPhase('battleContinuous');
-
-    naval = navalCombatTick(naval, wars, diplomacyDay(snapshot.date), provinces, relations);
-    const recovery = navalRecoveryTick(naval.fleets, countries, provinces, relations, wars);
-    naval = { ...naval, fleets: recovery.fleets }; countries = recovery.countries;
-    profiler.endPhase('navalCombat');
 
     const resolvedWars = processWarResolutionTick({provinces,countries,wars,relations,armies,activeBattles:currentActiveBattles,recruitments,constructions:buildingConstructions,date:snapshot.date});
     ({provinces,countries,wars,relations,armies,recruitments} = resolvedWars);
@@ -298,6 +310,13 @@ export function useGameLoop(props: Props) {
 
     ({relations,wars} = cleanupDiplomacy({relations,wars,countries,provinces,armies,date: snapshot.date}));
     naval = cleanupNavalState(naval, provinces, wars);
+    const cleanupLosses = resolveTransportLosses(naval, armies, provinces);
+    ({ naval, armies, provinces } = cleanupLosses);
+    if (cleanupLosses.troopLossesAtSea) profiler.recordAmphibious({ embarkedArmies: 0, transportedTroops: 0, activeLandings: 0, completedLandings: 0, troopLossesAtSea: cleanupLosses.troopLossesAtSea });
+    for (const feedback of cleanupLosses.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
+    const revalidated = amphibiousTick(naval, armies, provinces, wars, new Set(), false);
+    naval = revalidated.naval;
+    for (const feedback of revalidated.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
     profiler.endPhase('cleanup');
 
     setArmies(armies); setProvinces(provinces); setAllCountries(countries); setWars(wars);

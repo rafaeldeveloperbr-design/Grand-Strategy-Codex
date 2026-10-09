@@ -80,6 +80,8 @@ export interface ArmyMovementPlan {
 }
 
 export interface Army {
+  /** Canonical transport association; an embarked army has no land location. */
+  embarkedFleetId?: string;
   movementPlan?: ArmyMovementPlan;
   rebellionFactionId?: string;
   rebellionMovement?: { target?: string; reason: string; state: 'marching' | 'defending' | 'blocked'; blockedSinceDay?: number; powerRatio?: number; requiredRatio?: number };

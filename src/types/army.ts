@@ -115,6 +115,8 @@ export interface Army {
   inCombat?: boolean;
   retreatProtectionDays?: number;
   retreatFromBattleId?: string;
+  /** Strategic memory; decremented once per daily movement tick, also in PASSIVE. */
+  recentDefeat?: { provinceId: string; battleId?: string; daysRemaining: number };
   originalOwner?: string; // País de origem dos rebeldes (para IA separatista)
   separatistMode?: boolean; // Flag para ativar a marcha de reconquista
 

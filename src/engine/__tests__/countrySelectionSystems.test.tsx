@@ -31,10 +31,10 @@ describe('selected country uses existing player systems', () => {
     act(() => vi.advanceTimersByTime(60_000));
     expect(military).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Jogar como Andorra' }));
-    expect(screen.getByText('11 de Novembro, 1444')).toBeTruthy();
+    expect(screen.getByText('1 de Janeiro, 2020')).toBeTruthy();
     fireEvent.click(screen.getByTitle('Velocidade 1'));
     act(() => vi.advanceTimersByTime(1000));
-    expect(screen.getByText('12 de Novembro, 1444')).toBeTruthy();
+    expect(screen.getByText('2 de Janeiro, 2020')).toBeTruthy();
     expect(military.mock.calls.length).toBeGreaterThanOrEqual(24);
     expect(military.mock.calls.length).toBeLessThan(200);
     expect(military.mock.calls.map(call => call[0])).not.toContain('AND');
@@ -46,7 +46,7 @@ describe('selected country uses existing player systems', () => {
     expect(economic.mock.calls.map(call => call[0].tag)).not.toContain('AND');
     fireEvent.click(screen.getByTitle('Pausar'));
     act(() => vi.advanceTimersByTime(5000));
-    expect(screen.getByText('12 de Novembro, 1444')).toBeTruthy();
+    expect(screen.getByText('2 de Janeiro, 2020')).toBeTruthy();
   }, 30_000);
 
   it('research charges the selected country and national focus keeps its countryTag', () => {

@@ -60,7 +60,7 @@ describe('Economy V2.1 national UI', () => {
   });
   it('exposes the national trade entry in the top bar', () => {
     const props = fixture(),open = vi.fn();
-    render(<TopBar playerCountry={props.country} date={{year: 1444,month: 11,day: 11}} gameSpeed={0} onSpeedChange={vi.fn()} onResearchClick={vi.fn()} onFocusClick={vi.fn()} onEconomyClick={open} />);
+    render(<TopBar provinces={props.provinces} playerCountry={props.country} date={{year: 1444,month: 11,day: 11}} gameSpeed={0} onSpeedChange={vi.fn()} onResearchClick={vi.fn()} onFocusClick={vi.fn()} onEconomyClick={open} />);
     fireEvent.click(screen.getByRole('button',{name: 'Abrir economia nacional'}));
     expect(open).toHaveBeenCalledOnce();
   });

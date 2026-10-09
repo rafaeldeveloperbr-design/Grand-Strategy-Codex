@@ -1,7 +1,8 @@
 import { createMilitaryAIContext, type MilitaryAIContext } from './militaryAIContext';
+import { canInitiateOffensive, getRequiredAttackRatio, MIN_OFFENSIVE_ORGANIZATION, NORMAL_ATTACK_RATIO } from './militaryRecovery';
+import { hasEquivalentMovementOrder } from '../military/movementCommands';
 import type { MilitaryAIProfiler } from '../performance/militaryAIProfiler';
 import { shouldUseDefensiveWarPosture } from '../diplomacy/warResolution';
-import { WAR_RESOLUTION_BALANCE as WB } from '../diplomacy/warResolutionBalance';
 import { buildLogisticsNetworks, getProvinceLogistics as rawGetProvinceLogistics, projectRouteLogistics as rawProjectRouteLogistics, LOGISTICS_BALANCE as LB, type LogisticsSnapshot } from '../logistics';
 import { getTerrainDefinition } from '../terrain';
 import { Army, Province, Country } from '../../types';
@@ -23,6 +24,8 @@ import {
 function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfiler) {
   const measure = <T>(phase: Parameters<MilitaryAIProfiler['measure']>[0], run: () => T): T => profiler ? profiler.measure(phase, run) : run();
   let provinceTargets: Province[] | undefined;
+  let cautiousPosture = false;
+  let activeLogistics: LogisticsSnapshot | undefined;
   const routes = new Map<string, string[]>();
   const access = new Map<string, boolean>(), hostility = new Map<string, boolean>();
   const canMoveToProvince = (...args: Parameters<typeof rawCanMoveToProvince>) => measure('accessChecks', () => {
@@ -71,8 +74,12 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     botCountryId: string,
     diplomacy: DiplomaticRelation[]
   ): Army {
+    if (army.inCombat || army.retreatProtectionDays || army.embarkedFleetId || hasEquivalentMovementOrder(army, destinationId)) return army;
     profiler?.count('routeChecks');
     const destProv = context.provinceById.get(destinationId);
+    if (destProv && (isAtWarWith(botCountryId, destProv.owner, diplomacy)
+      || (context.armiesByProvince.get(destinationId) ?? []).some(other => isAtWarWith(botCountryId, other.owner, diplomacy)))
+      && !canAttackProvince(army, destProv, botCountryId, context.armiesByProvince.get(destinationId) ?? [], diplomacy, cautiousPosture, activeLogistics)) return army;
     if (destProv && !canMoveToProvince(botCountryId, destProv.owner, diplomacy)) {
       return army;
     }
@@ -166,6 +173,19 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     );
   }
 
+  // Use the existing readiness/terrain/fortification/logistics estimate, summed
+  // over every hostile stack at the destination instead of one representative.
+  function canAttackProvince(army: Army, target: Province, botCountryId: string, armies: Army[], diplomacy: DiplomaticRelation[], cautious: boolean, logistics?: LogisticsSnapshot): boolean {
+    if (!canInitiateOffensive(army) || !army.location) return false;
+    const current = context.provinceById.get(army.location);
+    if (!current) return false;
+    const defenders = (context.armiesByProvince.get(target.id) ?? []).filter(other =>
+      !other.embarkedFleetId && !other.retreatProtectionDays && isAtWarWith(botCountryId, other.owner, diplomacy));
+    const defense = defenders.reduce((sum, other) => sum + calculateEffectiveArmyPower(other, target, armies, true, logistics), 0);
+    const power = calculateEffectiveArmyPower(army, current, armies, false, logistics);
+    return power / Math.max(1, defense) >= getRequiredAttackRatio(army, target.id, cautious);
+  }
+
 
 
   function chooseDefensiveProvinceImpl(
@@ -202,6 +222,15 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       }
 
       const fortressLevel = getBuildingLevel(province, 'fortress');
+
+      if (calculateArmyOrganization(army) < MIN_OFFENSIVE_ORGANIZATION) {
+        const recoveryRoute = province.id === army.location ? [] : findPath(army.location!, province.id, provinces, botCountryId, diplomacy);
+        if ([province.id, ...recoveryRoute].some(id => {
+          const step = context.provinceById.get(id);
+          return !step || isAtWarWith(botCountryId, step.owner, diplomacy)
+            || (context.armiesByProvince.get(id) ?? []).some(other => isAtWarWith(botCountryId, other.owner, diplomacy));
+        })) continue;
+      }
       const infrastructureLevel = getBuildingLevel(
         province,
         'infrastructure'
@@ -267,7 +296,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       !reserved.has(other.id) &&
       other.location !== null &&
       other.destination === null &&
-      !other.inCombat
+      !other.inCombat && canInitiateOffensive(other)
     );
 
     let bestArmy: Army | null = null;
@@ -347,6 +376,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     if (!enemyProvince) {
       return -Infinity;
     }
+    if (aiArmy.recentDefeat?.provinceId === enemyProvince.id && !canAttackProvince(aiArmy, enemyProvince, botCountryId, armies, diplomacy, cautiousPosture, logistics)) return -Infinity;
 
     const path = findPath(
       aiArmy.location,
@@ -578,6 +608,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     let bestScore = -Infinity;
 
     for (const province of candidates) {
+      if (movingArmy && !canAttackProvince(movingArmy, province, botCountryId, armies, diplomacy, cautiousPosture, logistics)) continue;
       let score = scoreStrategicProvinceTarget(
         province,
         botCountryId
@@ -863,7 +894,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       );
 
       // Não atravessa uma força que possa bloquear o caminho.
-      if (armyPower < hostilePower * 1.20) {
+      if (armyPower < hostilePower * getRequiredAttackRatio(army, province.id, cautiousPosture)) {
         return false;
       }
     }
@@ -894,6 +925,8 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
     // Logistics above still receives the complete relations for other army owners.
     diplomacy = context.relationsByCountry.get(botCountryId) ?? [];
     const defensiveWar = measure('warStateEvaluation', () => shouldUseDefensiveWarPosture(botCountryId,wars,provinces,countries,armies));
+    cautiousPosture = defensiveWar;
+    activeLogistics = logistics;
     const reinforcementOrders = new Map<string, string>();
     const reservedReinforcements = new Set<string>();
 
@@ -915,7 +948,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
         army.owner === botCountryId &&
         army.location !== null &&
         army.destination === null &&
-        !army.inCombat
+        !army.inCombat && canInitiateOffensive(army)
     ));
     profiler?.count('armiesEvaluated', ownArmies.length);
 
@@ -966,7 +999,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
         armyPower / Math.max(1, enemyPower);
 
       // Só pede reforços em situação equilibrada/incerta.
-      if (ratio < 0.85 || ratio >= 1.20) {
+      if (ratio < 0.85 || ratio >= NORMAL_ATTACK_RATIO) {
         continue;
       }
 
@@ -1019,9 +1052,21 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
       if (
         army.owner !== botCountryId ||
         army.destination !== null ||
-        army.inCombat
+        army.inCombat || army.retreatProtectionDays || army.embarkedFleetId
       ) {
         return army;
+      }
+
+      // Recover in friendly territory; only defensive repositioning when unsafe.
+      // This runs before capital response/rendezvous so they cannot send a broken
+      // army into an enemy stack under the label of a defensive order.
+      if (calculateArmyOrganization(army) < MIN_OFFENSIVE_ORGANIZATION) {
+        const local = army.location ? context.provinceById.get(army.location) : undefined;
+        if (!local) return army;
+        const hostile = (context.armiesByProvince.get(local.id) ?? []).some(other => isAtWarWith(botCountryId, other.owner, diplomacy));
+        if (local.owner === botCountryId && !hostile) return army;
+        const refuge = chooseDefensiveProvince(army, botCountryId, provinces, armies, diplomacy, logistics);
+        return refuge && refuge.id !== army.location ? createArmyWithRoute(army, refuge.id, provinces, botCountryId, diplomacy) : army;
       }
 
       // =========================================================
@@ -1192,7 +1237,7 @@ function createProcessor(context: MilitaryAIContext, profiler?: MilitaryAIProfil
               // PRIORIDADE 4 — ESPERAR REFORÇOS
               // ===============================================
 
-              if (attackRatio < (defensiveWar ? WB.aiCautiousAttackRatio : 1.20)) {
+              if (attackRatio < getRequiredAttackRatio(army, bestEnemy.location, defensiveWar)) {
 
                 return army;
               }

@@ -1,4 +1,5 @@
 import { BATTLE_V3 } from './battleConfig';
+import { RECENT_DEFEAT_DAYS } from '../aiEngine/militaryRecovery';
 import type { DiplomaticRelation } from '../../types';
 import { canEnterTerritory } from '../diplomacy';
 import { createBattleHostility, type WarPair } from './battleParticipants';
@@ -124,6 +125,7 @@ export function retreatArmyManually(
   const updatedArmies = armies.map(a => {
     if (a.id === armyId) {
       return { ...a, retreatProtectionDays: BATTLE_V3.retreatProtectionDays, retreatFromBattleId: battleId, movementPlan: undefined, location: retreatProvince.id, inCombat: false, battleId: null,
+        recentDefeat: { provinceId: battleProvince.id, battleId, daysRemaining: RECENT_DEFEAT_DAYS }, targetArmyId: null, targetProvinceId: null,
         destination: null, targetDestination: null, path: [], position: null, movementProgress: 0 };
     }
     return a;

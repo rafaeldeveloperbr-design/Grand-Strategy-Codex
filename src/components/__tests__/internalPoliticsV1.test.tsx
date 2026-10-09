@@ -56,7 +56,7 @@ describe('Internal Politics V1 UI',() => {
     expect(view.getAllByText('Cooldown: 365 dias').length).toBeGreaterThan(0);
   });
   it('opens through the explicit TopBar government button',() => {
-    const {country}=setup(),open=vi.fn();const view=render(<TopBar playerCountry={country} date={date} gameSpeed={0} onSpeedChange={vi.fn()} onResearchClick={vi.fn()} onFocusClick={vi.fn()} onGovernmentClick={open}/>);
+    const {country}=setup(),open=vi.fn();const view=render(<TopBar provinces={[]} playerCountry={country} date={date} gameSpeed={0} onSpeedChange={vi.fn()} onResearchClick={vi.fn()} onFocusClick={vi.fn()} onGovernmentClick={open}/>);
     fireEvent.click(view.getByRole('button',{name:'Abrir Governo'}));expect(open).toHaveBeenCalledOnce();
   });
 });

@@ -357,13 +357,13 @@ describe('Diplomacy V2 UI', () => {
   it('renders neutral opinion/trust and disabled actions with reasons', () => {
     panel(); expect(screen.getByText('Paz')).toBeTruthy(); expect(screen.getByText('50/100')).toBeTruthy();
     expect((screen.getByRole('button',{name: 'Oferecer aliança'}) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText('Requer opinião +40')).toBeTruthy();
+    expect(screen.getByTitle('Requer opinião +40')).toBeTruthy();
     expect((screen.getByRole('button',{name: 'Declarar guerra'}) as HTMLButtonElement).disabled).toBe(false);
   });
   it('shows ally status and blocks direct war', () => {
     panel(allied()); expect(screen.getByText('Aliado')).toBeTruthy();
     expect((screen.getByRole('button',{name: 'Declarar guerra'}) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText('Rompa a aliança primeiro')).toBeTruthy();
+    expect(screen.getByTitle('Rompa a aliança primeiro')).toBeTruthy();
     expect((screen.getByRole('button',{name: 'Romper aliança'}) as HTMLButtonElement).disabled).toBe(false);
   });
   it('requires confirmation and shows penalties and CB selection', () => {

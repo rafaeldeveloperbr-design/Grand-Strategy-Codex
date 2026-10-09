@@ -141,7 +141,7 @@ describe('selected player persistence and integration', () => {
   it('mounts game refs and player-dependent systems only after confirmation with the chosen country', () => {
     start('AND');
     const game = latest();
-    expect(game.dateRef.current).toEqual({ year: 1444, month: 11, day: 11 });
+    expect(game.dateRef.current).toEqual({ year: 2020, month: 1, day: 1 });
     expect(game.countriesRef.current.find(c => c.tag === game.playerCountryTag)?.name).toBe('Andorra');
     expect(game.playerTechStateRef.current.countryTag).toBe('AND');
     expect(game.botTechStatesRef.current.has(mapMetadata.defaultPlayerCountry)).toBe(true);
@@ -188,7 +188,7 @@ describe('selected player persistence and integration', () => {
     makeSave('BRA');
     start('AND');
     expect(latest().playerCountryTag).toBe('AND');
-    expect(latest().dateRef.current.year).toBe(1444);
+    expect(latest().dateRef.current.year).toBe(2020);
   });
   it('manual Load from selection skips confirmation and restores saved country', () => {
     makeSave('NRU', 'manual');

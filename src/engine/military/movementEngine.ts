@@ -166,6 +166,7 @@ export function mergeArmies(army1: Army, army2: Army): Army {
   return {
     ...army1,
     regiments: mergedRegiments,
+    recentDefeat: (army2.recentDefeat?.daysRemaining ?? 0) > (army1.recentDefeat?.daysRemaining ?? 0) ? army2.recentDefeat : army1.recentDefeat,
     movementSpeed: calculateArmySpeed({ ...army1, regiments: mergedRegiments }),
   };
 }
@@ -189,6 +190,7 @@ export function splitArmy(
   const newArmy: Army = {
     id: generateArmyId(existingIds),
     owner: sourceArmy.owner,
+    recentDefeat: sourceArmy.recentDefeat ? { ...sourceArmy.recentDefeat } : undefined,
     rebellionFactionId: sourceArmy.rebellionFactionId,
     originalOwner: sourceArmy.originalOwner,
     separatistMode: sourceArmy.separatistMode,

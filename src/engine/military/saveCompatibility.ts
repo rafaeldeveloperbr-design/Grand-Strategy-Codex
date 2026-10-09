@@ -19,6 +19,11 @@ export function validateMilitarySave(value: unknown, path = 'save', provinceIds?
   if (!value || typeof value !== 'object') return;
   if (Array.isArray(value)) { value.forEach((item, i) => validateMilitarySave(item, `${path}[${i}]`, provinceIds)); return; }
   for (const [key, item] of Object.entries(value)) {
+    if (key === 'recentDefeat' && item !== undefined) {
+      const memory = item as Army['recentDefeat'];
+      if (!memory || typeof memory.provinceId !== 'string' || !Number.isInteger(memory.daysRemaining) || memory.daysRemaining <= 0
+        || (memory.battleId !== undefined && typeof memory.battleId !== 'string')) throw new MilitarySaveCompatibilityError(`Memória de derrota inválida em ${path}`);
+    }
     if (key === 'movementPlan' && item !== undefined) {
       const waypoints: unknown = item && typeof item === 'object' && 'waypoints' in item ? item.waypoints : undefined;
       if (!Array.isArray(waypoints) || waypoints.some(id => typeof id !== 'string' || !id.length || (provinceIds && !provinceIds.has(id)))) throw new MilitarySaveCompatibilityError(`Plano de movimento inválido em ${path}: waypoint ou província incompatível`);

@@ -1,4 +1,5 @@
 import { getTerrainDefinition } from '../terrain';
+import { RECENT_DEFEAT_DAYS } from '../aiEngine/militaryRecovery';
 import type { LogisticsSnapshot } from '../logistics';
 import type {
   Army,
@@ -477,6 +478,7 @@ function processParticipantBattleDay(battle: BattleExtended, armies: Army[], pro
           return {
             ...army,
             regiments: [],
+            recentDefeat: undefined,
             inCombat: false,
             destination: null,
             targetDestination: null,
@@ -494,6 +496,7 @@ function processParticipantBattleDay(battle: BattleExtended, armies: Army[], pro
           location: destination.id,
           retreatProtectionDays: BATTLE_V3.retreatProtectionDays,
           retreatFromBattleId: synced.id,
+          recentDefeat: { provinceId: province.id, battleId: synced.id, daysRemaining: RECENT_DEFEAT_DAYS },
           movementPlan: undefined,
           inCombat: false,
           destination: null,

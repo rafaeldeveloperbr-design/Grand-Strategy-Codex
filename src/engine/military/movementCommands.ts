@@ -1,6 +1,12 @@
 import type { Army, Province, DiplomaticRelation } from '../../types';
 import { moveArmy } from './movementEngine';
 
+/** O(1), preserves the existing route/progress for equivalent orders. */
+export function hasEquivalentMovementOrder(army: Army, destination: string): boolean {
+  return army.destination === destination || army.targetDestination === destination
+    || army.path[army.path.length - 1] === destination || army.targetProvinceId === destination;
+}
+
 /** Clearing a plan never changes location, troops, battle or retreat state. */
 export function clearMovementPlan(army: Army): Army {
   return { ...army, movementPlan: undefined, destination: null, targetDestination: null, path: [], movementProgress: 0, position: null };
@@ -8,6 +14,7 @@ export function clearMovementPlan(army: Army): Army {
 
 export function issueMoveCommand(army: Army, destination: string, provinces: Province[], relations: DiplomaticRelation[]): Army | null {
   if ((army.inCombat || !!army.retreatProtectionDays)) return null;
+  if (hasEquivalentMovementOrder(army, destination)) return army;
   return moveArmy(clearMovementPlan(army), destination, provinces, relations);
 }
 

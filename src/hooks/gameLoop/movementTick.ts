@@ -9,6 +9,7 @@ import type { DiplomaticRelation } from '../../types/diplomacy';
 import { transferProvince } from '../../engine/territoryTransfer';
 import { buildLogisticsNetworks } from '../../engine/logistics';
 import type { War } from '../../types';
+import { advanceRecentDefeat } from '../../engine/aiEngine/militaryRecovery';
 
 type Params = {
   armies: Army[];
@@ -24,6 +25,9 @@ type Params = {
 export function processMovementTick(p: Params) {
   let { armies, provinces, countries, relations } = p;
   const { addLog } = p;
+  const provinceIds = new Set(provinces.map(province => province.id));
+  const countryTags = new Set(countries.map(country => country.tag));
+  armies = armies.map(army => advanceRecentDefeat(army, provinceIds, countryTags));
   armies = armies.map(a => a.retreatProtectionDays ? {...a, retreatProtectionDays: Math.max(0,a.retreatProtectionDays - 1)} : a);
   const prepared = advanceMovementPlans(armies, provinces, relations);
   armies = prepared.armies;

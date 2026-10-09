@@ -1,3 +1,5 @@
+import { endedPlayerNavalBattles, enqueueNavalReports } from '../engine/naval/reports';
+import type { NavalBattle } from '../types/naval';
 import { friendlyBeachLandingTick } from '../engine/naval/friendlyBeachLanding';
 import { beachExtractionTick } from '../engine/naval/beachExtraction';
 import { airAITick, airCombatTick, airMissionsTick, cleanupAirState, airCounters, airProductionAI, processAirProductionTick, cleanupAirProduction } from '../engine/air';
@@ -117,6 +119,7 @@ type Props = {
 
   // Histórico / relatório
   setBattleHistory: Dispatch<SetStateAction<CombatResult[]>>;
+  setNavalReports?: Dispatch<SetStateAction<NavalBattle[]>>;
   setBattleReport: Dispatch<SetStateAction<CombatResult | null>>;
 
   // Logs
@@ -150,7 +153,7 @@ export function useGameLoop(props: Props) {
     setArmies, setWars, setDiplomaticRelations, setRecruitments, setBuildingConstructions,
     setPlayerTechState, setBotTechStates, setDate, setActiveBattles, setEndGameType,
     setGameStats, setHasTriggeredEndGame, setIsPaused, setBattleHistory, setBattleReport,
-    addLog, addToast, addAILog, formatGameDate,
+    setNavalReports, addLog, addToast, addAILog, formatGameDate,
   } = props;
 
   const profilerRef = useRef<ReturnType<typeof createGameLoopProfiler> | null>(null);
@@ -280,6 +283,8 @@ export function useGameLoop(props: Props) {
     naval = { ...naval, fleets: navalMovementTick(naval.fleets, provinces, relations, wars) };
     profiler.endPhase('navalMovement');
 
+    const previousNavalStatus = new Map(naval.battles.map(b => [b.id, b.status]));
+    const previousNavalFleets = naval.fleets;
     const previousNavalDays = new Map(naval.battles.map(b => [b.id, b.days]));
     naval = navalCombatTick(naval, wars, diplomacyDay(snapshot.date), provinces, relations);
     const engagedThisTick = new Set(naval.battles.filter(b => b.status === 'ACTIVE' || b.days > (previousNavalDays.get(b.id) ?? 0)).flatMap(b => [...b.sideA, ...b.sideB]));
@@ -349,6 +354,11 @@ export function useGameLoop(props: Props) {
     ({ naval, armies, provinces } = cleanupLosses);
     if (cleanupLosses.troopLossesAtSea) profiler.recordAmphibious({ embarkedArmies: 0, transportedTroops: 0, activeLandings: 0, completedLandings: 0, troopLossesAtSea: cleanupLosses.troopLossesAtSea });
     for (const feedback of cleanupLosses.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
+    const navalReports = endedPlayerNavalBattles(naval.battles, previousNavalStatus, playerCountryTag, previousNavalFleets);
+    if (navalReports.length && setNavalReports) {
+      setNavalReports(queue => enqueueNavalReports(queue, navalReports));
+      setLoopPaused(true);
+    }
     const revalidated = amphibiousTick(naval, armies, provinces, wars, new Set(), false);
     naval = revalidated.naval;
     for (const feedback of revalidated.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');

@@ -14,7 +14,13 @@ export interface Fleet {
 export interface SeaNode { id: string; x: number; y: number; neighbors: string[]; ocean: string; inland?: boolean; lake?: boolean }
 export interface NavalPort { provinceId: string; level: number; seaNodeId: string; x: number; y: number }
 export interface SeaEdge { a: string; b: string; distance: number; logical?: boolean }
+export type NavalShipComposition = Partial<Record<NavalUnitType, number>>;
+export interface NavalBattleParticipantSnapshot {
+  fleetId: string; fleetName: string; countryTag: string;
+  initialShips: NavalShipComposition; finalShips: NavalShipComposition; lostShips: NavalShipComposition;
+}
 export interface NavalBattle {
+  participantSnapshots?: { A: NavalBattleParticipantSnapshot[]; B: NavalBattleParticipantSnapshot[] };
   embarkedTroopLosses?: number;
   id: string; seaNodeId: string; sideA: string[]; sideB: string[]; startedAt: number;
   days: number; status: 'ACTIVE' | 'ENDED'; lossesA: number; lossesB: number;

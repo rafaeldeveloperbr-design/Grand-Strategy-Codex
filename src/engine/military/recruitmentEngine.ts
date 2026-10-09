@@ -110,7 +110,7 @@ export function processRecruitments(
             : a
         );
       } else {
-        const newArmy = createArmy(rec.owner, `Exército ${rec.provinceId}`, rec.provinceId);
+        const newArmy = createArmy(rec.owner, `Exército ${rec.provinceId}`, rec.provinceId, updatedArmies.map(a => a.id));
         newArmy.regiments = regiments;
         updatedArmies.push(newArmy);
       }

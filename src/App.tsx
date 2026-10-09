@@ -1,3 +1,4 @@
+import { cancelFriendlyBeachLanding, disembarkArmiesAtProvince, friendlyBeachLandingTick, FRIENDLY_BEACH_LANDING_LABEL } from './engine/naval/friendlyBeachLanding';
 import { cancelBeachExtraction, beachExtractionTick, BEACH_EXTRACTION_LABEL } from './engine/naval/beachExtraction';
 import { createInitialAirState, cancelAirMission, startAirProduction, cancelAirProduction, resolveAirTarget, airZoneById } from './engine/air';
 import type { AirWing, AirMission, AircraftType } from './types/air';
@@ -159,7 +160,10 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
     if (!updated) { addToast('Ordem naval inválida: verifique destino, acesso ao porto e status da frota.', 'warning'); return; }
     const next = { ...navalStateRef.current, ...(cancelInvasion ? { invasions: navalStateRef.current.invasions?.filter(o => o.fleetId !== fleet.id) } : {}), fleets: navalStateRef.current.fleets.map(f => f.id === fleet.id ? updated : f) };
     navalStateRef.current = next; setNavalState(next);
-    const extraction = beachExtractionTick({ armies: armiesRef.current, naval: next, provinces: provincesRef.current, wars: warsRef.current, relations: diplomaticRelationsRef.current, activeBattles: activeBattlesRef.current }, new Set(), false);
+    const pending = cancelInvasion ? cancelFriendlyBeachLanding(armiesRef.current, armiesRef.current.filter(a => a.embarkedFleetId === fleet.id).map(a => a.id), playerCountryTag) : armiesRef.current;
+    const friendly = friendlyBeachLandingTick({ armies: pending, naval: next, provinces: provincesRef.current, wars: warsRef.current, relations: diplomaticRelationsRef.current, activeBattles: activeBattlesRef.current }, new Set(), false);
+    for (const feedback of friendly.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
+    const extraction = beachExtractionTick({ armies: friendly.armies, naval: next, provinces: provincesRef.current, wars: warsRef.current, relations: diplomaticRelationsRef.current, activeBattles: activeBattlesRef.current }, new Set(), false);
     armiesRef.current = extraction.armies; setArmies(extraction.armies);
     for (const feedback of extraction.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
   };
@@ -170,6 +174,62 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
     armiesRef.current = result.armies; setArmies(result.armies);
     addToast(result.armies.find(a => a.id === armyId)?.beachExtraction ? BEACH_EXTRACTION_LABEL : fleetId ? 'Army embarcado; ordem terrestre cancelada.' : 'Desembarque concluído.', 'success', 'Transporte naval');
   };
+  const friendlyDisembark = (
+    armyIds: string[],
+    provinceId: string
+  ) => {
+    const result =
+      disembarkArmiesAtProvince(
+        transportContext(),
+        armyIds,
+        provinceId
+      );
+
+    if (result.error) {
+      addToast(
+        result.error,
+        'warning',
+        'Desembarque amigável'
+      );
+      return;
+    }
+
+    navalStateRef.current = result.naval;
+    setNavalState(result.naval);
+
+    armiesRef.current = result.armies;
+    setArmies(result.armies);
+
+    const army = result.armies.find(
+      a => armyIds.includes(a.id)
+    );
+
+    const landing =
+      army?.friendlyBeachLanding;
+
+    const fleet = landing
+      ? result.naval.fleets.find(
+        f => f.id === army?.embarkedFleetId
+      )
+      : undefined;
+
+    const traveling =
+      landing &&
+      fleet?.status === 'MOVING' &&
+      fleet.destinationSeaNodeId ===
+      landing.seaNodeId;
+
+    addToast(
+      traveling
+        ? 'Frota navegando até a costa; o desembarque começará ao chegar.'
+        : landing
+          ? FRIENDLY_BEACH_LANDING_LABEL
+          : 'Desembarcar pelo porto: concluído.',
+      'success',
+      'Transporte naval'
+    );
+  };
+  const cancelFriendly = (armyId: string) => { const updated = cancelFriendlyBeachLanding(armiesRef.current, [armyId], playerCountryTag); armiesRef.current = updated; setArmies(updated); addToast('Desembarque amig\u00e1vel cancelado.', 'info', 'Transporte naval'); };
   const invade = (armyIds: string[], provinceId: string) => {
     const result = planInvasion(transportContext(), selectedFleetId ?? '', armyIds, provinceId);
     if (result.error) { addToast(result.error, 'warning', 'Amphibious Invasion'); return; }
@@ -197,7 +257,7 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
 
 
   const saveSystem = useSaveSystem(
-    { battleHistoryRef: {current:battleHistory}, airStateRef, navalStateRef, provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef },
+    { battleHistoryRef: { current: battleHistory }, airStateRef, navalStateRef, provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef },
     { setBattleHistory, setAirState, setNavalState, setProvinces, setAllCountries, setArmies, setWars, setDiplomaticRelations, setRecruitments, setBuildingConstructions, setPlayerTechState, setBotTechStates, setActiveBattles, setDate, setPlayerCountryTag },
     addToast,
     modals.setShowSettingsModal
@@ -266,7 +326,7 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
     };
   }, [showCheatPanel, cheats]);
 
-  const playerCampaignCount = getCampaigns(wars).filter(c => [...c.attackerParticipants,...c.defenderParticipants].includes(playerCountryTag)).length;
+  const playerCampaignCount = getCampaigns(wars).filter(c => [...c.attackerParticipants, ...c.defenderParticipants].includes(playerCountryTag)).length;
   return (
     <div className="game">
       <TopBar
@@ -281,9 +341,9 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
         onGovernmentClick={() => modals.setShowGovernmentModal(true)}
         onEconomyClick={() => setShowEconomyPanel(true)}
       />      <div className="game__main">
-        <GameMap onAirFeedback={(message,error)=>{if(error)addToast(message,'warning','Air Warfare');}} airState={airState} selectedAirWingId={selectedAirWingId} onAirWingSelect={selectAirWing} onAirMission={airMission} onAirRebase={airRebase} onAirCancel={() => airCommand(cancelAirMission)} onDisembark={id=>transportArmy(id)} onInvasion={invade} navalState={navalState} selectedFleetId={selectedFleetId} onFleetSelect={selectFleet} onFleetOrder={id=>fleetCommand(f=>orderFleetMove(f,id,playerCountryTag))} onFleetIntercept={interceptFleet} onFleetReturn={returnFleet} onFleetCancel={()=>{fleetCommand(cancelNavalOrder,true);addToast('Ordem naval/landing cancelado.', 'info');}} key={playerCountryTag} initialViewBox={initialMapView} logistics={logistics} provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} wars={wars} diplomaticRelations={diplomaticRelations} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} selectedArmyIds={selection.selectedArmyIds} playerCountryTag={playerCountryTag} onToggleArmy={value=>{setSelectedAirWingId(null);setSelectedFleetId(null);selection.toggleArmySelection(value);}} onToggleStack={value=>{setSelectedAirWingId(null);setSelectedFleetId(null);selection.toggleStackSelection(value);}} onToggleStackAdditive={value=>{setSelectedAirWingId(null);setSelectedFleetId(null);selection.toggleStackAdditive(value);}} onClearSelection={()=>{setSelectedAirWingId(null);setSelectedFleetId(null);selection.clearArmySelection();selection.handleClosePanel();}} onProvinceHover={selection.handleProvinceHover} onProvinceClick={id=>{setSelectedAirWingId(null);setSelectedFleetId(null);selection.handleProvinceClick(id);}} onArmyClick={id=>{setSelectedAirWingId(null);setSelectedFleetId(null);selection.handleArmyClick(id);}} onProvinceRightClick={armyActions.handleProvinceRightClick} />
-        {selection.isPanelOpen && selectedProvinceData && <ProvincePanel onAirBuild={buildAir} onAirBuildCancel={cancelAirBuild} airState={airState} onSelectAirWing={selectAirWing} navalState={navalState} onNavalBuild={buildNaval} onNavalCancel={cancelNavalBuild} fleets={navalState.fleets} onSelectFleet={selectFleet} selectedArmyIds={selection.selectedArmyIds} onSelectArmy={id=>{setSelectedAirWingId(null);setSelectedFleetId(null);selection.toggleArmySelection(id);}} logistics={logistics} onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
-        {selection.selectedArmyIds.length > 1 && <ArmySelectionSummary armies={armies.filter(a => selection.selectedArmyIds.includes(a.id) && a.owner === playerCountryTag)} allArmies={armies} provinces={provinces} logistics={logistics} onClear={selection.clearArmySelection} onClearRoutes={armyActions.handleClearRoutes}><ArmyReorganizationPanel selectedIds={selection.selectedArmyIds} context={{armies, provinces, playerCountryTag, activeBattles}} onConfirm={armyActions.handleReorganize} /></ArmySelectionSummary>}
+        <GameMap onAirFeedback={(message, error) => { if (error) addToast(message, 'warning', 'Air Warfare'); }} airState={airState} selectedAirWingId={selectedAirWingId} onAirWingSelect={selectAirWing} onAirMission={airMission} onAirRebase={airRebase} onAirCancel={() => airCommand(cancelAirMission)} onFriendlyLanding={friendlyDisembark} onDisembark={id => transportArmy(id)} onInvasion={invade} navalState={navalState} selectedFleetId={selectedFleetId} onFleetSelect={selectFleet} onFleetOrder={id => fleetCommand(f => orderFleetMove(f, id, playerCountryTag))} onFleetIntercept={interceptFleet} onFleetReturn={returnFleet} onFleetCancel={() => { fleetCommand(cancelNavalOrder, true); addToast('Ordem naval/landing cancelado.', 'info'); }} key={playerCountryTag} initialViewBox={initialMapView} logistics={logistics} provinces={provinces} countries={allCountries} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} activeBattles={activeBattles} wars={wars} diplomaticRelations={diplomaticRelations} selectedProvince={selection.selectedProvince} hoveredProvince={selection.hoveredProvince} selectedArmy={selection.selectedArmy} selectedArmyIds={selection.selectedArmyIds} playerCountryTag={playerCountryTag} onToggleArmy={value => { setSelectedAirWingId(null); setSelectedFleetId(null); selection.toggleArmySelection(value); }} onToggleStack={value => { setSelectedAirWingId(null); setSelectedFleetId(null); selection.toggleStackSelection(value); }} onToggleStackAdditive={value => { setSelectedAirWingId(null); setSelectedFleetId(null); selection.toggleStackAdditive(value); }} onClearSelection={() => { setSelectedAirWingId(null); setSelectedFleetId(null); selection.clearArmySelection(); selection.handleClosePanel(); }} onProvinceHover={selection.handleProvinceHover} onProvinceClick={id => { setSelectedAirWingId(null); setSelectedFleetId(null); selection.handleProvinceClick(id); }} onArmyClick={id => { setSelectedAirWingId(null); setSelectedFleetId(null); selection.handleArmyClick(id); }} onProvinceRightClick={armyActions.handleProvinceRightClick} />
+        {selection.isPanelOpen && selectedProvinceData && <ProvincePanel onAirBuild={buildAir} onAirBuildCancel={cancelAirBuild} airState={airState} onSelectAirWing={selectAirWing} navalState={navalState} onNavalBuild={buildNaval} onNavalCancel={cancelNavalBuild} fleets={navalState.fleets} onSelectFleet={selectFleet} selectedArmyIds={selection.selectedArmyIds} onSelectArmy={id => { setSelectedAirWingId(null); setSelectedFleetId(null); selection.toggleArmySelection(id); }} logistics={logistics} onRebellionAction={handleRebellionAction} province={selectedProvinceData} provinces={provinces} countries={allCountries} playerCountry={playerCountry} playerTechState={playerTechState} botTechStates={botTechStates} armies={armies} recruitments={recruitments} buildingConstructions={buildingConstructions} onClose={selection.handleClosePanel} onProvinceClick={selection.handleProvinceClick} onBuild={economy.handleBuild} onRecruit={economy.handleRecruit} onCancelRecruitment={economy.handleCancelRecruitment} onCancelBuilding={economy.handleCancelBuilding} />}
+        {selection.selectedArmyIds.length > 1 && <ArmySelectionSummary armies={armies.filter(a => selection.selectedArmyIds.includes(a.id) && a.owner === playerCountryTag)} allArmies={armies} provinces={provinces} logistics={logistics} onClear={selection.clearArmySelection} onClearRoutes={armyActions.handleClearRoutes}><ArmyReorganizationPanel selectedIds={selection.selectedArmyIds} context={{ armies, provinces, playerCountryTag, activeBattles }} onConfirm={armyActions.handleReorganize} /></ArmySelectionSummary>}
         {selection.selectedArmyIds.length === 1 && selectedArmyData && (
           <div className="army-info-panel">
             <div className="army-info-panel__header"><h3>{selectedArmyData.name}</h3><button onClick={() => selection.setSelectedArmy(null)}>✕</button></div>
@@ -294,7 +354,7 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
               {selectedArmyLogistics && <div className="army-info-panel__stat"><span>Logística:</span><span>{selectedArmyLogistics.connected ? 'Conectada' : 'Desconectada'} · Distância {selectedArmyLogistics.distance ?? '—'}</span></div>}
               {selectedArmyData.destination && <div className="army-info-panel__stat"><span>Destino:</span><span>{provinces.find(p => p.id === selectedArmyData.destination)?.name} ({Math.round(selectedArmyData.movementProgress * 100)}%)</span></div>}
               {selectedArmyData.path.length > 0 && <div className="army-info-panel__stat"><span>Rota:</span><span className="army-info-panel__path">{selectedArmyData.path.map(pid => provinces.find(p => p.id === pid)?.name).join(' → ')}</span></div>}
-              <ArmyTransportPanel army={selectedArmyData} armies={armies} fleets={navalState.fleets} provinces={provinces} owner={selectedArmyData.owner===playerCountryTag} onEmbark={id=>transportArmy(selectedArmyData.id,id)} onDisembark={()=>transportArmy(selectedArmyData.id)}  wars={wars} relations={diplomaticRelations} activeBattles={activeBattles} onCancelExtraction={()=>{const updated = cancelBeachExtraction(armiesRef.current, selectedArmyData.id, playerCountryTag); armiesRef.current=updated;setArmies(updated);addToast('Extra\u00e7\u00e3o pela praia cancelada.', 'info', 'Transporte naval');}}  navalState={navalState} /><ArmyMovementPlanPanel army={selectedArmyData} provinces={provinces} onClear={armyActions.handleClearRoutes} />
+              <ArmyTransportPanel onCancelFriendlyLanding={() => cancelFriendly(selectedArmyData.id)} army={selectedArmyData} armies={armies} fleets={navalState.fleets} provinces={provinces} owner={selectedArmyData.owner === playerCountryTag} onEmbark={id => transportArmy(selectedArmyData.id, id)} onDisembark={() => transportArmy(selectedArmyData.id)} wars={wars} relations={diplomaticRelations} activeBattles={activeBattles} onCancelExtraction={() => { const updated = cancelBeachExtraction(armiesRef.current, selectedArmyData.id, playerCountryTag); armiesRef.current = updated; setArmies(updated); addToast('Extra\u00e7\u00e3o pela praia cancelada.', 'info', 'Transporte naval'); }} navalState={navalState} /><ArmyMovementPlanPanel army={selectedArmyData} provinces={provinces} onClear={armyActions.handleClearRoutes} />
               <div className="army-info-panel__regiments">
                 <strong>Regimentos:</strong>
 
@@ -314,7 +374,7 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
                 })}
               </div>    {selectedArmyData.destination && selectedArmyData.owner === playerCountryTag && !selectedArmyData.inCombat && <div className="army-info-panel__actions-section">
                 <button className="army-info-panel__action-btn army-info-panel__action-btn--stop" onClick={() => armyActions.handleStopMovement(selectedArmyData.id)}>🛑 Parar Marcha</button></div>}
-              <ArmyReorganizationPanel selectedIds={selection.selectedArmyIds} context={{armies, provinces, playerCountryTag, activeBattles}} onConfirm={armyActions.handleReorganize} onHalf={armyActions.handleSplitHalf} />
+              <ArmyReorganizationPanel selectedIds={selection.selectedArmyIds} context={{ armies, provinces, playerCountryTag, activeBattles }} onConfirm={armyActions.handleReorganize} onHalf={armyActions.handleSplitHalf} />
 
             </div>
           </div>

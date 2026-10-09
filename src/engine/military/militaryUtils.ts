@@ -26,9 +26,9 @@ export function createRegiment(type: UnitType, originProvinceId?: string): Regim
   };
 }
 
-export function createArmy(owner: string, name: string, location: string): Army {
+export function createArmy(owner: string, name: string, location: string, existingIds: readonly string[] = []): Army {
   return {
-    id: generateArmyId(),
+    id: generateArmyId(existingIds),
     owner,
     name,
     regiments: [],

@@ -13,6 +13,7 @@ function validationContext(ctx: TransportContext) {
     hostility: buildNavalHostility(ctx.wars), relations: ctx.relations,
     battles: new Set(ctx.activeBattles?.flatMap(b => b.participantArmyIds)),
     invasions: new Set(ctx.naval.invasions?.map(o => o.fleetId)),
+    friendlyLandings: new Set(ctx.armies.filter(a => a.friendlyBeachLanding).map(a => a.embarkedFleetId)),
   };
 }
 function positionError(army: Army, fleet: Fleet | undefined, province: Province | undefined, validation: ReturnType<typeof validationContext>): string | undefined {
@@ -28,6 +29,7 @@ function positionError(army: Army, fleet: Fleet | undefined, province: Province 
   const node = resolveAmphibiousLandingSeaNode(province)!;
   if (fleet.status !== 'HOLDING' || fleet.locationSeaNodeId !== node.id || fleet.portProvinceId || fleet.movementProgress !== 0 || fleet.route.length) return 'Fleet não está parada no SeaNode correto da costa.';
   if (army.destination || army.targetDestination || army.path.length || army.movementPlan?.waypoints.length || army.movementProgress !== 0 || army.position) return 'Army em movimento: limpe a rota antes de iniciar extração.';
+  if (validation.friendlyLandings.has(fleet.id)) return 'Fleet comprometida com desembarque amig\u00e1vel; cancele primeiro.';
   if (validation.invasions.has(fleet.id)) return 'Fleet comprometida com invasão; cancele a invasão antes de embarcar.';
   if (!canUseNavalAccess(army.owner, province, validation.relations, validation.hostility)) return 'Acesso à costa inválido.';
   if (calculateArmySize(army) <= 0) return 'Army sem tropas.';

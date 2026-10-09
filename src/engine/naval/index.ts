@@ -10,6 +10,7 @@ export * from './pathfinding';
 export * from './construction';
 export * from './transport';
 export * from './beachExtraction';
+export * from './friendlyBeachLanding';
 export const fleetSpeed = (f: Fleet): number => f.units.length ? Math.min(...f.units.map(u=>u.speed)) : 0;
 export const fleetStrength = (f: Fleet): number => f.units.reduce((s,u)=>s+u.strength,0);
 export const fleetOrganization = (f: Fleet): number => f.units.length ? f.units.reduce((s,u)=>s+u.organization/u.maxOrganization,0)/f.units.length*100 : 0;

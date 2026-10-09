@@ -1,3 +1,4 @@
+import { captureNavalParticipants, updateNavalParticipants } from './reports';
 import type { Country, Province, War } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
 import type { Fleet, NavalState, NavalUnitType } from '../../types/naval';
@@ -190,6 +191,7 @@ export function navalCombatTick(state:NavalState,wars:readonly War[],day:number,
   let battles=structuredClone(state.battles);const engaged=new Set<string>();
   // Existing engagements end as soon as hostility, location or participation disappears.
   for(const battle of battles.filter(b=>b.status==='ACTIVE')) {
+    updateNavalParticipants(battle, indexes.byId);
     const a=battle.sideA.map(id=>indexes.byId.get(id)).filter((f):f is Fleet=>!!f&&fleetCombatNode(f)===battle.seaNodeId), b=battle.sideB.map(id=>indexes.byId.get(id)).filter((f):f is Fleet=>!!f&&fleetCombatNode(f)===battle.seaNodeId);
     if(!a.length||!b.length||!a.every(f=>b.every(e=>hostility.get(f.countryTag)?.has(e.countryTag)))) {battle.status='ENDED';for(const f of [...a,...b]) if(f.status==='COMBAT') f.status='HOLDING';}
     else {
@@ -221,6 +223,7 @@ export function navalCombatTick(state:NavalState,wars:readonly War[],day:number,
       battles.push({id,seaNodeId:node,sideA:sideA.map(f=>f.id),sideB:sideB.map(f=>f.id),startedAt:day,days:0,status:'ACTIVE',lossesA:0,lossesB:0});for(const f of [...sideA,...sideB]) engaged.add(f.id);
     }
   }
+  for (const battle of battles.filter(b=>b.status==='ACTIVE')) captureNavalParticipants(battle, indexes.byId);
   const retreat=(f:Fleet,nodeId:string) => {
     const node=seaNodeById.get(nodeId)!;
     const neighbors=node.neighbors.filter(id=>!indexes.bySeaNode.get(id)?.some(e=>hostility.get(f.countryTag)?.has(e.countryTag)));
@@ -240,6 +243,7 @@ export function navalCombatTick(state:NavalState,wars:readonly War[],day:number,
       return lost;
     };
     battle.lossesA+=damage(a,attackB);battle.lossesB+=damage(b,attackA);battle.days++;
+    updateNavalParticipants(battle, indexes.byId);
     const broken=(side:Fleet[])=>side.every(f=>!f.units.length||fleetOrganization(f)<=B.retreatOrganization);
     const brokenA=broken(a), brokenB=broken(b);
     if(brokenA||brokenB) {

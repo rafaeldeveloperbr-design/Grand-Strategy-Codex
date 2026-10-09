@@ -73,6 +73,19 @@ export function readNavalSave(value:unknown):NavalState {
   for(const b of value.battles) {
     if(!record(b)||typeof b.id!=='string'||battleIds.has(b.id)||!seaNodeById.has(String(b.seaNodeId))||!strings(b.sideA)||!strings(b.sideB)||!['ACTIVE','ENDED'].includes(String(b.status))||!finite(b.startedAt)||!['days','lossesA','lossesB'].every(k=>finite(b[k])&&(b[k] as number)>=0)) throw new Error('NavalBattle inválida');
     battleIds.add(b.id);
+    if (b.participantSnapshots !== undefined) {
+      const snapshots = b.participantSnapshots;
+      if (!record(snapshots) || !Array.isArray(snapshots.A) || !Array.isArray(snapshots.B)) throw new Error('Snapshots navais inválidos');
+      const participants = new Set<string>();
+      for (const p of [...snapshots.A, ...snapshots.B]) {
+        if (!record(p) || typeof p.fleetId !== 'string' || participants.has(p.fleetId) || typeof p.fleetName !== 'string' || typeof p.countryTag !== 'string') throw new Error('Participante histórico naval inválido');
+        participants.add(p.fleetId);
+        for (const key of ['initialShips', 'finalShips', 'lostShips']) {
+          const counts = p[key];
+          if (!record(counts) || Object.entries(counts).some(([type, count]) => !Object.prototype.hasOwnProperty.call(NAVAL_UNIT_STATS, type) || !Number.isSafeInteger(count) || (count as number) < 0)) throw new Error('Composição histórica naval inválida');
+        }
+      }
+    }
     if (b.embarkedTroopLosses !== undefined && (!finite(b.embarkedTroopLosses) || b.embarkedTroopLosses < 0)) throw new Error('Baixas embarcadas inválidas');
     if(new Set([...b.sideA,...b.sideB]).size!==b.sideA.length+b.sideB.length) throw new Error('Participante naval duplicado');
     if(b.status==='ACTIVE'&&(!b.sideA.some(id=>ids.has(id))||!b.sideB.some(id=>ids.has(id)))) throw new Error('Fleet de batalha ausente');

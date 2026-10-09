@@ -1,3 +1,5 @@
+import { readAirSave } from './air/save';
+import type { AirState } from '../types/air';
 import { validateMilitarySave } from './military/saveCompatibility';
 let lastMilitaryLoadError: string | null = null;
 export const getSaveCompatibilityError = () => lastMilitaryLoadError;
@@ -61,6 +63,7 @@ export type SaveGameV2 = {
   date: GameDate;
   world: { provinces: Province[]; countries: Country[] };
   military: { armies: Army[]; wars: War[]; activeBattles: ActiveBattle[]; recruitments: Recruitment[] };
+  air?: AirState;
   naval?: NavalState;
   diplomacy: { version?: 2; relations: DiplomaticRelation[] };
   economy: { constructions: BuildingConstruction[] };
@@ -132,6 +135,7 @@ function migrateStructuredSave(raw: SerializedSaveGame): SaveGameV3 {
   return {
     ...raw,
     version: CURRENT_VERSION,
+    air: readAirSave(raw.air, { provinces: raw.world.provinces, countries: raw.world.countries, wars: raw.military.wars, relations: raw.diplomacy.relations }),
     naval: readNavalSave(raw.naval),
     economy: { constructions: migrateBuildingConstructions(raw.economy.constructions) },
     world: { ...raw.world, provinces: raw.world.provinces.map(normalizeSavedProvince), countries: raw.world.countries.map(normalizeSavedCountry) },
@@ -242,6 +246,7 @@ type SaveGameRefs = {
   recruitmentsRef: { current: Recruitment[] }; buildingConstructionsRef: { current: BuildingConstruction[] };
   playerTechStateRef: { current: CountryTechState }; botTechStatesRef: { current: Map<string, CountryTechState> };
   activeBattlesRef: { current: ActiveBattle[] }; dateRef: { current: GameDate };
+  airStateRef?: { current: AirState };
   navalStateRef?: { current: NavalState };
 };
 
@@ -251,10 +256,18 @@ export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, cus
   const activeIds = new Set(provincesData.map(province => province.id));
   const isActiveMap = refs.provincesRef.current.length === activeIds.size &&
     refs.provincesRef.current.every(province => activeIds.has(province.id));
+  let air: AirState;
+  try {
+    air = readAirSave(refs.airStateRef?.current, { provinces: refs.provincesRef.current, countries: refs.countriesRef.current, wars: refs.warsRef.current, relations: refs.diplomaticRelationsRef.current });
+  } catch (error) {
+    lastMilitaryLoadError = error instanceof Error ? error.message : 'Air save inválido';
+    return false;
+  }
   const save: SaveGameV3 = {
     mapId: isActiveMap ? mapMetadata.id : undefined,
     version: CURRENT_VERSION, id: slotId, name: customName || (slotId === AUTO_SAVE_KEY ? 'Autosave' : `Save ${new Date(now).toLocaleString('pt-BR')}`),
     timestamp: now, date: refs.dateRef.current,
+    air,
     naval: readNavalSave(refs.navalStateRef?.current),
     world: { provinces: refs.provincesRef.current, countries: refs.countriesRef.current },
     military: { armies: refs.armiesRef.current, wars: refs.warsRef.current, activeBattles: refs.activeBattlesRef.current, recruitments: refs.recruitmentsRef.current },

@@ -1,0 +1,70 @@
+{
+  "browser": "Chrome headless CDP",
+  "checks": [
+    "New Game BRA and Country Selection",
+    "Air Mode OFF has all Wing markers; marker click enables Air Mode; right-click derives AirZone",
+    "Air Mode, base military section, selectable wing and selection exclusivity",
+    "Locate and F",
+    "Direct CAS, Bombing, Interception; specific out-of-range feedback; Escape; Army/Fleet exit and cancel pending target",
+    "Assign Air Superiority in range",
+    "Declare war through diplomacy UI",
+    "Saved hostile zone resolves simultaneous air losses before CAS and bombing",
+    "CAS and bombing missions continue with land battle",
+    "Timed Rebase, manual Save V3 and load restores exact progress without duplication",
+    "Build Fighter UI; Save/load exact paid queue; real x3 progress; completion fixture delivers once; new Wing visible with Air Mode OFF",
+    "Rebase completes, x3 with zoom/pan and air overlay"
+  ],
+  "errors": [],
+  "performance": {
+    "airMode": {
+      "samples": [
+        {
+          "frames": 16,
+          "maxFrameGapMs": 300,
+          "over50ms": 9,
+          "overlayPaths": 6
+        },
+        {
+          "frames": 18,
+          "maxFrameGapMs": 300,
+          "over50ms": 10,
+          "overlayPaths": 6
+        },
+        {
+          "frames": 20,
+          "maxFrameGapMs": 300,
+          "over50ms": 10,
+          "overlayPaths": 6
+        }
+      ],
+      "averageFrames": 18,
+      "averageMaxFrameGapMs": 300,
+      "averageOver50ms": 9.666666666666666
+    },
+    "normalMode": {
+      "samples": [
+        {
+          "frames": 19,
+          "maxFrameGapMs": 333.2999999999993,
+          "over50ms": 10,
+          "overlayPaths": 0
+        },
+        {
+          "frames": 17,
+          "maxFrameGapMs": 316.59999999999854,
+          "over50ms": 8,
+          "overlayPaths": 0
+        },
+        {
+          "frames": 17,
+          "maxFrameGapMs": 266.59999999999854,
+          "over50ms": 9,
+          "overlayPaths": 0
+        }
+      ],
+      "averageFrames": 17.666666666666668,
+      "averageMaxFrameGapMs": 305.4999999999988,
+      "averageOver50ms": 9
+    }
+  }
+}

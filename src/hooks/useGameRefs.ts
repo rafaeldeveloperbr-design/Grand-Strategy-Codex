@@ -1,3 +1,4 @@
+import type { AirState } from '../types/air';
 import { useRef, useEffect } from 'react'
 import type { Province, Country, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../types'
 import type { War, DiplomaticRelation } from '../types/diplomacy'
@@ -19,6 +20,7 @@ type Props = {
   botTechStates: Map<string, CountryTechState>
   aiDifficulty: AIDifficulty
   activeBattles: ActiveBattle[]
+  airState?: AirState
   navalState?: NavalState
 }
 
@@ -36,7 +38,9 @@ export function useGameRefs(props: Props) {
   const botTechStatesRef = useRef(props.botTechStates)
   const aiDifficultyRef = useRef(props.aiDifficulty)
   const activeBattlesRef = useRef(props.activeBattles)
+  const airStateRef = useRef<AirState>(props.airState ?? { wings: [], engagements: [] })
   const navalStateRef = useRef<NavalState>(props.navalState ?? { fleets: [], battles: [] })
+  useEffect(() => { if (props.airState) airStateRef.current = props.airState }, [props.airState])
   const ceilingLogRef = useRef<Set<string>>(new Set())
 
   useEffect(() => { provincesRef.current = props.provinces }, [props.provinces])
@@ -67,6 +71,7 @@ export function useGameRefs(props: Props) {
     botTechStatesRef,
     aiDifficultyRef,
     activeBattlesRef,
+    airStateRef,
     navalStateRef,
     ceilingLogRef
   }

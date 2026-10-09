@@ -34,9 +34,9 @@
         },
         "tabs": {
           "top": 253,
-          "bottom": 310
+          "bottom": 354
         },
-        "contentHeight": 329,
+        "contentHeight": 285,
         "sidebarHeight": 386,
         "contentScroll": "auto",
         "sidebarScroll": "auto",
@@ -85,7 +85,7 @@
         "horizontalOverflow": false
       }
     },
-    "Inland selection hides Porto, falls back to Info; return to São Paulo restores four tabs"
+    "Inland selection hides Porto, falls back to Info; return to São Paulo restores five tabs"
   ],
   "errors": []
 }

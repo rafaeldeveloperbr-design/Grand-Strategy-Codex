@@ -35,7 +35,7 @@ try {
   const press=async expression=>{await evaluate(expression);await delay(200);};
   const overview=()=>evaluate(`document.querySelector('.province-panel__sidebar')?.textContent`);
   await click('[data-province-id="sa_bra_sao_paulo"]');
-  assert(await evaluate(`document.querySelectorAll('.province-panel__tab').length===4 && !document.querySelector('.naval-port-info')`),'Initial tabs/naval placement');
+  assert(await evaluate(`document.querySelectorAll('.province-panel__tab').length===5 && !document.querySelector('.naval-port-info')`),'Initial tabs/naval placement');
   await tab('Porto');await waitFor(`document.querySelector('[aria-label="Naval construction"]')`);
   await press(`([...document.querySelectorAll('[aria-label="Naval construction"] button')].find(b=>b.textContent==='Build Destroyer')).click()`);
   assert((await overview()).includes('Destroyer'),'Naval overview missing');
@@ -57,10 +57,11 @@ try {
   await call('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
   const capture=await call('Page.captureScreenshot',{format:'png'});await writeFile('artifacts/province-panel-ux-cleanup-v1.png',Buffer.from(capture.data,'base64'));
   const {provincesData}=await server.ssrLoadModule('/src/data/map/index.ts');const {portByProvince}=await server.ssrLoadModule('/src/engine/naval/index.ts');
-  const inland=provincesData.find(p=>p.owner==='BRA'&&!portByProvince.has(p.id));
+  const {airBaseByProvinceId}=await server.ssrLoadModule('/src/engine/air/index.ts');
+  const inland=provincesData.find(p=>p.owner==='BRA'&&!portByProvince.has(p.id)&&!airBaseByProvinceId.has(p.id));
   await click(`[data-province-id="${inland.id}"]`);
   assert(await evaluate(`document.querySelectorAll('.province-panel__tab').length===3&&document.querySelector('.province-panel__tab--active').textContent.includes('Info')`),'Inland fallback failed');
-  await click('[data-province-id="sa_bra_sao_paulo"]');assert(await evaluate(`document.querySelectorAll('.province-panel__tab').length===4 && !document.querySelector('.naval-port-info')`),'Return layout failed');
-  report.checks.push('Inland selection hides Porto, falls back to Info; return to São Paulo restores four tabs');
+  await click('[data-province-id="sa_bra_sao_paulo"]');assert(await evaluate(`document.querySelectorAll('.province-panel__tab').length===5 && !document.querySelector('.naval-port-info')`),'Return layout failed');
+  report.checks.push('Inland selection hides Porto, falls back to Info; return to São Paulo restores five tabs');
   assert(errors.length===0,'Browser exceptions');await writeFile('artifacts/province-panel-ux-cleanup-v1-browser.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
 } finally {ws?.close();chrome?.kill();await server.close();}

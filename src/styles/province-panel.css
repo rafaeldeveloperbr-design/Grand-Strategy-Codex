@@ -286,6 +286,7 @@
 
 .province-panel__tab{
   flex: 1;
+  min-width: max-content;
   padding: 10px 8px;
   font-size: 11px;
   font-weight: 600;
@@ -318,6 +319,17 @@
   flex: 1;
   overflow-y: auto;
   padding: 0;
+}
+
+.province-panel__air {
+  padding: 0 16px 16px;
+  min-width: 0;
+}
+
+.province-panel__air button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .province-panel__section--highlight{

@@ -1,3 +1,5 @@
+import type { AirState } from '../../types/air';
+import { getAirSupportForBattle, getAirSuperiorityModifier } from '../../engine/air';
 import { recordBattleWarCasualties } from '../../engine/diplomacy/warResolution';
 import { politicalBattleOutcome } from '../../engine/politics';
 import { battleEndFeedback } from '../../components/militaryPresentation';
@@ -62,6 +64,7 @@ type FinalResultEnriched = CombatResult & {
 };
 
 type Params = {
+  air?: AirState;
   armies: Army[];
   provinces: Province[];
   countries: Country[];
@@ -162,6 +165,10 @@ export function processBattleContinuous(p: Params) {
     const repaired = synchronizeBattle(battle, armies) || battle;
     const armiesBeforeCombat = armies;
     const combatMultipliers = new Map<string, number>();
+    if (p.air) for (const tag of new Set(repaired.participantArmyIds.map(id => armies.find(a => a.id === id)?.owner).filter((tag): tag is string => !!tag))) {
+      const ctx = { provinces, countries, armies, wars, relations: p.relations ?? [] };
+      combatMultipliers.set(tag, getAirSuperiorityModifier(p.air, province.id, tag, ctx) + getAirSupportForBattle(p.air, repaired, tag, ctx));
+    }
     const unitBonuses = new Map(p.countries.map(country => {
       const state = country.tag === p.playerCountryTag ? p.playerTechState : p.botTechStates.get(country.tag);
       return [country.tag, state ? calculateTechBonuses(state).combatPowerBonus : {}] as const;

@@ -38,7 +38,7 @@ export function navalConstructionBlockReason(state: NavalState, province: Provin
   if ((province.market?.goods.tools.stock ?? 0) < cost.tools) return 'TOOLS local insuficiente.';
   return null;
 }
-function pay(provinces: Province[], countries: Country[], provinceId: string, tag: string, cost: NavalConstructionCost) {
+export function payLocalProductionCost(provinces: Province[], countries: Country[], provinceId: string, tag: string, cost: NavalConstructionCost) {
   return {
     countries: countries.map(c => c.tag === tag ? { ...c, resources: { ...c.resources, gold: c.resources.gold-cost.gold } } : c),
     provinces: provinces.map(p => p.id === provinceId && p.market ? { ...p, market: { ...p.market, goods: { ...p.market.goods,
@@ -56,7 +56,7 @@ export function startNavalConstruction(naval: NavalState, provinces: Province[],
   const construction: NavalConstructionState = type === 'UPGRADE'
     ? { ...state, nextId: state.nextId+1, upgrades: [...state.upgrades, { ...base, targetLevel: level+1 }] }
     : { ...state, nextId: state.nextId+1, builds: [...state.builds, { ...base, unitType: type, ...(targetFleetId && naval.fleets.some(f => f.id === targetFleetId && f.countryTag === actor) ? { targetFleetId } : {}) }] };
-  return { naval: { ...naval, construction }, ...pay(provinces,countries,provinceId,actor,config), error: null };
+  return { naval: { ...naval, construction }, ...payLocalProductionCost(provinces,countries,provinceId,actor,config), error: null };
 }
 /** Cancel paid orders/upgrades with zero refund, including queued items. */
 export function cancelNavalConstruction(naval: NavalState, id: string, actor: string): NavalState {

@@ -1,3 +1,4 @@
+import type { AirState } from '../../types/air';
 import { useState, useCallback } from 'react';
 import { loadGame, saveGame, getSaveCompatibilityError, isAutoSaveEnabled, setAutoSaveEnabled, listSaves, deleteSave } from '../../engine/saveSystem';
 import { isSaveCompatibleWithActiveMap } from '../../data/map/saveCompatibility';
@@ -8,6 +9,7 @@ import type { DiplomaticRelation, War } from '../../types/diplomacy';
 import type { NavalState } from '../../types/naval';
 
 interface SaveRefs {
+  airStateRef?: { current: AirState };
   navalStateRef?: { current: NavalState };
   provincesRef: { current: Province[] };
   countriesRef: { current: Country[] };
@@ -23,6 +25,7 @@ interface SaveRefs {
 }
 
 interface SaveSetters {
+  setAirState?: (v: AirState) => void;
   setNavalState?: (v: NavalState) => void;
   setPlayerCountryTag?: (tag: string) => void;
   setProvinces: (v: Province[]) => void;
@@ -71,6 +74,9 @@ export function useSaveSystem(
       return;
     }
     setters.setPlayerCountryTag?.(playerTag);
+    const air = saved.air ?? { wings: [], engagements: [] };
+    if (refs.airStateRef) refs.airStateRef.current = air;
+    setters.setAirState?.(air);
     const naval = saved.naval ?? { fleets: [], battles: [] };
     if (refs.navalStateRef) refs.navalStateRef.current = naval;
     setters.setNavalState?.(naval);
@@ -89,7 +95,7 @@ export function useSaveSystem(
 
     addToast(`📂 Save V${saved.version} carregado!`, 'success');
     setShowSettingsModal?.(false);
-  }, [setters, addToast, setShowSettingsModal, refs.navalStateRef]);
+  }, [setters, addToast, setShowSettingsModal, refs.navalStateRef, refs.airStateRef]);
 
   const handleDelete = useCallback((slotId: string) => {
     if (!confirm(`Apagar save?`)) return;

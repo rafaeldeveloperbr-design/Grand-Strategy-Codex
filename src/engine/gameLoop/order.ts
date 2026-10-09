@@ -5,6 +5,10 @@
  * 
  * Regra de ouro: Um sistema só pode depender de sistemas que já rodaram neste tick.
  * Ex: Combate depende de Movimento (exército tem que chegar antes de lutar)
+ * Air V1: airAI follows navalAI, reuses its FULL activation snapshot.
+ * After navalCombat: airCombat -> airMissions (rebase, upkeep, recovery, bombing).
+ * Existing battleArrival -> battleContinuous then consume post-air-combat support.
+ * Cleanup evacuates captured airbases before publication and autosave.
  */
 
 export type GameTickPhase = 

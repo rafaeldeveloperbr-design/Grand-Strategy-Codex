@@ -4,8 +4,12 @@ import { BUILDING_DEFINITIONS } from '../../data/buildings';
 import { UNIT_DEFINITIONS } from '../../data/units';
 import type { NavalBuildOrder, NavalShipyardUpgrade } from '../../types/naval';
 import { NAVAL_BUILD_CONFIG } from '../../data/navalConstruction';
+import type { AirProductionOrder } from '../../types/air';
 
 interface ProvinceSidebarProps {
+  airOrders?: readonly AirProductionOrder[];
+  actor?: string;
+  onAirBuildCancel?: (id: string) => void;
   provinceConstructions: BuildingConstruction[];
   recruitmentsHere: Recruitment[];
   navalBuilds?: readonly NavalBuildOrder[];
@@ -15,6 +19,7 @@ interface ProvinceSidebarProps {
 }
 
 export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
+  airOrders = [], actor, onAirBuildCancel,
   provinceConstructions,
   recruitmentsHere,
   navalBuilds = [],
@@ -22,7 +27,7 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
   onCancelBuilding,
   onCancelRecruitment,
 }) => {
-  const hasActivities = provinceConstructions.length > 0 || recruitmentsHere.length > 0 || navalBuilds.length > 0 || !!navalUpgrade;
+  const hasActivities = provinceConstructions.length > 0 || recruitmentsHere.length > 0 || navalBuilds.length > 0 || !!navalUpgrade || airOrders.length > 0;
 
   return (
     <div className="province-panel__sidebar">
@@ -134,6 +139,16 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
             })}
           </div>
         )}
+        {airOrders.length > 0 && <div className="province-panel__sidebar-section">
+          <h4 className="province-panel__sidebar-subtitle">✈ Aéreo</h4>
+          {airOrders.map((order, index) => <NavalActivity key={order.id} label={`${order.type} Wing`}
+            progress={order.progress} requiredProgress={order.requiredProgress}
+            status={index ? 'Na fila' : order.progress >= order.requiredProgress ? 'Aguardando capacidade' : 'Ativo'}
+            action={order.countryTag === actor && onAirBuildCancel && <button
+                className="province-panel__construction-cancel" aria-label={`Cancelar produção aérea ${order.id}`}
+                title="Cancelar produção aérea (sem reembolso)" onClick={() => onAirBuildCancel(order.id)}>✕</button>}
+          />)}
+        </div>}
         {(navalBuilds.length > 0 || navalUpgrade) && <div className="province-panel__sidebar-section">
           <h4 className="province-panel__sidebar-subtitle">⚓ Naval</h4>
           {navalBuilds.map((build, index) => <NavalActivity key={build.id}
@@ -147,12 +162,12 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
   );
 };
 
-function NavalActivity({ label, progress, requiredProgress, status }: {
-  label: string; progress: number; requiredProgress: number; status: string;
+function NavalActivity({ label, progress, requiredProgress, status, action }: {
+  label: string; progress: number; requiredProgress: number; status: string; action?: React.ReactNode;
 }) {
   const percent = Math.max(0, Math.min(100, requiredProgress > 0 ? progress / requiredProgress * 100 : 0));
   return <div className="province-panel__sidebar-item">
-    <div className="province-panel__sidebar-item-header"><span>{label}</span></div>
+    <div className="province-panel__sidebar-item-header"><span>{label}</span>{action}</div>
     <div className="province-panel__sidebar-item-info"><span className="province-panel__construction-days">{progress} / {requiredProgress} dias · {Math.floor(percent)}% · {status}</span></div>
     <div className="province-panel__construction-bar"><div className="province-panel__construction-fill" style={{ width: `${percent}%` }} /></div>
   </div>;

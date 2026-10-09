@@ -1,0 +1,163 @@
+{
+  "samples": 30,
+  "world": {
+    "countries": 201,
+    "provinces": 494,
+    "zones": 56,
+    "bases": 83,
+    "initialWings": 66,
+    "countriesWithWings": 38
+  },
+  "results": [
+    {
+      "name": "zero",
+      "wings": 0,
+      "engagements": 0,
+      "landBattles": 0,
+      "rangeChecks": 0,
+      "phases": {
+        "airAI": {
+          "averageMs": 0.0019566666666529877,
+          "maxMs": 0.010500000000320142
+        },
+        "airCombat": {
+          "averageMs": 0.00173666666655663,
+          "maxMs": 0.009699999999611464
+        },
+        "airMissions": {
+          "averageMs": 0.10942999999997483,
+          "maxMs": 1.3274999999998727
+        },
+        "range": {
+          "averageMs": 0.00040333333337609173,
+          "maxMs": 0.002900000000408909
+        }
+      }
+    },
+    {
+      "name": "initial-peace",
+      "wings": 66,
+      "engagements": 0,
+      "landBattles": 0,
+      "rangeChecks": 3696,
+      "phases": {
+        "airAI": {
+          "averageMs": 3.6154066666666647,
+          "maxMs": 6.833599999999933
+        },
+        "airCombat": {
+          "averageMs": 0.025846666666711825,
+          "maxMs": 0.05540000000019063
+        },
+        "airMissions": {
+          "averageMs": 0.37524333333335563,
+          "maxMs": 0.5826000000001841
+        },
+        "range": {
+          "averageMs": 1.2985166666666372,
+          "maxMs": 3.8609999999998763
+        }
+      }
+    },
+    {
+      "name": "some-wars",
+      "wings": 66,
+      "engagements": 1,
+      "landBattles": 2,
+      "rangeChecks": 3696,
+      "phases": {
+        "airAI": {
+          "averageMs": 2.8124166666667105,
+          "maxMs": 3.5697000000000116
+        },
+        "airCombat": {
+          "averageMs": 0.2468133333333147,
+          "maxMs": 0.38970000000017535
+        },
+        "airMissions": {
+          "averageMs": 0.9310666666666596,
+          "maxMs": 1.5724999999997635
+        },
+        "range": {
+          "averageMs": 1.2138733333333676,
+          "maxMs": 1.6922999999997046
+        }
+      }
+    },
+    {
+      "name": "disputed-zones",
+      "wings": 66,
+      "engagements": 4,
+      "landBattles": 4,
+      "rangeChecks": 3696,
+      "phases": {
+        "airAI": {
+          "averageMs": 2.6771466666666734,
+          "maxMs": 4.305299999999988
+        },
+        "airCombat": {
+          "averageMs": 0.4248666666666395,
+          "maxMs": 2.0960000000000036
+        },
+        "airMissions": {
+          "averageMs": 0.890520000000015,
+          "maxMs": 1.206199999999626
+        },
+        "range": {
+          "averageMs": 1.1452499999999721,
+          "maxMs": 1.475800000000163
+        }
+      }
+    },
+    {
+      "name": "100-wings",
+      "wings": 100,
+      "engagements": 4,
+      "landBattles": 4,
+      "rangeChecks": 5600,
+      "phases": {
+        "airAI": {
+          "averageMs": 3.7818599999999756,
+          "maxMs": 5.016999999999825
+        },
+        "airCombat": {
+          "averageMs": 0.5296466666666068,
+          "maxMs": 0.6956000000000131
+        },
+        "airMissions": {
+          "averageMs": 0.8932499999999739,
+          "maxMs": 1.0441000000000713
+        },
+        "range": {
+          "averageMs": 1.7796400000000177,
+          "maxMs": 2.2128999999999905
+        }
+      }
+    },
+    {
+      "name": "CAS-and-bombing",
+      "wings": 66,
+      "engagements": 4,
+      "landBattles": 4,
+      "rangeChecks": 3696,
+      "phases": {
+        "airAI": {
+          "averageMs": 2.419843333333332,
+          "maxMs": 2.969100000000253
+        },
+        "airCombat": {
+          "averageMs": 0.27230666666669096,
+          "maxMs": 0.5632999999997992
+        },
+        "airMissions": {
+          "averageMs": 0.610663333333332,
+          "maxMs": 1.0021999999999025
+        },
+        "range": {
+          "averageMs": 1.1926266666666985,
+          "maxMs": 1.473700000000008
+        }
+      }
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import { airAITick, airCombatTick, airMissionsTick, cleanupAirState, airCounters, airProductionAI, processAirProductionTick, cleanupAirProduction } from '../engine/air';
+import type { AirState } from '../types/air';
 import { processWarResolutionTick } from '../engine/diplomacy/warResolution';
 import { processPoliticalTick } from '../engine/politics';
 import { buildSimulationActivation } from '../engine/simulationActivation';
@@ -50,6 +52,8 @@ import { SPEED_INTERVALS, useGameLoopScheduler } from './gameLoop/useGameLoopSch
 import { createGameLoopProfiler } from '../engine/performance/gameLoopProfiler';
 
 type Props = {
+  airStateRef?: MutableRefObject<AirState>;
+  setAirState?: Dispatch<SetStateAction<AirState>>;
   navalStateRef?: MutableRefObject<NavalState>;
   setNavalState?: Dispatch<SetStateAction<NavalState>>;
   // Refs principais do jogo
@@ -208,6 +212,7 @@ export function useGameLoop(props: Props) {
     let currentPlayerTechState = playerTechStateRef.current;
     let currentBotTechStates = new Map<string, CountryTechState>(botTechStatesRef.current);
     let naval = props.navalStateRef?.current ?? { fleets: [], battles: [] };
+    let air = props.airStateRef?.current ?? { wings: [], engagements: [] };
     resetNavalPathfindCalls();
 
     // 2. ECONOMY - primeiro, gera recursos e recrutamentos
@@ -248,10 +253,20 @@ export function useGameLoop(props: Props) {
     naval = navalProduction.naval;
     profiler.recordNavalConstruction(navalProduction.counters);
     profiler.endPhase('navalConstruction');
+    const airProductionDecision = airProductionAI(air, provinces, countries, navalActivation.fullCountryTags, playerCountryTag, wars, currentActiveBattles, relations);
+    air = airProductionDecision.state; provinces = airProductionDecision.provinces; countries = airProductionDecision.countries;
+    const airProduction = processAirProductionTick(air, provinces, countries);
+    air = airProduction.state;
+    profiler.recordAirProduction(airProduction.counters);
+    for (const feedback of airProduction.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'info', 'Aircraft Production');
+    profiler.endPhase('airProduction');
     // War participants already activate every country eligible for a hostile naval engagement.
     const navalAI = navalAITick(naval.fleets, navalActivation.fullCountryTags, playerCountryTag, provinces, relations, wars, new Set(naval.invasions?.map(o => o.fleetId)));
     naval = { ...naval, fleets: navalAI.fleets };
     profiler.endPhase('navalAI');
+    const airAI = airAITick(air, navalActivation.fullCountryTags, playerCountryTag, { provinces, countries, wars, relations }, currentActiveBattles);
+    air = airAI.state;
+    profiler.endPhase('airAI');
 
     // 8. MOVEMENT - IA já decidiu pra onde ir
     const mov = processMovementTick({ armies, provinces, relations, countries, wars, addLog, addToast, playerCountryTag });
@@ -270,6 +285,13 @@ export function useGameLoop(props: Props) {
     const recovery = navalRecoveryTick(naval.fleets, countries, provinces, relations, wars);
     naval = { ...naval, fleets: recovery.fleets }; countries = recovery.countries;
     profiler.endPhase('navalCombat');
+    air = airCombatTick(air, { provinces, countries, wars, relations });
+    profiler.endPhase('airCombat');
+    const rebasing = air.wings.filter(w => w.rebase && w.countryTag === playerCountryTag);
+    const airMissions = airMissionsTick(air, { provinces, countries, wars, relations });
+    air = airMissions.state; countries = airMissions.countries; provinces = airMissions.provinces;
+    for (const w of rebasing) { const arrived = air.wings.find(next => next.id === w.id); if (arrived && !arrived.rebase && arrived.baseProvinceId === w.rebase!.targetProvinceId) addToast(`Rebase concluído: ${w.name}.`, 'success', 'Air Warfare'); }
+    profiler.endPhase('airMissions');
     const landing = amphibiousTick(naval, armies, provinces, wars, engagedThisTick);
     naval = landing.naval; armies = landing.armies; arrivedArmies.push(...landing.arrivals);
     profiler.recordAmphibious({ ...landing.counters, troopLossesAtSea: transportLosses.troopLossesAtSea });
@@ -284,7 +306,7 @@ export function useGameLoop(props: Props) {
 
     profiler.endPhase('battleArrival');
 
-    const cont = processBattleContinuous({ armies, provinces, countries, wars, relations, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused: setLoopPaused, activeBattlesRef, cancelProvinceActivities });
+    const cont = processBattleContinuous({ air, armies, provinces, countries, wars, relations, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused: setLoopPaused, activeBattlesRef, cancelProvinceActivities });
     armies = cont.armies; provinces = cont.provinces; countries = cont.countries; currentActiveBattles = cont.currentActiveBattles; wars = cont.wars; recruitments = cont.recruitments; buildingConstructions = cont.buildingConstructions;
 
     profiler.endPhase('battleContinuous');
@@ -317,6 +339,9 @@ export function useGameLoop(props: Props) {
     const revalidated = amphibiousTick(naval, armies, provinces, wars, new Set(), false);
     naval = revalidated.naval;
     for (const feedback of revalidated.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
+    const productionCleanup = cleanupAirProduction(air, provinces, countries);
+    for (const feedback of productionCleanup.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Aircraft Production');
+    air = cleanupAirState(productionCleanup.state, { provinces, countries, wars, relations });
     profiler.endPhase('cleanup');
 
     setArmies(armies); setProvinces(provinces); setAllCountries(countries); setWars(wars);
@@ -329,6 +354,9 @@ export function useGameLoop(props: Props) {
     playerTechStateRef.current = currentPlayerTechState; botTechStatesRef.current = currentBotTechStates;
     if (props.navalStateRef) props.navalStateRef.current = naval;
     props.setNavalState?.(naval);
+    if (props.airStateRef) props.airStateRef.current = air;
+    props.setAirState?.(air);
+    profiler.recordAir(airCounters(air, airAI.bots));
     profiler.recordNaval({ fleets: naval.fleets.length, movingFleets: naval.fleets.filter(f => f.status === 'MOVING' || f.status === 'RETREATING').length, navalAIBots: navalAI.bots, activeNavalBattles: naval.battles.filter(b => b.status === 'ACTIVE').length, pathfindCalls: getNavalPathfindCalls() });
 
     // Announcements observe the same final state as the UI and save system.
@@ -345,7 +373,7 @@ export function useGameLoop(props: Props) {
     // AUTOSAVE - todo dia 1 - FIX: agora com slotId
     if (dateRef.current.day === 1 && isAutoSaveEnabled()) {
       const saved = saveGame(
-        { provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef, navalStateRef: props.navalStateRef },
+        { provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef, navalStateRef: props.navalStateRef, airStateRef: props.airStateRef },
         'autosave',
         'Autosave'
       );

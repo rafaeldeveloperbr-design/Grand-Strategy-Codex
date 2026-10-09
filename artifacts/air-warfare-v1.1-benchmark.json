@@ -1,0 +1,50 @@
+{
+  "samples": 100,
+  "warmups": 20,
+  "node": "v26.8.2",
+  "results": [
+    {
+      "name": "production-0-active-bases",
+      "activeBases": 0,
+      "averageMs": 0.001966999999992822,
+      "medianMs": 0.0019999999999527063,
+      "p95Ms": 0.004100000000107684
+    },
+    {
+      "name": "production-20-active-bases",
+      "activeBases": 20,
+      "averageMs": 0.05439299999998639,
+      "medianMs": 0.040899999999965075,
+      "p95Ms": 0.06590000000005602
+    },
+    {
+      "name": "production-50-active-bases",
+      "activeBases": 50,
+      "averageMs": 0.047549999999989725,
+      "medianMs": 0.044599999999945794,
+      "p95Ms": 0.06589999999982865
+    },
+    {
+      "name": "markers-normal-mode",
+      "wings": 66,
+      "measurement": "React SSR marker rendering; excludes browser paint",
+      "averageMs": 1.0218790000000082,
+      "medianMs": 0.9502999999999702,
+      "p95Ms": 1.4664999999999964
+    },
+    {
+      "name": "markers-air-mode",
+      "wings": 66,
+      "measurement": "React SSR marker rendering; excludes browser paint",
+      "averageMs": 1.909160000000013,
+      "medianMs": 1.7839999999998781,
+      "p95Ms": 2.5171000000000276
+    },
+    {
+      "name": "right-click-command-dispatch",
+      "averageMs": 0.0026609999999845967,
+      "medianMs": 0.002100000000154978,
+      "p95Ms": 0.0072000000000116415
+    }
+  ]
+}

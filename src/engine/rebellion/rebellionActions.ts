@@ -4,6 +4,7 @@ import type { RebellionAction } from './types';
 import { REBELLION_BALANCE as B } from './balance';
 import { clamp, friendlyTroops, getProvinceRebellion, normalizeRebellion, rebellionDay } from './rebellionUtils';
 import { normalizePopulation } from '../population';
+import { transferProvince, type TerritoryTransferState } from '../territoryTransfer';
 export function applyRebellionAction(provinces: Province[], countries: Country[], armies: Army[], countryTag: string, provinceId: string, action: RebellionAction, date: GameDate) {
   const p = provinces.find(p => p.id === provinceId), country = countries.find(c => c.tag === countryTag);
   const unchanged = (reason: string) => ({ provinces, countries, armies, accepted: false, reason });
@@ -24,8 +25,13 @@ export function applyRebellionAction(provinces: Province[], countries: Country[]
   if (action === 'investment') updated = { ...updated, investmentDays: B.investmentDays };
   const negotiated = action === 'negotiate' ? faction : undefined;
   const ids = negotiated ? Array.from(new Set([...negotiated.involvedProvinces, ...provinces.filter(item => item.owner === negotiated.id).map(item => item.id)])) : [p.id];
+  if (negotiated) {
+    let territory: TerritoryTransferState = { provinces, countries, recruitments: [], constructions: [] };
+    for (const item of provinces.filter(item => item.owner === negotiated.id)) territory = transferProvince(territory, item.id, countryTag, { date });
+    ({ provinces, countries } = territory);
+  }
   return { accepted: true, reason: negotiated ? `Rebelião em ${p.name} encerrada por negociação aceita.` : action === 'repression' ? 'Repressão reduziu progress; ressentimento aumentou.' : 'Concessão aceita.',
-    provinces: provinces.map(item => ids.includes(item.id) ? { ...item, owner: item.owner === negotiated?.id ? countryTag : item.owner,
+    provinces: provinces.map(item => ids.includes(item.id) ? { ...item,
       rebellion: negotiated ? { ...normalizeRebellion(item.rebellion), ...updated, factionId: undefined } : updated,
       population: action === 'repression' ? { ...pop, total: Math.max(0, pop.total - Math.round(Math.min(1, troops / Math.max(1, pop.total * B.garrisonPopulationRatio)) * pop.total * B.repressionDeaths)) } : item.population } : item),
     armies: negotiated ? armies.filter(a => a.owner !== negotiated.id) : armies,

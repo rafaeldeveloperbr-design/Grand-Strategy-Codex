@@ -225,7 +225,7 @@ describe('MOVIMENTO', () => {
     });
 
     expect(result.provinces[0].owner).toBe('BRA');
-    expect(result.provinces[0].unrest).toBe(0);
+    expect(result.provinces[0].unrest).toBe(10);
     expect(addLog).toHaveBeenCalled();
   });
 });

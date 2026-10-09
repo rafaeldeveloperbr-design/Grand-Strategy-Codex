@@ -24,10 +24,22 @@ export function recoverRebelArmies(armies: Army[], provinces: Province[], countr
 
 export function planRebelMovement(armies: Army[], provinces: Province[], countries: Country[], relations: DiplomaticRelation[], date?: GameDate): Army[] {
   const factions = countries.flatMap(c => c.rebellions ?? []).filter(f => f.status === 'active');
-  return armies.map(a => {
+  const activeById = new Map(factions.map(f => [f.id, f]));
+  const controlledOwners = new Set(provinces.filter(p => p.owner.startsWith('rebel_')).map(p => p.owner));
+  const byId = new Map(provinces.map(p => [p.id, p]));
+  return armies.filter(a => {
+    if (!a.owner.startsWith('rebel_v2_')) return true;
+    const f = activeById.get(a.owner);
+    if (!f || f.cleanupPending) return false;
+    const base = byId.get(f.baseProvince ?? f.originProvince);
+    return controlledOwners.has(f.id) || (!f.territoryEstablished && base?.rebellion?.factionId === f.id && a.location === base.id && (a.inCombat || !date || rebellionDay(date) === f.formedDay));
+  }).map(a => {
     if (a.inCombat || a.destination || !a.location || troopCount(a) <= 0) return a;
-    const faction = factions.find(f => f.id === a.owner);
-    if (!faction) return a;
+    const faction = activeById.get(a.owner);
+    if (!faction || faction.cleanupPending) return a;
+    const base = byId.get(faction.baseProvince ?? faction.originProvince);
+    const controlled = controlledOwners.has(faction.id);
+    if (!controlled && (faction.territoryEstablished || !base || base.rebellion?.factionId !== faction.id || a.location !== base.id)) return a;
     const army = { ...a, rebellionFactionId: faction.id, originalOwner: faction.owner };
     // An active civil war grants access to its government; sibling occupations
     // must not cut the route through the same country's territory.

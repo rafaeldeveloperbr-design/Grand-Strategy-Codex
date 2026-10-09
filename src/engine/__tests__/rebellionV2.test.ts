@@ -75,7 +75,7 @@ describe('Rebellion V2 pressure and organization', () => {
     expect(rebellionEconomicImpact(50, 80, 50, 180).goldMultiplier).toBeLessThan(rebellionEconomicImpact(50, 80).goldMultiplier);
   });
   it('threshold feedback respects cooldowns and does not spam per tick', () => {
-    const p = ready({ unrest: 69.99, population: { ...province().population, satisfaction: 0 } });
+    const p = ready({ rebellion: { ...normalizeRebellion(), progress: 49.9 }, unrest: 69.99, population: { ...province().population, satisfaction: 0 } });
     const c = country({ resources: { ...country().resources, stability: 0 } });
     const first = processProvincialPressure([p], date, [], [c]);
     expect(first.logs).toHaveLength(1);
@@ -268,10 +268,11 @@ describe('Rebellion V2 responses, military and migration', () => {
     const defender = { ...army('A', 'capital'), regiments: Array.from({ length: 20 }, () => createRegiment('infantry')) };
     const planned = planRebelMovement([...born.armies, defender], born.provinces, born.countries, born.relations)[0];
     expect(planned).toMatchObject({ destination: 'mid', path: ['mid'], rebellionMovement: { target: 'capital', state: 'marching' } });
-    const held = planRebelMovement([{ ...planned, location: 'mid', destination: null, path: [] }, defender], born.provinces, born.countries, born.relations)[0];
+    const occupied = born.provinces.map(p => p.id === 'mid' ? { ...p, owner: born.createdFactionIds[0] } : p);
+    const held = planRebelMovement([{ ...planned, location: 'mid', destination: null, path: [] }, defender], occupied, born.countries, born.relations)[0];
     expect(held.destination).toBeNull();
     expect(held.rebellionMovement).toMatchObject({ state: 'defending', target: 'capital', reason: expect.stringContaining('superior') });
-    const released = planRebelMovement([held], born.provinces, born.countries, born.relations)[0];
+    const released = planRebelMovement([held], occupied, born.countries, born.relations)[0];
     expect(released.destination).toBe('capital');
   });
   it('uses an accessible alternate route around a superior intermediate army, with no free reinforcements', () => {

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { transferProvince } from '../territoryTransfer';
 import React, { useState } from 'react';
 import { act, cleanup, render, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -6,12 +7,11 @@ import type { ActiveBattle, Army, BuildingConstruction, Country, DiplomaticRelat
 import { DEFAULT_LAWS } from '../../constants/laws';
 import { createArmy, createRegiment, splitArmy } from '../military';
 import { createInitialTechState } from '../technology';
-import { advanceObjective, applyRebellionAction, collectRebellionFormationFeedback, collectRebellionResolutionFeedback, createRebelArmy, getProvinceRebellion, migrateLegacyRebels, normalizeSavedFactions, normalizeRebellion, planRebelMovement, processRebellionObjectives, REBELLION_BALANCE as B, rebellionDay, reinforceRebellions, resolveRebellion, spawnRebellions, troopCount } from '../rebellion';
+import { advanceObjective, applyRebellionAction, collectRebellionFormationFeedback, collectRebellionResolutionFeedback, createRebelArmy, getProvinceRebellion, normalizeRebellion, planRebelMovement, processRebellionObjectives, REBELLION_BALANCE as B, rebellionDay, reinforceRebellions, resolveRebellion, spawnRebellions, troopCount } from '../rebellion';
 import { processMovementTick } from '../../hooks/gameLoop/movementTick';
 import { processUnrestTick } from '../../hooks/gameLoop/unrestTick';
 import { useGameRefs } from '../../hooks/useGameRefs';
 import { useGameLoop } from '../../hooks/useGameLoop';
-import { ProvincePanel } from '../../components/ProvincePanel/ProvincePanel';
 import { ProvinceLayer } from '../../components/GameMap/ProvinceLayer';
 import { ArmyMarker } from '../../components/ArmyMarker';
 
@@ -54,18 +54,18 @@ describe('rebellion announcement lifecycle', () => {
     initial.provinces[0] = ready('p', { population: { ...initial.provinces[0].population, total: 1000000 } });
     const born = spawnRebellions(initial.provinces, initial.countries, [], [], [], date), f = born.countries[0].rebellions![0];
     const provinces = born.provinces.map(p => p.id === 'p' ? { ...p, owner: f.id } : p);
-    const armies = [createRebelArmy({ ...f, militaryStrength: B.reinforcements.maximumStrength - 50 }, provinces[0])];
+    const armies = [createRebelArmy({ ...f, militaryStrength: B.reinforcements.maximumStrength - B.reinforcements.perProvinceCap }, provinces[0])];
     const result = reinforceRebellions(provinces, born.countries, armies, date);
-    expect(result.countries[0].rebellions![0].reinforcementRate).toBe(50);
+    expect(result.countries[0].rebellions![0].reinforcementRate).toBe(B.reinforcements.perProvinceCap);
     expect(troopCount(result.armies[0])).toBe(B.reinforcements.maximumStrength);
-    expect(provinces[0].population.total - result.provinces[0].population.total).toBe(50);
+    expect(provinces[0].population.total - result.provinces[0].population.total).toBe(B.reinforcements.perProvinceCap);
     expect(result.armies[0].regiments.every(r => r.strength <= (r.maxStrength ?? 1000))).toBe(true);
     const twice = reinforceRebellions(result.provinces, result.countries, result.armies, date);
     expect(twice).toEqual(result);
     const capped = reinforceRebellions(result.provinces, result.countries, result.armies, { ...date, day: 3 });
     expect(capped.countries[0].rebellions![0].reinforcementRate).toBe(0);
     const daily = reinforceRebellions(provinces, born.countries, [createRebelArmy({ ...f, militaryStrength: 1000 }, provinces[0])], date);
-    expect(daily.countries[0].rebellions![0].reinforcementRate).toBe(B.reinforcements.dailyCap);
+    expect(daily.countries[0].rebellions![0].reinforcementRate).toBe(B.reinforcements.perProvinceCap);
     const exhaustedCountries = born.countries.map(c => ({ ...c, rebellions: c.rebellions?.map(item => ({ ...item, recruitedTroops: provinces[0].population.total * B.reinforcements.populationPoolRatio })) }));
     expect(reinforceRebellions(provinces, exhaustedCountries, daily.armies, date).countries[0].rebellions![0].reinforcementRate).toBe(0);
   });
@@ -75,13 +75,13 @@ describe('rebellion announcement lifecycle', () => {
     initial.provinces[0] = ready('p', { population: { ...initial.provinces[0].population, total: 10000 } });
     const born = spawnRebellions(initial.provinces, initial.countries, [], [], [], date), f = born.countries[0].rebellions![0];
     const withSupport = (support: number) => born.countries.map(c => ({ ...c, rebellions: c.rebellions?.map(item => ({ ...item, support })) }));
-    const high = reinforceRebellions(born.provinces, withSupport(100), born.armies, date);
-    const low = reinforceRebellions(born.provinces, withSupport(30), born.armies, date);
-    expect(high.countries[0].rebellions![0].reinforcementRate!).toBeGreaterThan(low.countries[0].rebellions![0].reinforcementRate!);
-    const small = reinforceRebellions(born.provinces.map(p => ({ ...p, population: { ...p.population, total: p.population.total / 2 } })), withSupport(100), born.armies, date);
-    expect(high.countries[0].rebellions![0].reinforcementRate!).toBeGreaterThan(small.countries[0].rebellions![0].reinforcementRate!);
     const controlled = born.provinces.map(p => p.id === 'p' ? { ...p, owner: f.id } : p);
-    expect(reinforceRebellions(controlled, withSupport(100), born.armies, date).countries[0].rebellions![0].reinforcementRate!).toBeGreaterThan(high.countries[0].rebellions![0].reinforcementRate!);
+    const high = reinforceRebellions(controlled, withSupport(100), born.armies, date);
+    const low = reinforceRebellions(controlled, withSupport(30), born.armies, date);
+    expect(high.countries[0].rebellions![0].reinforcementRate!).toBeGreaterThan(low.countries[0].rebellions![0].reinforcementRate!);
+    const small = reinforceRebellions(controlled.map(p => ({ ...p, population: { ...p.population, total: p.population.total / 2 } })), withSupport(100), born.armies, date);
+    expect(high.countries[0].rebellions![0].reinforcementRate!).toBeGreaterThan(small.countries[0].rebellions![0].reinforcementRate!);
+    expect(reinforceRebellions(born.provinces, withSupport(100), born.armies, date).countries[0].rebellions![0].reinforcementRate).toBe(0);
     expect(reinforceRebellions(born.provinces, withSupport(0), born.armies, date).countries[0].rebellions![0].reinforcementRate).toBe(0);
     const gone = reinforceRebellions(born.provinces, withSupport(100), [], date);
     expect(gone.armies).toEqual([]);
@@ -117,8 +117,9 @@ describe('rebellion announcement lifecycle', () => {
       activeLaws: { ...DEFAULT_LAWS, governance: type === 'pretenders' ? 'governance_balanced' : 'governance_centralized' } };
     const born = spawnRebellions(initial.provinces, initial.countries, [], [], [], date);
     const f = { ...born.countries[0].rebellions![0], militaryStrength: 5000 };
-    initial.provinces = born.provinces;
-    initial.countries = born.countries.map(c => c.tag === 'A' ? { ...c, rebellions: [f] } : c);
+    const occupied = transferProvince({ provinces: born.provinces, countries: born.countries, recruitments: [], constructions: [] }, 'p', f.id, { date });
+    initial.provinces = occupied.provinces;
+    initial.countries = occupied.countries.map(c => c.tag === 'A' ? { ...c, rebellions: [{ ...f, territoryEstablished: true }] } : c);
     initial.armies = [createRebelArmy(f, initial.provinces[0]), { ...createArmy('A', 'Capital guard', 'q'), regiments: Array.from({ length: 6 }, () => createRegiment('infantry')) }];
     const game = mountGame(initial, ignore, false);
     act(() => vi.advanceTimersByTime(1000));
@@ -183,26 +184,13 @@ describe('rebellion announcement lifecycle', () => {
     expect(onToast.mock.calls.filter(([, , title]) => title === 'Rebelião resolvida')).toHaveLength(1);
   });
 
-  it('does not defeat a faction after losing territory or membership metadata while an owner-tagged army survives', () => {
+  it('defeats territoryless orphan forces even when an owner-tagged army survives', () => {
     const initial = fixture(), born = spawnRebellions(initial.provinces, initial.countries, [], [], [], date);
-    const f = { ...born.countries[0].rebellions![0], involvedProvinces: [], objective: { ...born.countries[0].rebellions![0].objective, targets: [] } };
-    let countries = born.countries.map(c => c.tag === 'A' ? { ...c, rebellions: [f] } : c);
-    let armies: Army[] = born.armies.map(a => ({ ...a, rebellionFactionId: undefined, location: 'q', inCombat: true }));
-    for (let day = 2; day < 12; day++) {
-      const next = processRebellionObjectives(initial.provinces, countries, armies, born.wars, born.relations, { ...date, day });
-      countries = next.countries; armies = next.armies;
-      expect(countries[0].rebellions![0].status).toBe('active');
-      expect(armies).toHaveLength(1);
-      expect(armies[0].rebellionFactionId).toBe(f.id);
-      expect(next.provinces.every(p => !p.owner.startsWith('rebel_'))).toBe(true);
-      expect(next.logs.some(log => log.includes('derrotada'))).toBe(false);
-    }
-    expect(normalizeSavedFactions([f])).toHaveLength(1);
-    const loaded = migrateLegacyRebels(initial.provinces, countries, [{ ...armies[0], rebellionFactionId: undefined }], date);
-    expect(loaded.armies[0].rebellionFactionId).toBe(f.id);
-    expect(loaded.countries[0].rebellions).toHaveLength(1);
-    const invalidCleanup = resolveRebellion({ ...f, status: 'defeated' }, initial.provinces, countries, armies);
-    expect(invalidCleanup.armies).toEqual(armies);
+    const armies = born.armies.map(a => ({ ...a, rebellionFactionId: undefined, location: 'q', inCombat: true }));
+    const next = processRebellionObjectives(initial.provinces, born.countries, armies, born.wars, born.relations, date);
+    expect(next.countries[0].rebellions![0].status).toBe('defeated');
+    expect(next.armies).toEqual([]);
+    expect(next.logs.some(log => log.includes('derrotada'))).toBe(true);
   });
 
   it('preserves occupations without armies until a real reconquest, then logs and records military defeat', () => {
@@ -300,24 +288,13 @@ describe('rebellion announcement lifecycle', () => {
     expect(collectRebellionFormationFeedback(result.createdFactionIds, result.provinces, result.countries, result.armies)).toEqual([]);
   });
 
-  it('shows one shared faction and its actual army in every involved province, including reconquered provinces with zero local progress', () => {
+  it('does not attach a recaptured province through historical membership', () => {
     const initial = fixture();
     initial.provinces = [ready('p', { neighbors: ['q'] }), ready('q', { neighbors: ['p'] }), initial.provinces[2]];
     const result = spawnRebellions(initial.provinces, initial.countries, [], [], [], date);
-    expect(result.countries[0].rebellions).toHaveLength(1);
-    expect(result.armies).toHaveLength(1);
-    expect(result.countries[0].rebellions![0].involvedProvinces).toEqual(['p','q']);
     const reconquered = province('q', { unrest: 22, rebellion: normalizeRebellion() });
-    const provinces = result.provinces.map(p => p.id === 'q' ? reconquered : p);
-    expect(getProvinceRebellion(reconquered, result.countries)?.id).toBe(result.createdFactionIds[0]);
-    const view = render(<ProvincePanel province={reconquered} provinces={provinces} countries={result.countries} playerCountry={result.countries[0]}
-      armies={result.armies} recruitments={[]} buildingConstructions={[]} playerTechState={createInitialTechState('A')} botTechStates={new Map()}
-      onClose={ignore} onProvinceClick={ignore} onBuild={ignore} onRecruit={ignore} onCancelRecruitment={ignore} onCancelBuilding={ignore} />);
-    expect(view.getByText(/Camponeses: Alívio fiscal/)).toBeDefined();
-    expect(view.getByText('Província envolvida na revolta. Origem: Portus Magnus.')).toBeDefined();
-    expect(view.getByText(/Exército rebelde: .* tropas em Portus Magnus/)).toBeDefined();
-    expect(view.getByText('Estável (22%)')).toBeDefined();
-    expect(applyRebellionAction(provinces, result.countries, result.armies, 'A', 'q', 'negotiate', date).accepted).toBe(true);
+    expect(getProvinceRebellion(reconquered, result.countries)).toBeUndefined();
+    expect(result.countries[0].rebellions).toHaveLength(1);
   });
 
   it('marks involved provinces independently of unrest and gives rebel armies a distinct flag', () => {

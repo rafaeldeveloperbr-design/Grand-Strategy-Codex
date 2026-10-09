@@ -12,7 +12,10 @@
     "test:run": "vitest run",
     "benchmark:diplomacy-ai": "node scripts/benchmark-diplomacy-ai.mjs",
     "benchmark:military-ai": "node scripts/benchmark-military-ai.mjs",
-    "benchmark:simulation-activation": "node scripts/benchmark-simulation-activation.mjs"
+    "benchmark:simulation-activation": "node scripts/benchmark-simulation-activation.mjs",
+    "generate:naval": "node tools/map/generate_naval.mjs",
+    "validate:naval": "node tools/map/generate_naval.mjs --check",
+    "benchmark:naval": "node scripts/benchmark-naval.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",

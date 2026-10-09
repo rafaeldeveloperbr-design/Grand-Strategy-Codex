@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import type { Fleet } from '../../types/naval';
+import { portByProvince } from '../../engine/naval';
+import { NAVAL_BALANCE } from '../../data/navalUnits';
 import type { LogisticsSnapshot } from '../../engine/logistics';
 import { Province, Country, BuildingType, Army, Recruitment, UnitType, BuildingConstruction } from '../../types';
 import { getCountryByTag } from '../../data/countries';
@@ -11,6 +14,8 @@ import { getProvinceRebellion, type RebellionAction } from '../../engine/rebelli
 import type { CountryTechState } from '../../types/technology';
 
 export interface ProvincePanelProps {
+  fleets?: readonly Fleet[];
+  onSelectFleet?: (id: string) => void;
   logistics?: LogisticsSnapshot;
   onRebellionAction?: (provinceId: string, action: RebellionAction) => void;
   selectedArmyIds?: string[];
@@ -35,6 +40,8 @@ export interface ProvincePanelProps {
 type PanelTab = 'info' | 'buildings' | 'military';
 
 export const ProvincePanel: React.FC<ProvincePanelProps> = ({
+  fleets = [],
+  onSelectFleet,
   logistics,
   province,
   provinces,
@@ -86,6 +93,12 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
         </p></div>
         <button className="province-panel__close" aria-label={"Fechar painel da prov\u00edncia"} onClick={onClose}>✕</button>
       </div>
+
+      {portByProvince.has(province.id) && <section className="naval-port-info" aria-label="Port information">
+        <strong>Porto · nível {portByProvince.get(province.id)!.level} · operacional</strong>
+        <p>Recuperação: {NAVAL_BALANCE.recoveryOrganization*portByProvince.get(province.id)!.level} organização e até {(NAVAL_BALANCE.repairStrength*portByProvince.get(province.id)!.level).toFixed(1)} força/navio/dia. Reparo: {NAVAL_BALANCE.repairGoldPerStrength} ouro/força; requer porto amigo.</p>
+        {fleets.filter(f=>f.portProvinceId===province.id).map(f=><button key={f.id} onClick={()=>onSelectFleet?.(f.id)}>{f.name}</button>)}
+      </section>}
 
       {/* Layout Principal */}
       <div className="province-panel__layout">

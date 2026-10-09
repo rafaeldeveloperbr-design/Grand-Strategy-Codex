@@ -4,6 +4,7 @@ import type { War, DiplomaticRelation } from '../types/diplomacy'
 import type { CountryTechState } from '../types/technology'
 import type { GameDate } from '../types/date'
 import type { AIDifficulty } from '../types/difficulty'
+import type { NavalState } from '../types/naval'
 
 type Props = {
   provinces: Province[]
@@ -18,6 +19,7 @@ type Props = {
   botTechStates: Map<string, CountryTechState>
   aiDifficulty: AIDifficulty
   activeBattles: ActiveBattle[]
+  navalState?: NavalState
 }
 
 export function useGameRefs(props: Props) {
@@ -34,6 +36,7 @@ export function useGameRefs(props: Props) {
   const botTechStatesRef = useRef(props.botTechStates)
   const aiDifficultyRef = useRef(props.aiDifficulty)
   const activeBattlesRef = useRef(props.activeBattles)
+  const navalStateRef = useRef<NavalState>(props.navalState ?? { fleets: [], battles: [] })
   const ceilingLogRef = useRef<Set<string>>(new Set())
 
   useEffect(() => { provincesRef.current = props.provinces }, [props.provinces])
@@ -48,6 +51,7 @@ export function useGameRefs(props: Props) {
   useEffect(() => { botTechStatesRef.current = props.botTechStates }, [props.botTechStates])
   useEffect(() => { aiDifficultyRef.current = props.aiDifficulty }, [props.aiDifficulty])
   useEffect(() => { activeBattlesRef.current = props.activeBattles }, [props.activeBattles])
+  useEffect(() => { if (props.navalState) navalStateRef.current = props.navalState }, [props.navalState])
 
   return {
     gameLoopRef,
@@ -63,6 +67,7 @@ export function useGameRefs(props: Props) {
     botTechStatesRef,
     aiDifficultyRef,
     activeBattlesRef,
+    navalStateRef,
     ceilingLogRef
   }
 }

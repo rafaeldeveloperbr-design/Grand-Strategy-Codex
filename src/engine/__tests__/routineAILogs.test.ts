@@ -144,8 +144,9 @@ describe('routine bot feedback removal', () => {
       for (let i = 0; i < 59; i++) tick(); expect(info).not.toHaveBeenCalled();
       tick(); expect(info).toHaveBeenCalledTimes(1);
       const [label, summary] = info.mock.calls[0]; expect(label).toContain('[GameLoop]');
-      expect(summary).toMatchObject({ speed: 5, targetInterval: 60, total: { last: 12, average: 12, max: 12 } });
-      expect(Object.keys(summary.phases)).toHaveLength(13); expect(debug).not.toHaveBeenCalled();
+      const phaseCount = GAME_LOOP_PHASES.length - 1;
+      expect(summary).toMatchObject({ speed: 5, targetInterval: 60, total: { last: phaseCount, average: phaseCount, max: phaseCount } });
+      expect(Object.keys(summary.phases)).toHaveLength(GAME_LOOP_PHASES.length); expect(debug).not.toHaveBeenCalled();
       for (let i = 0; i < 60; i++) tick(); expect(info).toHaveBeenCalledTimes(2);
     } finally { info.mockRestore(); debug.mockRestore(); }
   });

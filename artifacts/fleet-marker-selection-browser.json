@@ -1,0 +1,11 @@
+{
+  "browser": "Chrome headless, physical mouse input",
+  "checks": [
+    "Physical DOCKED selection/reselection, Naval Mode false",
+    "Physical DOCKED selection/reselection, Naval Mode true",
+    "32px screen target and reselection after zoom",
+    "SeaNode physical right click after reselection and physical MOVING selection",
+    "Physical HOLDING reselection"
+  ],
+  "errors": []
+}

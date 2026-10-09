@@ -4,12 +4,14 @@
 import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from './index';
 import type { CountryTechState } from './technology';
 import type { DiplomaticRelation, War } from './diplomacy';
+import type { NavalState } from './naval';
 
 /**
  * GameState V1 - Mapa mental do jogo
  * Hoje usa os mesmos dados do App.tsx, mas já agrupado por domínio
  */
 export interface GameState {
+  naval?: NavalState;
   date: GameDate;
 
   world: {

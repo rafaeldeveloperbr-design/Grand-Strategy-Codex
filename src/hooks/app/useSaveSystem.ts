@@ -5,8 +5,10 @@ import { mapMetadata } from '../../data/map';
 import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../../types';
 import type { CountryTechState } from '../../types/technology';
 import type { DiplomaticRelation, War } from '../../types/diplomacy';
+import type { NavalState } from '../../types/naval';
 
 interface SaveRefs {
+  navalStateRef?: { current: NavalState };
   provincesRef: { current: Province[] };
   countriesRef: { current: Country[] };
   armiesRef: { current: Army[] };
@@ -21,6 +23,7 @@ interface SaveRefs {
 }
 
 interface SaveSetters {
+  setNavalState?: (v: NavalState) => void;
   setPlayerCountryTag?: (tag: string) => void;
   setProvinces: (v: Province[]) => void;
   setAllCountries: (v: Country[]) => void;
@@ -68,6 +71,9 @@ export function useSaveSystem(
       return;
     }
     setters.setPlayerCountryTag?.(playerTag);
+    const naval = saved.naval ?? { fleets: [], battles: [] };
+    if (refs.navalStateRef) refs.navalStateRef.current = naval;
+    setters.setNavalState?.(naval);
     // V2 PURO
     setters.setProvinces(saved.world.provinces);
     setters.setAllCountries(saved.world.countries);
@@ -83,7 +89,7 @@ export function useSaveSystem(
 
     addToast(`📂 Save V${saved.version} carregado!`, 'success');
     setShowSettingsModal?.(false);
-  }, [setters, addToast, setShowSettingsModal]);
+  }, [setters, addToast, setShowSettingsModal, refs.navalStateRef]);
 
   const handleDelete = useCallback((slotId: string) => {
     if (!confirm(`Apagar save?`)) return;

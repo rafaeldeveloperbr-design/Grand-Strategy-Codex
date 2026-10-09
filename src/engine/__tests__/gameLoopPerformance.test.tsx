@@ -112,8 +112,11 @@ describe('game loop profiler', () => {
     }
     const phases = report.mock.calls[0][0].phases;
     expect(phases.economy).toEqual({ count: 2, total: 6, average: 3, max: 4, last: 4 });
-    expect(phases.TOTAL?.last).toBe(48);
-    expect(Object.keys(phases)).toHaveLength(13);
+    expect(phases.TOTAL?.last).toBe((GAME_LOOP_PHASES.length - 1) * 4);
+    expect(Object.keys(phases)).toHaveLength(GAME_LOOP_PHASES.length);
+    expect(phases.navalAI).toEqual(phases.economy);
+    expect(phases.navalMovement).toEqual(phases.economy);
+    expect(phases.navalCombat).toEqual(phases.economy);
     expect(report).toHaveBeenCalledTimes(1);
     expect(report.mock.calls[0][0].slowTicks).toBe(1);
   });

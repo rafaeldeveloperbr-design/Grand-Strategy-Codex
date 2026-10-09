@@ -13,11 +13,22 @@ import { MapModeBar } from './MapModeBar';
 import { ArmyStackPopover } from '../ArmyStackPopover';
 import { OperationalOverlay } from './OperationalOverlay';
 import { buildLogisticsNetworks, type LogisticsSnapshot } from '../../engine/logistics';
+import type { NavalState } from '../../types/naval';
+import { fleetPosition, seaNodeById } from '../../engine/naval';
+import { NavalLayer } from './NavalLayer';
+import { FleetPanel, NavalBattlePanel } from '../FleetPanel';
+import '../../styles/naval.css';
 
 const NO_WARS: War[] = [];
 const NO_RELATIONS: DiplomaticRelation[] = [];
 
 export interface MapProps {
+  navalState?: NavalState;
+  selectedFleetId?: string | null;
+  onFleetSelect?: (id: string | null) => void;
+  onFleetOrder?: (nodeId: string) => void;
+  onFleetReturn?: (portId?: string) => void;
+  onFleetCancel?: () => void;
   initialViewBox?: MapViewBox;
   selectionMode?: boolean;
   selectedCountryTag?: string;
@@ -46,6 +57,12 @@ export interface MapProps {
 }
 
 export const GameMap: React.FC<MapProps> = ({
+  navalState,
+  selectedFleetId = null,
+  onFleetSelect,
+  onFleetOrder,
+  onFleetReturn,
+  onFleetCancel,
   initialViewBox,
   selectionMode = false,
   selectedCountryTag,
@@ -77,6 +94,10 @@ export const GameMap: React.FC<MapProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [mapMode, setMapMode] = useState<MapMode>('political');
+  const [navalMode, setNavalMode] = useState(false);
+  const [selectedNavalBattle, setSelectedNavalBattle] = useState<string | null>(null);
+  const selectedFleet = navalState?.fleets.find(f => f.id === selectedFleetId);
+  const navalBattle = navalState?.battles.find(b => b.id === selectedNavalBattle);
   const [openStack, setOpenStack] = useState<{ key: string; anchor: { x: number; y: number } } | null>(null);
   const networks = useMemo(() => logistics ?? buildLogisticsNetworks({ countries, provinces, wars, relations: diplomaticRelations }), [logistics, countries, provinces, wars, diplomaticRelations]);
   const presentation = useMemo(() => buildArmyPresentation(armies, provinces, networks), [armies, provinces, networks]);
@@ -109,17 +130,20 @@ export const GameMap: React.FC<MapProps> = ({
     isPanning,
     isDragging,
     unitsPerPixel,
-    panBy, focusProvince, focusCountry, fitBounds,
+    panBy, focusProvince, focusCountry, fitBounds, focusWorldPoint,
   } = useMapControls(svgRef, initialViewBox);
   const focusPlayer = useCallback(() => {
     const country = countryByTag.get(playerCountryTag ?? '');
     if (country) focusCountry(country, provinces);
   }, [countryByTag, playerCountryTag, focusCountry, provinces]);
   const focusSelected = useCallback(() => {
+    const fleet = navalState?.fleets.find(f => f.id === selectedFleetId);
+    const point = fleet ? fleetPosition(fleet) : undefined;
+    if (point) { focusWorldPoint(point); return; }
     const army = selectedArmy ? presentation.armyById.get(selectedArmy) : undefined;
     const province = presentation.provinceById.get(army?.location ?? selectedProvince ?? '');
     if (province) focusProvince(province);
-  }, [selectedArmy, selectedProvince, presentation, focusProvince]);
+  }, [selectedArmy, selectedProvince, presentation, focusProvince, navalState, selectedFleetId, focusWorldPoint]);
   useEffect(() => {
     const keyboard = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || blocksMapKeyboard(event.target)
@@ -131,12 +155,13 @@ export const GameMap: React.FC<MapProps> = ({
       else if (event.key === '-') handleZoomOut();
       else if (!selectionMode && event.key === 'Home') focusPlayer();
       else if (!selectionMode && event.key.toLowerCase() === 'f') focusSelected();
+      else if (!selectionMode && event.key === 'Escape') { onFleetSelect?.(null); setSelectedNavalBattle(null); }
       else return;
       event.preventDefault();
     };
     window.addEventListener('keydown', keyboard);
     return () => window.removeEventListener('keydown', keyboard);
-  }, [panBy, handleResetZoom, handleZoomIn, handleZoomOut, selectionMode, focusPlayer, focusSelected]);
+  }, [panBy, handleResetZoom, handleZoomIn, handleZoomOut, selectionMode, focusPlayer, focusSelected, onFleetSelect]);
   const capitalIds = war.capitals;
   const capitalProvinces = useMemo(() => provinces.filter(p => capitalIds.has(p.id)), [provinces, capitalIds]);
   const logisticsOrigins = useMemo(() => provinces.filter(p => mapValues.origins.has(p.id)), [provinces, mapValues]);
@@ -193,7 +218,9 @@ export const GameMap: React.FC<MapProps> = ({
         </button>
         {!selectionMode && <>
           <button className="map__zoom-btn" onClick={focusPlayer} title="Focus Player (Home)" aria-label="Focus Player" disabled={!playerCountryTag}>◎</button>
-          <button className="map__zoom-btn" onClick={focusSelected} title="Locate selected Army / Province (F)" aria-label="Locate selected entity" disabled={!selectedArmy && !selectedProvince}>⌖</button>
+          <button className="map__zoom-btn" onClick={focusSelected} title="Locate selected Fleet / Army / Province (F)" aria-label="Locate selected entity" disabled={!selectedArmy && !selectedProvince && !selectedFleet}>⌖</button>
+          {navalState && <button className="map__zoom-btn" aria-label="Naval Mode" aria-pressed={navalMode} onClick={() => setNavalMode(v => !v)}>⚓</button>}
+          {!!navalState?.battles.length && <select aria-label="Naval battles" value="" onChange={e => {setSelectedNavalBattle(e.target.value);const b=navalState.battles.find(b=>b.id===e.target.value),node=b?seaNodeById.get(b.seaNodeId):undefined;if(node)focusWorldPoint(node);}}><option value="" disabled>Batalhas navais…</option>{navalState.battles.map(b=><option key={b.id} value={b.id}>{b.seaNodeId} · {b.status}</option>)}</select>}
           <select aria-label="Regional jump" value="" onChange={event => {
             if (event.target.value === 'World') handleResetZoom();
             else if (regionalBounds[event.target.value]) fitBounds(regionalBounds[event.target.value]);
@@ -231,7 +258,7 @@ export const GameMap: React.FC<MapProps> = ({
 
           const target = e.target as SVGElement;
           const provinceId = target.closest?.('[data-province-id]')?.getAttribute('data-province-id');
-          if (provinceId) { if (e.shiftKey) onProvinceRightClick(provinceId, true); else onProvinceRightClick(provinceId); }
+          if (provinceId) { if (selectedFleetId && onFleetReturn) onFleetReturn(provinceId); else if (e.shiftKey) onProvinceRightClick(provinceId, true); else onProvinceRightClick(provinceId); }
         }}
       >
         {/* Fundo do mar */}
@@ -317,6 +344,7 @@ export const GameMap: React.FC<MapProps> = ({
           countries={countries}
           provinces={provinces}
         />
+        {!selectionMode && navalState && <NavalLayer fleets={navalState.fleets} battles={navalState.battles} wars={wars} viewport={viewBox} mode={navalMode} selected={selectedFleetId} countries={countryByTag} provinces={provinces} scale={unitsPerPixel} onSelect={id=>{closeStack();setSelectedNavalBattle(null);onFleetSelect?.(id);}} onOrder={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetOrder?.(id);}} onPort={onProvinceClick} onReturnPort={id=>onFleetReturn?.(id)} onBattle={id=>{onFleetSelect?.(null);setSelectedNavalBattle(id);const b=navalState.battles.find(b=>b.id===id),n=b?seaNodeById.get(b.seaNodeId):undefined;if(n)focusWorldPoint(n);}}/>}
 
         {/* === Filtro de Glow para exércitos elevados === */}
         <defs>
@@ -326,6 +354,8 @@ export const GameMap: React.FC<MapProps> = ({
           </filter>
         </defs>
       </svg>
+      {!selectionMode && selectedFleet && <FleetPanel fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
+      {!selectionMode && navalBattle && navalState && <NavalBattlePanel battle={navalBattle} fleets={navalState.fleets} onLocate={()=>{const n=seaNodeById.get(navalBattle.seaNodeId);if(n)focusWorldPoint(n);}} onClose={()=>setSelectedNavalBattle(null)}/>}
 
       {/* === Tooltip === */}
       {!openGroup && <GameMapTooltip tooltip={tooltip} countries={countryByTag} presentation={presentation} war={war} logistics={networks} />}

@@ -1,0 +1,126 @@
+{
+  "checks": [
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "tab": "Aéreo",
+      "layout": {
+        "horizontalOverflow": false,
+        "contentOverflow": false,
+        "contentHeight": 575,
+        "scroll": "auto",
+        "scrollTop": 0,
+        "tabsInside": true
+      }
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "tab": "Porto",
+      "layout": {
+        "horizontalOverflow": false,
+        "contentOverflow": false,
+        "contentHeight": 575,
+        "scroll": "auto",
+        "scrollTop": 0,
+        "tabsInside": true
+      }
+    },
+    {
+      "viewport": [
+        1280,
+        720
+      ],
+      "tab": "Aéreo",
+      "layout": {
+        "horizontalOverflow": false,
+        "contentOverflow": false,
+        "contentHeight": 285,
+        "scroll": "auto",
+        "scrollTop": 169,
+        "tabsInside": true
+      }
+    },
+    {
+      "viewport": [
+        1280,
+        720
+      ],
+      "tab": "Porto",
+      "layout": {
+        "horizontalOverflow": false,
+        "contentOverflow": false,
+        "contentHeight": 285,
+        "scroll": "auto",
+        "scrollTop": 234,
+        "tabsInside": true
+      }
+    },
+    {
+      "viewport": [
+        1024,
+        768
+      ],
+      "tab": "Aéreo",
+      "layout": {
+        "horizontalOverflow": false,
+        "contentOverflow": false,
+        "contentHeight": 123,
+        "scroll": "auto",
+        "scrollTop": 307,
+        "tabsInside": true
+      }
+    },
+    {
+      "viewport": [
+        1024,
+        768
+      ],
+      "tab": "Porto",
+      "layout": {
+        "horizontalOverflow": false,
+        "contentOverflow": false,
+        "contentHeight": 123,
+        "scroll": "auto",
+        "scrollTop": 288,
+        "tabsInside": true
+      }
+    },
+    {
+      "viewport": [
+        768,
+        720
+      ],
+      "tab": "Aéreo",
+      "layout": {
+        "horizontalOverflow": false,
+        "contentOverflow": false,
+        "contentHeight": 166,
+        "scroll": "auto",
+        "scrollTop": 264,
+        "tabsInside": true
+      }
+    },
+    {
+      "viewport": [
+        768,
+        720
+      ],
+      "tab": "Porto",
+      "layout": {
+        "horizontalOverflow": false,
+        "contentOverflow": false,
+        "contentHeight": 166,
+        "scroll": "auto",
+        "scrollTop": 245,
+        "tabsInside": true
+      }
+    },
+    "Air tab fallback to Info on inland selection"
+  ],
+  "errors": []
+}

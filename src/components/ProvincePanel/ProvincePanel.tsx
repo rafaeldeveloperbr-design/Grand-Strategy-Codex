@@ -48,7 +48,7 @@ export interface ProvincePanelProps {
   onCancelBuilding: (constructionId: string) => void;
 }
 
-type PanelTab = 'info' | 'buildings' | 'military' | 'port';
+type PanelTab = 'info' | 'buildings' | 'military' | 'port' | 'air';
 
 export const ProvincePanel: React.FC<ProvincePanelProps> = ({
   airState, onSelectAirWing, onAirBuild, onAirBuildCancel, navalState, onNavalBuild, onNavalCancel,
@@ -76,7 +76,11 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<PanelTab>('info');
   const port = portByProvince.get(province.id);
-  if (activeTab === 'port' && !port) setActiveTab('info');
+  const airBase = airBaseByProvinceId.get(province.id);
+  const airWings = airState?.wings.filter(w => w.baseProvinceId === province.id || w.rebase?.targetProvinceId === province.id) ?? [];
+  const airOrders = airState?.production?.queues[province.id] ?? [];
+  const hasAirContent = !!airBase || airWings.length > 0 || airOrders.length > 0;
+  if ((activeTab === 'port' && !port) || (activeTab === 'air' && !hasAirContent)) setActiveTab('info');
   const navalBuilds = useMemo(() => navalState?.construction?.builds.filter(b => b.provinceId === province.id) ?? [], [navalState?.construction?.builds, province.id]);
   const navalUpgrade = useMemo(() => navalState?.construction?.upgrades.find(u => u.provinceId === province.id), [navalState?.construction?.upgrades, province.id]);
   const ownerCountry = countries.find(c => c.tag === province.owner);
@@ -135,6 +139,10 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
             >
               ⚔️ Militar
             </button>
+            {hasAirContent && <button
+              className={`province-panel__tab ${activeTab === 'air' ? 'province-panel__tab--active' : ''}`}
+              onClick={() => setActiveTab('air')}
+            >✈ Aéreo</button>}
             {port && <button
               className={`province-panel__tab ${activeTab === 'port' ? 'province-panel__tab--active' : ''}`}
               onClick={() => setActiveTab('port')}
@@ -174,9 +182,15 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
               />
             )}
 
-            {activeTab === 'military' && airBaseByProvinceId.has(province.id) && <section className="province-air-base"><strong>✈ Air Base · nível {airBaseByProvinceId.get(province.id)!.level}</strong><p>Capacidade: {airState ? airBaseOccupancy(airState,province.id) : 0}/{airBaseByProvinceId.get(province.id)!.capacity} grupos</p>{airState?.wings.filter(w=>w.baseProvinceId===province.id).map(w=><button key={w.id} onClick={()=>onSelectAirWing?.(w.id)}>{w.name} · {w.aircraftCount} aeronaves</button>)}</section>}
+            {activeTab === 'air' && hasAirContent && <div className="province-panel__air">
+              <section className="province-panel__section province-air-base" aria-label="Air Base">
+                <strong>{airBase ? `✈ Air Base · nível ${airBase.level}` : '✈ Aéreo · sem Air Base'}</strong>
+                {airBase && <p>Capacidade: {airState ? airBaseOccupancy(airState, province.id) : 0}/{airBase.capacity} grupos (inclui rebase)</p>}
+                {airWings.map(w => <button key={w.id} onClick={() => onSelectAirWing?.(w.id)}>{w.name} · {w.aircraftCount} aeronaves{w.status === 'REBASING' && ` · Rebase: ${w.rebase?.daysRemaining ?? 0} dias`}</button>)}
+              </section>
+              {airState && isPlayerOwned && <ProvinceAirProduction state={airState} province={province} country={playerCountry} actor={playerCountry.tag} onBuild={onAirBuild} onCancel={onAirBuildCancel}/>}
+            </div>}
             {activeTab === 'military' && isPlayerOwned && (
-              <>{airState && airBaseByProvinceId.has(province.id) && <ProvinceAirProduction state={airState} province={province} country={playerCountry} actor={playerCountry.tag} onBuild={onAirBuild} onCancel={onAirBuildCancel}/>}
               <ProvinceMilitaryTab
                 logistics={logistics}
                 province={province}
@@ -191,7 +205,6 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
                 onCancelRecruitment={onCancelRecruitment}
                 onRecruit={onRecruit}
               />
-              </>
             )}
 
             {(activeTab === 'buildings' || activeTab === 'military') && !isPlayerOwned && (
@@ -211,6 +224,9 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
             recruitmentsHere={recruitmentsHere}
             navalBuilds={navalBuilds}
             navalUpgrade={navalUpgrade}
+            airOrders={airOrders}
+            actor={playerCountry.tag}
+            onAirBuildCancel={onAirBuildCancel}
             onCancelBuilding={onCancelBuilding}
             onCancelRecruitment={onCancelRecruitment}
           />

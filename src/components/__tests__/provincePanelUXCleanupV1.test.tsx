@@ -8,6 +8,7 @@ import { createInitialTechState } from '../../engine/technology';
 import { createDefaultMarket } from '../../engine/market';
 import { emptyNavalConstruction } from '../../engine/naval/construction';
 import { portByProvince } from '../../engine/naval';
+import { airBaseByProvinceId } from '../../engine/air';
 
 afterEach(cleanup);
 function fixture(): ProvincePanelProps {
@@ -42,7 +43,7 @@ describe('Province panel UX cleanup V1', () => {
   });
   it('orders Info, Obras, Militar, Porto and keeps naval content inside the scrolling tab', () => {
     const { container } = render(<ProvincePanel {...fixture()} />);
-    expect(Array.from(container.querySelectorAll('.province-panel__tab')).map(b => b.textContent?.trim())).toEqual(['📊 Info', '🏗️ Obras', '⚔️ Militar', '⚓ Porto']);
+    expect(Array.from(container.querySelectorAll('.province-panel__tab')).map(b => b.textContent?.trim())).toEqual(['📊 Info', '🏗️ Obras', '⚔️ Militar', ...(airBaseByProvinceId.has(fixture().province.id) ? ['✈ Aéreo'] : []), '⚓ Porto']);
     expect(screen.queryByLabelText('Port information')).toBeNull(); openPort();
     const port = screen.getByLabelText('Port information');
     expect(port.parentElement?.className).toBe('province-panel__content');

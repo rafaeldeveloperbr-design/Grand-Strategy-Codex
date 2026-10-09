@@ -12,21 +12,6 @@ input:not([type='range']):not([type='checkbox']), select, textarea {
 }
 * { scrollbar-width: thin; scrollbar-color: var(--border-light) var(--bg-secondary); }
 .game__main, .map-container { min-width: 0; min-height: 0; }
-.top-bar { padding: 10px 16px; gap: 12px; flex-wrap: wrap; border-bottom-width: 1px; background: var(--bg-secondary); }
-.top-bar__country { min-width: 180px; padding: 8px 12px; border-radius: var(--radius-md); }
-.top-bar__country-name { font-size: var(--font-base); }
-.top-bar__country-tag, .top-bar__resource-label { font-size: var(--font-xs); color: var(--text-secondary); }
-.top-bar__resources { gap: 8px; flex: 1; justify-content: center; flex-wrap: wrap; }
-.top-bar__resource { padding: 7px 10px; gap: 8px; border-color: transparent; border-radius: var(--radius-md); min-height: 56px; }
-.top-bar__resource-value { font-size: var(--font-lg); font-variant-numeric: tabular-nums; }
-.top-bar__resource-rate, .top-bar__resource-balance { font-size: var(--font-xs); font-variant-numeric: tabular-nums; }
-.top-bar__tech-group { gap: 6px; margin-left: 0; }
-.topbar__icon-btn, .top-bar__settings-btn { width: 34px; height: 34px; padding: 0; border-radius: var(--radius-sm); background: var(--bg-tertiary); border: 1px solid var(--border-subtle); }
-.topbar__icon-btn:hover, .top-bar__settings-btn:hover { background: var(--bg-hover); transform: none; box-shadow: none; }
-.top-bar__date-section { gap: 8px; flex-wrap: wrap; }
-.top-bar__date { font-size: var(--font-sm); padding: 8px; border-color: transparent; }
-.top-bar__speed-controls { gap: 3px; }
-.top-bar__speed-btn { min-height: 32px; font-size: var(--font-xs); border-radius: var(--radius-sm); }
 .province-panel { width: clamp(480px, 40vw, 640px); min-width: 0; flex-shrink: 0; border-left-width: 1px; }
 .province-panel__header { padding: 20px; gap: 12px; }
 .province-panel__title { font-size: var(--font-title); line-height: 1.3; }
@@ -102,9 +87,6 @@ input:not([type='range']):not([type='checkbox']), select, textarea {
   .research-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 950px) {
-  .top-bar { gap: 8px; padding: 8px; }
-  .top-bar__resources { order: 3; flex-basis: 100%; }
-  .top-bar__resource { flex: 1; }
   .province-panel { width: 420px; max-width: 55vw; }
   .research-columns { grid-template-columns: 1fr; }
 }

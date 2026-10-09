@@ -74,7 +74,7 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
   const { addToast, notificationHistory, unreadCount, markAllAsRead } = useToast();
   const { addAILog } = useAILog();
   const [playerCountryTag, setPlayerCountryTag] = useState(initialPlayerTag);
-  const [date, setDate] = useState<GameDate>(saved?.date ?? { year: 1444, month: 11, day: 11 });
+  const [date, setDate] = useState<GameDate>(saved?.date ?? { year: 2020, month: 1, day: 1 });
   const [gameSpeed, setGameSpeed] = useState(0);
   const [provinces, setProvinces] = useState<Province[]>(() => saved?.world.provinces ?? structuredClone(provincesData));
   const [allCountries, setAllCountries] = useState<Country[]>(() =>
@@ -267,6 +267,7 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
     <div className="game">
       <TopBar
         playerCountry={playerCountry}
+        provinces={provinces}
         date={date}
         gameSpeed={gameSpeed}
         onSpeedChange={tech.handleSpeedChange}

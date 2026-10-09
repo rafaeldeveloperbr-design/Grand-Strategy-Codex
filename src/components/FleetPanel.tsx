@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { calculateArmySize } from '../engine/combat';
-import { LANDING_DAYS, fleetTransportCapacity, fleetTransportUsed } from '../engine/naval/transport';
+import { amphibiousLandingDays, fleetTransportCapacity, fleetTransportUsed } from '../engine/naval/transport';
 import type { InvasionOrder } from '../types/naval';
 import type { Army, Country, Province } from '../types';
 import type { Fleet, NavalBattle, NavalBuildOrder } from '../types/naval';
@@ -14,7 +14,7 @@ export function FleetPanel({fleet,country,provinces,reinforcements=[],embarkedAr
     <p>Destino: {fleet.destinationPortId?provinces.find(p=>p.id===fleet.destinationPortId)?.name:fleet.destinationSeaNodeId??'—'}</p>
     <section aria-label="Transport Capacity"><p>Transport Capacity: {fleetTransportUsed(embarkedArmies).toLocaleString()} / {fleetTransportCapacity(fleet).toLocaleString()}</p>
       <p>Embarked Armies:</p><ul>{embarkedArmies.map(army=><li key={army.id}>{owner&&<input aria-label={`Invade with ${army.name}`} type="checkbox" checked={selectedCargo.includes(army.id)} onChange={e=>setSelectedCargo(ids=>e.target.checked?[...ids,army.id]:ids.filter(id=>id!==army.id))}/>} {owner&&onSelectArmy?<button onClick={()=>onSelectArmy(army.id)}>{army.name}</button>:army.name} — {calculateArmySize(army).toLocaleString()} tropas {owner&&fleet.status==='DOCKED'&&!invasion&&<button onClick={()=>onDisembark?.(army.id)}>Disembark {army.name}</button>}</li>)}</ul>
-      {invasion&&<p>Invasion: {provinces.find(p=>p.id===invasion.targetProvinceId)?.name} · {invasion.status} · {invasion.landingDays}/{LANDING_DAYS} dias</p>}
+      {invasion&&<p>Invasion: {provinces.find(p=>p.id===invasion.targetProvinceId)?.name} · {invasion.status} · {invasion.landingDays}/{amphibiousLandingDays(invasion.landingType)} dias</p>}
       {owner&&embarkedArmies.length>0&&!invasion&&<button disabled={fleet.status==='COMBAT'||fleet.status==='RETREATING'||!selectedCargo.some(id=>embarkedArmies.some(a=>a.id===id))} onClick={()=>onPlanInvasion?.(selectedCargo.filter(id=>embarkedArmies.some(a=>a.id===id)))}>Plan Invasion</button>}
     </section>
     <ul>{fleet.units.map(u=><li key={u.id}>{u.type}: {u.strength.toFixed(0)}/{u.maxStrength} · Org {u.organization.toFixed(0)}</li>)}</ul>

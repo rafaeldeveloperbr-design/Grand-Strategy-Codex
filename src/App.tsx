@@ -65,7 +65,7 @@ import { useSaveSystem } from './hooks/app/useSaveSystem';
 import { CampaignEntry, type CampaignStart } from './components/CampaignEntry';
 import { getCountryInitialView } from './engine/countrySelection';
 import { ArmyTransportPanel } from './components/ArmyTransportPanel';
-import { embarkArmy, disembarkArmy, planInvasion } from './engine/naval/transport';
+import { embarkArmy, disembarkArmy, planInvasion, amphibiousLandingLabel } from './engine/naval/transport';
 import type { NavalState, Fleet } from './types/naval';
 import { createInitialNavies, createInitialShipyards, startNavalConstruction, cancelNavalConstruction, resolveFleetIntercept, orderFleetMove, orderFleetReturn, cancelNavalOrder } from './engine/naval';
 
@@ -170,7 +170,7 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
     const result = planInvasion(transportContext(), selectedFleetId ?? '', armyIds, provinceId);
     if (result.error) { addToast(result.error, 'warning', 'Amphibious Invasion'); return; }
     navalStateRef.current = result.naval; setNavalState(result.naval);
-    addToast('Invasion iniciada: navegar até a costa e realizar landing de 3 dias.', 'info', 'Amphibious Invasion');
+    addToast(amphibiousLandingLabel(result.naval.invasions?.find(o => o.fleetId === selectedFleetId)?.landingType), 'info', 'Amphibious Invasion');
   };
   const interceptFleet = (targetId: string) => {
     const own = navalStateRef.current.fleets.find(f => f.id === selectedFleetId);

@@ -15,7 +15,7 @@ import { ArmyStackPopover } from '../ArmyStackPopover';
 import { OperationalOverlay } from './OperationalOverlay';
 import { buildLogisticsNetworks, type LogisticsSnapshot } from '../../engine/logistics';
 import type { NavalState } from '../../types/naval';
-import { buildTransportIndexes, fleetPosition, seaNodeById } from '../../engine/naval';
+import { buildTransportIndexes, fleetPosition, seaNodeById, planInvasion, portByProvince, amphibiousLandingLabel } from '../../engine/naval';
 import { NavalLayer } from './NavalLayer';
 import { FleetPanel, NavalBattlePanel } from '../FleetPanel';
 import '../../styles/naval.css';
@@ -317,6 +317,7 @@ export const GameMap: React.FC<MapProps> = ({
           const target = e.target as SVGElement;
           const provinceId = target.closest?.('[data-province-id]')?.getAttribute('data-province-id');
           if (airTarget) { if (provinceId) dispatchAirTarget(provinceId); return; }
+          if (provinceId && invasionSelection) { handleClick(provinceId); return; }
           if (provinceId) { if (selectedFleetId && onFleetReturn) onFleetReturn(provinceId); else if (e.shiftKey) onProvinceRightClick(provinceId, true); else onProvinceRightClick(provinceId); }
         }}
       >
@@ -415,7 +416,7 @@ export const GameMap: React.FC<MapProps> = ({
           </filter>
         </defs>
       </svg>
-      {invasionSelection&&invasionSelection.fleetId===selectedFleetId&&<div className="amphibious-target-hint" role="status">Amphibious Invasion: clique numa província costeira inimiga com porto. <button onClick={()=>setInvasionSelection(null)}>Cancelar seleção</button></div>}{!selectionMode && selectedFleet && <FleetPanel key={selectedFleet.id} onSelectArmy={selectArmy} embarkedArmies={transportIndexes.byFleet.get(selectedFleet.id)??[]} invasion={navalState?.invasions?.find(o=>o.fleetId===selectedFleet.id)} onDisembark={onDisembark} onPlanInvasion={armyIds=>setInvasionSelection({fleetId:selectedFleet.id,armyIds})} reinforcements={navalState?.construction?.builds.filter(b=>b.targetFleetId===selectedFleet.id)} fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
+      {invasionSelection&&invasionSelection.fleetId===selectedFleetId&&<div className="amphibious-target-hint" role="status">Amphibious Invasion: clique com botão esquerdo ou direito numa província costeira inimiga. {hoveredProvince && <span>{planInvasion({ armies, naval: navalState!, provinces, wars, relations: diplomaticRelations, actor: playerCountryTag ?? '' }, invasionSelection.fleetId, invasionSelection.armyIds, hoveredProvince).error ?? amphibiousLandingLabel(portByProvince.has(hoveredProvince) ? 'PORT' : 'BEACH')}</span>} <button onClick={()=>setInvasionSelection(null)}>Cancelar seleção</button></div>}{!selectionMode && selectedFleet && <FleetPanel key={selectedFleet.id} onSelectArmy={selectArmy} embarkedArmies={transportIndexes.byFleet.get(selectedFleet.id)??[]} invasion={navalState?.invasions?.find(o=>o.fleetId===selectedFleet.id)} onDisembark={onDisembark} onPlanInvasion={armyIds=>setInvasionSelection({fleetId:selectedFleet.id,armyIds})} reinforcements={navalState?.construction?.builds.filter(b=>b.targetFleetId===selectedFleet.id)} fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
       {!selectionMode && airWing && airState && <AirWingPanel key={airWing.id} wing={airWing} state={airState} ctx={airContext} owner={airWing.countryTag===playerCountryTag}
         onTargetMission={mission=>{if(canStartAirTarget(airWing,playerCountryTag??'',mission)){setAirMode(true);setAirFeedback('');setAirTarget({wingId:airWing.id,kind:'MISSION',mission});}}}
         onTargetRebase={()=>{if(canStartAirTarget(airWing,playerCountryTag??'')){setAirMode(true);setAirFeedback('');setAirTarget({wingId:airWing.id,kind:'REBASE'});}}}

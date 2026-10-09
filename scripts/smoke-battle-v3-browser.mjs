@@ -19,7 +19,7 @@ try {
   const call=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}));});
   const evaluate=async expression=>{const r=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw new Error(r.exceptionDetails.exception?.description??r.exceptionDetails.text);return r.result.value;};
   const waitFor=async expression=>{for(let i=0;i<200;i++){if(await evaluate(`Boolean(${expression})`))return;await delay(100);}throw new Error(`Timed out: ${expression}`);};
-  const waitUntil=async predicate=>{for(let i=0;i<300;i++){if(await predicate())return;await delay(100);}throw new Error('Timed out waiting for fixture completion');};
+  const waitUntil=async predicate=>{for(let i=0;i<300;i++){if(await predicate())return;await delay(100);}{const state=await current();console.error('Fixture timeout state',JSON.stringify({...state,armies:state.armies.filter(a=>['BRA','ARG'].includes(a.owner))}));}throw new Error('Timed out waiting for fixture completion');};
   const click=async selector=>{await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw new Error('Missing: '+${JSON.stringify(selector)});e.click();})()`);await delay(150);};
   const assert=(value,message)=>{if(!value)throw new Error(message);};
   const current=()=>evaluate(`(()=>{let f=document.querySelector('.game')?.[Object.keys(document.querySelector('.game')??{}).find(k=>k.startsWith('__reactFiber'))];while(f?.return)f=f.return;const queue=[f?.stateNode?.current??f];while(queue.length){const candidate=queue.pop();if(candidate?.type?.name==='GameApp'){f=candidate;break;}if(candidate?.sibling)queue.push(candidate.sibling);if(candidate?.child)queue.push(candidate.child);}const hooks=[];let h=f?.memoizedState;while(h){hooks.push(h.memoizedState);h=h.next;}return {naval:hooks.find(v=>v?.fleets&&v?.battles),battles:hooks.find(v=>Array.isArray(v)&&v[0]?.participantArmyIds)??[],history:hooks.find(v=>Array.isArray(v)&&v[0]?.attackerOriginal)??[],armies:hooks.find(v=>Array.isArray(v)&&v[0]?.regiments)??[],date:document.querySelector('.top-bar__date')?.textContent};})()`);
@@ -42,9 +42,9 @@ try {
     await click('[title^="Configura"]');
     await click('.settings-modal__btn--small:not(.settings-modal__btn--danger)');await delay(200);if(await evaluate(`!!document.querySelector('.settings-modal')`))throw new Error(await evaluate(`([...document.querySelectorAll('.toast-message')].map(e=>e.textContent)).join('; ')`));
   };
-  for(const name of (process.argv.length>2?process.argv.slice(2):['plain','mountains','fortress','air','reinforcement','annihilation','amphibious'])) {
+  for(const name of (process.argv.length>2?process.argv.slice(2):['plain','mountains','fortress','air','reinforcement','annihilation','amphibious','beach'])) {
     let expectedId=`browser-${name}`;
-    const saved=structuredClone(base),province=saved.world.provinces.find(p=>name==='amphibious'?p.owner==='ARG'&&portByProvince.has(p.id):p.id===front.id);
+    const saved=structuredClone(base),province=saved.world.provinces.find(p=>['amphibious','beach'].includes(name)?p.owner==='ARG'&&(name==='beach'?p.id==='sa_arg_restored_1':portByProvince.has(p.id)):p.id===front.id);
     province.terrain=name==='mountains'?'mountains':'plains';province.defense=name==='fortress'?5:0;province.buildings=name==='fortress'?[{type:'fortress',level:5,daysRemaining:0}]:[];
     const own=structuredClone(saved.military.armies.find(a=>a.owner==='BRA')),enemy=structuredClone(saved.military.armies.find(a=>a.owner==='ARG'));
     const braHome=saved.world.provinces.find(p=>p.owner==='BRA'&&province.neighbors.includes(p.id))?.id ?? saved.world.provinces.find(p=>p.owner==='BRA').id,argHome=saved.world.provinces.find(p=>p.owner==='ARG'&&province.neighbors.includes(p.id))?.id ?? saved.world.provinces.find(p=>p.owner==='ARG'&&p.id!==province.id).id;
@@ -60,23 +60,26 @@ try {
       saved.air.wings=saved.air.wings.map(w=>w.countryTag==='BRA'&&['FIGHTER','CAS'].includes(w.type)?assignAirMission(w,w.type==='FIGHTER'?'AIR_SUPERIORITY':'CLOSE_AIR_SUPPORT',airZoneByProvinceId.get(province.id).id,ctx)??w:w);
     }
     if(name==='reinforcement') {const extra={...structuredClone(own),id:'browser-reinforcement',name:'Reinforcement',inCombat:false};saved.military.armies.push(extra);}
-    if(name==='amphibious') {
+    if(['amphibious','beach'].includes(name)) {
       const fleet=saved.naval.fleets.find(f=>f.countryTag==='BRA');
       fleet.units.push(...Array.from({length:10},(_,i)=>createNavalUnit(`fixture-transport-${i}`,'TRANSPORT')));
       own.location=fleet.portProvinceId;own.inCombat=false;enemy.inCombat=false;
+      // Recovering defenders hold friendly territory while the real landing runs.
+      // At full organization the AI left the fixture coast before day three.
+      enemy.regiments=enemy.regiments.map(r=>({...r,organization:25}));
       saved.military.activeBattles=[];saved.naval={fleets:[fleet],battles:[],invasions:[]};
       const ctx={armies:saved.military.armies,naval:saved.naval,provinces:saved.world.provinces,wars:saved.military.wars,relations:[],actor:'BRA'};
       const embarked=embarkArmy(ctx,own.id,fleet.id);assert(!embarked.error,embarked.error);ctx.armies=embarked.armies;
       const planned=planInvasion(ctx,fleet.id,[own.id],province.id);assert(!planned.error,planned.error);saved.naval=planned.naval;saved.military.armies=embarked.armies;
-      saved.naval.fleets[0]={...saved.naval.fleets[0],portProvinceId:undefined,locationSeaNodeId:portByProvince.get(province.id).seaNodeId,status:'HOLDING',route:[],movementProgress:0,destinationPortId:undefined,destinationSeaNodeId:undefined};
+      saved.naval.fleets[0]={...saved.naval.fleets[0],portProvinceId:undefined,locationSeaNodeId:planned.naval.invasions[0].seaNodeId,status:'HOLDING',route:[],movementProgress:0,destinationPortId:undefined,destinationSeaNodeId:undefined};
     }
     await loadFixture(saved);
-    if(name==='amphibious') {await click('[title="Velocidade 3"]');await waitUntil(async()=> (await current()).battles.some(b=>b.provinceId===province.id));await click('[title="Pausar"]');expectedId=(await current()).battles.find(b=>b.provinceId===province.id).id;}
+    if(['amphibious','beach'].includes(name)) {await click('[title="Velocidade 3"]');await waitUntil(async()=> (await current()).battles.some(b=>b.provinceId===province.id));await click('[title="Pausar"]');expectedId=(await current()).battles.find(b=>b.provinceId===province.id).id;}
 
     await click('.active-battle-panel summary');
-    assert(await evaluate(`document.querySelector('.active-battle-panel').textContent.includes(${JSON.stringify(name==='amphibious'?'tropas':'10000 tropas')})`),`Missing aggregate force: ${name}`);
+    assert(await evaluate(`document.querySelector('.active-battle-panel').textContent.includes(${JSON.stringify(['amphibious','beach'].includes(name)?'tropas':'10000 tropas')})`),`Missing aggregate force: ${name}`);
     await click('[title="Velocidade 3"]');
-    if(name==='annihilation') await waitUntil(async()=> (await current()).history.some(b=>b.id===expectedId));
+    if(name==='annihilation'||['amphibious','beach'].includes(name)) await waitUntil(async()=> (await current()).history.some(b=>b.id===expectedId));
     else {await waitFor(`document.querySelector('.active-battle-panel summary')?.textContent.match(/ [3-9] dias/)`);await click('[title="Pausar"]');const state=await current();assert(state.battles.length===1&&state.battles[0].durationDays>=3,'Normal combat ended in 1–2 days');
       if(name==='reinforcement')assert(state.battles[0].participantArmyIds.length===3,'Reinforcement failed');
       if(name==='plain') {

@@ -58,11 +58,20 @@
     },
     {
       "name": "amphibious",
-      "duration": 15,
+      "duration": 6,
       "reason": "organization",
       "casualties": [
-        11000,
-        945
+        486,
+        335
+      ]
+    },
+    {
+      "name": "beach",
+      "duration": 3,
+      "reason": "no_retreat",
+      "casualties": [
+        107,
+        10000
       ]
     }
   ],

@@ -19,7 +19,7 @@ try {
   ws.onmessage = e => { const msg = JSON.parse(e.data); if (msg.id) { const p = pending.get(msg.id); pending.delete(msg.id); if (msg.error) p.reject(new Error(msg.error.message)); else p.resolve(msg.result); } if (msg.method === 'Runtime.exceptionThrown') errors.push(msg.params.exceptionDetails.exception?.description ?? msg.params.exceptionDetails.text); };
   const call = (method, params = {}) => new Promise((resolve, reject) => { const id = ++sequence; pending.set(id, { resolve, reject }); ws.send(JSON.stringify({ id, method, params })); });
   const evaluate = async expression => { const r = await call('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text); return r.result.value; };
-  const waitFor = async expression => { for (let i = 0; i < 600; i++) { if (await evaluate(`Boolean(${expression})`)) return; await delay(100); } throw new Error(`Timed out: ${expression}`); };
+  const waitFor = async expression => { for (let i = 0; i < 600; i++) { if (await evaluate(`Boolean(${expression})`)) return; await delay(100); } console.error('Timeout UI',await evaluate(`document.body.textContent.slice(-2400)`));throw new Error(`Timed out: ${expression}`); };
   const event = async (selector, type = 'click') => { await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw new Error('Missing '+${JSON.stringify(selector)});el.dispatchEvent(new MouseEvent(${JSON.stringify(type)},{bubbles:true,cancelable:true}));})()`); await delay(150); };
   const button = async (label, scope = 'document') => { await evaluate(`(()=>{const el=[...${scope}.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(label)});if(!el||el.disabled)throw new Error('Unavailable button '+${JSON.stringify(label)});el.click();})()`); await delay(150); };
   const assert = (v, m) => { if (!v) throw new Error(m); };
@@ -49,7 +49,10 @@ try {
   const homeNode = portByProvince.get(portId).seaNodeId, neighbor = seaNodeById.get(homeNode).neighbors[0];
   await event(`[aria-label="SeaNode ${neighbor}"]`, 'contextmenu'); await event('[title="Velocidade 3"]');
   await waitFor(live(`s.naval.fleets.find(f=>f.id==='fleet-BRA-1')?.locationSeaNodeId===${JSON.stringify(neighbor)}&&s.naval.fleets.find(f=>f.id==='fleet-BRA-1')?.status==='HOLDING'`)); await event('[title="Pausar"]');
+  // The disposable fixture keeps one full map save under Chrome's localStorage quota.
+  await evaluate(`localStorage.removeItem('imperium_save_autosave')`);
   await event('[title^="Configura"]'); await event('.settings-modal__btn--primary');
+  await waitFor(`Object.keys(localStorage).some(k=>k.startsWith('imperium_save_')&&k!=='imperium_save_autosave')`);
   const keys = await evaluate(`Object.keys(localStorage).filter(k=>k.startsWith('imperium_save_')&&k!=='imperium_save_autosave')`);
   const saveKey = keys.at(-1); const seaSave = await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(saveKey)}))`);
   assert(seaSave.military.armies.find(a => a.id === armyId)?.embarkedFleetId === 'fleet-BRA-1', 'Save lost embarked association');

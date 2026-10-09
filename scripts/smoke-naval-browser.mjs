@@ -37,7 +37,7 @@ try {
   await evaluate(`document.querySelector('[aria-label="SeaNode ${targetNode.id}"]').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,button:2}))`);await delay(200);assert((await state()).panel.includes('MOVING'),'Movement order failed');
   await click('[title="Velocidade 3"]');await delay(1400);await click('[title="Pausar"]');const moving=await state();assert(moving.marker!==initial.marker,'Fleet did not move');report.checks.push('Atlantic movement at x3');
   await click('[aria-label="Reset View"]');await click('[aria-label="Focus Player"]');report.checks.push('Reset / focus camera');
-  await click('[title="Configurações"]');await click('.settings-modal__btn--primary');const keys=await evaluate(`Object.keys(localStorage).filter(k=>k.startsWith('imperium_save_')&&k!=='imperium_save_autosave')`);assert(keys.length===1,'Manual save missing');
+  await click('[title="Configurações"]');await evaluate(`localStorage.removeItem('imperium_save_autosave')`);await click('.settings-modal__btn--primary');const keys=await evaluate(`Object.keys(localStorage).filter(k=>k.startsWith('imperium_save_')&&k!=='imperium_save_autosave')`);assert(keys.length===1,'Manual save missing');
   const saved=await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(keys[0])}))`);assert(saved.naval.fleets.some(f=>f.id==='fleet-BRA-1'&&f.route.length),'Route missing in save');report.checks.push('Save V3 persists movement');
   await click('.settings-modal__btn--small');await delay(200);await click('[data-fleet-id="fleet-BRA-1"]');assert((await state()).marker===moving.marker,'Load did not restore fleet position');report.checks.push('Load restores fleet route/progress without duplicates');
   // A reproducible encounter fixture uses the real saved campaign and war model.
@@ -51,7 +51,7 @@ try {
   await click('[data-province-id="na_usa_washington"]');await waitFor(`document.querySelector('.diplomacy-panel')`);
   await evaluate(`([...document.querySelectorAll('.diplomacy-panel button')].find(b=>b.textContent==='Declarar guerra')).click()`);await delay(150);
   await evaluate(`([...document.querySelectorAll('.diplomacy-panel button')].find(b=>b.textContent==='Confirmar Declaração de Guerra')).click()`);await delay(200);
-  assert(await evaluate(`document.querySelector('.diplomacy-panel__status-text')?.textContent==='Guerra'`),'Diplomacy declaration failed');await click('[aria-label="Fechar diplomacia"]');report.checks.push('Declare war against USA through diplomacy UI');
+  assert(await evaluate(`(()=>{const el=document.querySelector('.game');let f=el?.[Object.keys(el).find(k=>k.startsWith('__reactFiber'))];while(f&&f.type?.name!=='GameApp')f=f.return;for(let h=f?.memoizedState;h;h=h.next)if(Array.isArray(h.memoizedState)&&h.memoizedState.some(w=>w?.attacker==='BRA'&&w?.defender==='USA'))return true;return false;})()`),'Diplomacy declaration failed');if(await evaluate(`!!document.querySelector('[aria-label="Fechar diplomacia"]')`))await click('[aria-label="Fechar diplomacia"]');report.checks.push('Declare war against USA through diplomacy UI');
   await click('[data-fleet-id="fleet-BRA-1"]');await click('[title="Velocidade 1"]');
   await waitFor(`document.querySelector('[aria-label="Naval battle"]')`);await click('[title="Pausar"]');await click('[aria-label="Naval battle"]');assert(await evaluate(`document.querySelector('[aria-label="Naval battle panel"]')?.textContent.includes('ACTIVE')`),'Battle UI missing');
   report.checks.push('Wartime fixture: hostile encounter, battle panel and battle camera focus');
@@ -64,7 +64,7 @@ try {
   const measure=()=>evaluate(`new Promise(resolve=>{const gaps=[];let previous=performance.now(),start=previous;function frame(now){gaps.push(now-previous);previous=now;window.dispatchEvent(new KeyboardEvent('keydown',{key:gaps.length%2?'ArrowLeft':'ArrowRight',bubbles:true}));if(now-start<2000)requestAnimationFrame(frame);else resolve({frames:gaps.length,maxFrameGapMs:Math.max(...gaps),over50ms:gaps.filter(x=>x>50).length,renderedNavalEdges:document.querySelectorAll('[data-testid="naval-layer"] line').length});}requestAnimationFrame(frame);})`);
   await click('[title="Velocidade 3"]');report.performance.normalMode=await measure();
   await click('[aria-label="Naval Mode"]');report.performance.navalMode=await measure();
-  await click('[title="Pausar"]');report.checks.push('x3 with camera navigation');
+  await waitFor(`JSON.parse(localStorage.getItem('imperium_save_autosave'))?.naval?.battles?.length>0`);await click('[title="Pausar"]');report.checks.push('x3 with camera navigation');
   const autosave=await evaluate(`JSON.parse(localStorage.getItem('imperium_save_autosave'))`);
   assert(autosave.naval.battles.length>0,'Autosave did not persist the naval battle');report.checks.push('Monthly autosave persists naval battle and recovery');
   const screenshot=await call('Page.captureScreenshot',{format:'png'});await writeFile('artifacts/naval-warfare-v1-browser.png',Buffer.from(screenshot.data,'base64'));

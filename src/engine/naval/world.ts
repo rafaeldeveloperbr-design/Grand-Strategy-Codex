@@ -6,8 +6,22 @@ export const seaEdges: readonly SeaEdge[] = data.edges;
 export const navalPorts: readonly NavalPort[] = data.ports;
 export const seaNodeById = new Map(seaNodes.map(n => [n.id, n]));
 export const portByProvince = new Map(navalPorts.map(p => [p.provinceId, p]));
-const coastalIds = new Set(data.coastalProvinceIds);
-export const isCoastalProvince = (province: Pick<Province, 'id'> | string): boolean => coastalIds.has(typeof province === 'string' ? province : province.id);
+const coastIndex: Readonly<Record<string, readonly string[]>> = data.coastalSeaNodes;
+const waterBorderIds = new Set(data.waterBorderProvinceIds);
+export const isNavigableSeaNode = (node: SeaNode | undefined): node is SeaNode => !!node && !node.inland && !node.lake && !/lake|inland/i.test(node.ocean) && node.neighbors.some(id => seaNodeById.has(id));
+export function getCoastalSeaNodes(province: Pick<Province, 'id'> | string): SeaNode[] {
+  const id = typeof province === 'string' ? province : province.id;
+  return (coastIndex[id] ?? []).map(id => seaNodeById.get(id)).filter(isNavigableSeaNode);
+}
+export const isCoastalProvince = (province: Pick<Province, 'id'> | string): boolean => getCoastalSeaNodes(province).length > 0;
+export function resolveAmphibiousLandingSeaNode(province: Pick<Province, 'id'> | string): SeaNode | undefined {
+  const id = typeof province === 'string' ? province : province.id, nodes = getCoastalSeaNodes(id);
+  return nodes.find(n => n.id === portByProvince.get(id)?.seaNodeId) ?? nodes[0];
+}
+export function coastalLandingError(id: string): string | undefined {
+  if (isCoastalProvince(id)) return;
+  return waterBorderIds.has(id) ? 'Alvo em lago/interior ou sem conexão com mar navegável.' : 'Alvo não costeiro.';
+}
 export const getCoastalProvinces = (provinces: readonly Province[]): Province[] => provinces.filter(isCoastalProvince);
 export const edgeKey = (a: string, b: string): string => a < b ? `${a}|${b}` : `${b}|${a}`;
 export const seaEdgeByPair = new Map(seaEdges.map(e => [edgeKey(e.a, e.b), e]));

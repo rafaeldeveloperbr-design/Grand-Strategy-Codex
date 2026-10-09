@@ -1,6 +1,6 @@
 {
   "environment": {
-    "node": "v26.8.2",
+    "node": "v24.21.0",
     "platform": "win32"
   },
   "countries": 201,
@@ -9,113 +9,146 @@
     {
       "transportedArmies": 0,
       "activeLandings": 0,
+      "landingType": "PORT",
       "transportBookkeeping": {
         "samples": 200,
         "medianMs": 0.00029999999992469384,
-        "p95Ms": 0.0003000000001520675,
-        "meanMs": 0.00026999999999929966
+        "p95Ms": 0.0006000000000767614,
+        "meanMs": 0.0003575000000023465
       },
       "landingTick": {
         "samples": 200,
-        "medianMs": 0.00040000000012696546,
+        "medianMs": 0.0005000000001018634,
         "p95Ms": 0.0032999999998537533,
-        "meanMs": 0.000964000000001306
+        "meanMs": 0.001283499999990454
       },
       "capacityHandling": {
         "samples": 200,
-        "medianMs": 0.0004999999998744897,
+        "medianMs": 0.0006000000000767614,
         "p95Ms": 0.0007000000000516593,
-        "meanMs": 0.0005685000000073614
+        "meanMs": 0.0006445000000007894
       },
       "capacityLossHandling": {
         "samples": 200,
-        "medianMs": 0.00040000000012696546,
-        "p95Ms": 0.0006000000000767614,
-        "meanMs": 0.0005175000000019736
+        "medianMs": 0.0004999999998744897,
+        "p95Ms": 0.0006999999998242856,
+        "meanMs": 0.0005404999999927895
       }
     },
     {
       "transportedArmies": 10,
       "activeLandings": 0,
+      "landingType": "PORT",
       "transportBookkeeping": {
         "samples": 200,
-        "medianMs": 0.001399999999875945,
-        "p95Ms": 0.0018000000000029104,
-        "meanMs": 0.0015129999999987831
+        "medianMs": 0.0020999999999276042,
+        "p95Ms": 0.0028999999999541615,
+        "meanMs": 0.0022595000000023902
       },
       "landingTick": {
         "samples": 200,
-        "medianMs": 0.0017000000000280124,
-        "p95Ms": 0.0036000000000058208,
-        "meanMs": 0.007410499999997456
+        "medianMs": 0.002199999999902502,
+        "p95Ms": 0.007000000000061846,
+        "meanMs": 0.003855500000003076
       },
       "capacityHandling": {
         "samples": 200,
-        "medianMs": 0.0036999999999807187,
-        "p95Ms": 0.007599999999911233,
-        "meanMs": 0.004258500000004233
+        "medianMs": 0.00479999999993197,
+        "p95Ms": 0.005499999999983629,
+        "meanMs": 0.004993500000000495
       },
       "capacityLossHandling": {
         "samples": 200,
-        "medianMs": 0.10599999999999454,
-        "p95Ms": 0.13619999999991705,
-        "meanMs": 0.10948100000000067
+        "medianMs": 0.03199999999992542,
+        "p95Ms": 0.0522000000000844,
+        "meanMs": 0.03665350000001126
       }
     },
     {
       "transportedArmies": 50,
       "activeLandings": 0,
+      "landingType": "PORT",
       "transportBookkeeping": {
         "samples": 200,
-        "medianMs": 0.002499999999827196,
-        "p95Ms": 0.003399999999828651,
-        "meanMs": 0.002687499999992724
+        "medianMs": 0.005100000000084037,
+        "p95Ms": 0.005700000000160799,
+        "meanMs": 0.00515849999999773
       },
       "landingTick": {
         "samples": 200,
-        "medianMs": 0.004100000000107684,
-        "p95Ms": 0.005199999999831562,
-        "meanMs": 0.004325000000000046
+        "medianMs": 0.007599999999911233,
+        "p95Ms": 0.009199999999964348,
+        "meanMs": 0.008141999999996869
       },
       "capacityHandling": {
         "samples": 200,
-        "medianMs": 0.009400000000141517,
-        "p95Ms": 0.014300000000048385,
-        "meanMs": 0.013520999999998366
+        "medianMs": 0.014699999999947977,
+        "p95Ms": 0.017200000000002547,
+        "meanMs": 0.015195499999999812
       },
       "capacityLossHandling": {
         "samples": 200,
-        "medianMs": 0.45329999999989923,
-        "p95Ms": 0.570699999999988,
-        "meanMs": 0.4750670000000036
+        "medianMs": 0.09249999999997272,
+        "p95Ms": 0.11739999999986139,
+        "meanMs": 0.1047749999999951
       }
     },
     {
       "transportedArmies": 20,
       "activeLandings": 20,
+      "landingType": "PORT",
       "transportBookkeeping": {
         "samples": 200,
-        "medianMs": 0.0009999999999763531,
-        "p95Ms": 0.001199999999926149,
-        "meanMs": 0.001006000000000995
+        "medianMs": 0.0018999999999778083,
+        "p95Ms": 0.0024000000000796717,
+        "meanMs": 0.0019554999999979827
       },
       "landingTick": {
         "samples": 200,
-        "medianMs": 0.020099999999956708,
-        "p95Ms": 0.03160000000002583,
-        "meanMs": 0.02154649999999833
+        "medianMs": 0.052000000000134605,
+        "p95Ms": 0.10789999999997235,
+        "meanMs": 0.058667500000001385
       },
       "capacityHandling": {
         "samples": 200,
-        "medianMs": 0.003400000000056025,
-        "p95Ms": 0.004200000000082582,
-        "meanMs": 0.0035524999999972805
+        "medianMs": 0.0060000000000854925,
+        "p95Ms": 0.008100000000013097,
+        "meanMs": 0.006307500000008304
       },
       "capacityLossHandling": {
         "samples": 200,
-        "medianMs": 0.18689999999992324,
-        "p95Ms": 0.2320999999999458,
-        "meanMs": 0.19648199999999974
+        "medianMs": 0.03899999999998727,
+        "p95Ms": 0.05490000000008877,
+        "meanMs": 0.04762050000000499
+      }
+    },
+    {
+      "transportedArmies": 20,
+      "activeLandings": 20,
+      "landingType": "BEACH",
+      "transportBookkeeping": {
+        "samples": 200,
+        "medianMs": 0.0024000000000796717,
+        "p95Ms": 0.0036999999999807187,
+        "meanMs": 0.0025475000000051294
+      },
+      "landingTick": {
+        "samples": 200,
+        "medianMs": 0.04719999999997526,
+        "p95Ms": 0.06179999999994834,
+        "meanMs": 0.05021800000000667
+      },
+      "capacityHandling": {
+        "samples": 200,
+        "medianMs": 0.0079000000000633,
+        "p95Ms": 0.008700000000089858,
+        "meanMs": 0.008002500000001191
+      },
+      "capacityLossHandling": {
+        "samples": 200,
+        "medianMs": 0.03710000000000946,
+        "p95Ms": 0.04250000000001819,
+        "meanMs": 0.038052000000000134
       }
     }
   ]

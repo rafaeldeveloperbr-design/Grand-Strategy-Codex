@@ -1,3 +1,4 @@
+import type { AirState } from './air';
 // src/types/gameState.ts - Conceito central do jogo
 // Não reescreve nada ainda, só define onde cada dado pertence
 
@@ -11,6 +12,7 @@ import type { NavalState } from './naval';
  * Hoje usa os mesmos dados do App.tsx, mas já agrupado por domínio
  */
 export interface GameState {
+  air?: AirState;
   naval?: NavalState;
   date: GameDate;
 

@@ -7,12 +7,12 @@ export function clearMovementPlan(army: Army): Army {
 }
 
 export function issueMoveCommand(army: Army, destination: string, provinces: Province[], relations: DiplomaticRelation[]): Army | null {
-  if (army.inCombat) return null;
+  if ((army.inCombat || !!army.retreatProtectionDays)) return null;
   return moveArmy(clearMovementPlan(army), destination, provinces, relations);
 }
 
 export function appendWaypoint(army: Army, waypoint: string, provinces: Province[], relations: DiplomaticRelation[]): Army | null {
-  if (army.inCombat || !army.location || !army.regiments.some(r => r.strength > 0)) return null;
+  if ((army.inCombat || !!army.retreatProtectionDays) || !army.location || !army.regiments.some(r => r.strength > 0)) return null;
   const pending = army.movementPlan?.waypoints ?? [];
   const active = army.targetDestination ?? army.destination;
   const start = pending[pending.length - 1] ?? active ?? army.location;
@@ -33,7 +33,7 @@ export function advanceMovementPlans(armies: Army[], provinces: Province[], rela
   const updatedArmies = armies.map(army => {
     if (!army.movementPlan?.waypoints.length) return army;
     if (!army.regiments.some(r => r.strength > 0)) return clearMovementPlan(army);
-    if (army.inCombat || army.destination) return army;
+    if ((army.inCombat || !!army.retreatProtectionDays) || army.destination) return army;
     const waypoints = [...army.movementPlan.waypoints];
     while (waypoints.length && waypoints[0] === army.location) waypoints.shift();
     if (!waypoints.length) return { ...army, movementPlan: undefined };

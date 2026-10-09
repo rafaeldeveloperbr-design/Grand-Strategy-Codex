@@ -1,0 +1,285 @@
+{
+  "node": "v24.21.0",
+  "balance": [
+    {
+      "name": "A",
+      "days": 5,
+      "winner": "defender",
+      "attackerCasualties": 1189,
+      "defenderCasualties": 636,
+      "organization": [
+        16.51173715150697,
+        56.252007332649804
+      ],
+      "endReason": "organization",
+      "retreat": {
+        "retreated": true,
+        "to": "a-home",
+        "toName": "a-home",
+        "troops": 8811,
+        "owner": "ATT"
+      }
+    },
+    {
+      "name": "B",
+      "days": 5,
+      "winner": "attacker",
+      "attackerCasualties": 902,
+      "defenderCasualties": 1267,
+      "organization": [
+        58.801965070431585,
+        10.748185212164962
+      ],
+      "endReason": "organization",
+      "retreat": {
+        "retreated": true,
+        "to": "d-home",
+        "toName": "d-home",
+        "troops": 8733,
+        "owner": "DEF"
+      }
+    },
+    {
+      "name": "C",
+      "days": 4,
+      "winner": "defender",
+      "attackerCasualties": 1460,
+      "defenderCasualties": 345,
+      "organization": [
+        0,
+        76.53963672044914
+      ],
+      "endReason": "organization",
+      "retreat": {
+        "retreated": true,
+        "to": "a-home",
+        "toName": "a-home",
+        "troops": 8540,
+        "owner": "ATT"
+      }
+    },
+    {
+      "name": "D",
+      "days": 3,
+      "winner": "defender",
+      "attackerCasualties": 1240,
+      "defenderCasualties": 230,
+      "organization": [
+        13.678032536136278,
+        84.49358852556405
+      ],
+      "endReason": "organization",
+      "retreat": {
+        "retreated": true,
+        "to": "a-home",
+        "toName": "a-home",
+        "troops": 8760,
+        "owner": "ATT"
+      }
+    },
+    {
+      "name": "E",
+      "days": 6,
+      "winner": "defender",
+      "attackerCasualties": 1205,
+      "defenderCasualties": 885,
+      "organization": [
+        15.079743789686281,
+        38.596278662438976
+      ],
+      "endReason": "organization",
+      "retreat": {
+        "retreated": true,
+        "to": "a-home",
+        "toName": "a-home",
+        "troops": 8795,
+        "owner": "ATT"
+      }
+    },
+    {
+      "name": "F-large",
+      "days": 5,
+      "winner": "defender",
+      "attackerCasualties": 3570,
+      "defenderCasualties": 1915,
+      "organization": [
+        16.51401976832183,
+        56.25101628822644
+      ],
+      "endReason": "organization",
+      "retreat": {
+        "retreated": true,
+        "to": "a-home",
+        "toName": "a-home",
+        "troops": 26430,
+        "owner": "ATT"
+      }
+    },
+    {
+      "name": "G-overwhelming",
+      "days": 2,
+      "winner": "attacker",
+      "attackerCasualties": 344,
+      "defenderCasualties": 1904,
+      "organization": [
+        95.38508119507672,
+        0
+      ],
+      "endReason": "organization",
+      "retreat": {
+        "retreated": true,
+        "to": "d-home",
+        "toName": "d-home",
+        "troops": 8096,
+        "owner": "DEF"
+      }
+    },
+    {
+      "name": "H-skirmish",
+      "days": 1,
+      "winner": "defender",
+      "attackerCasualties": 21,
+      "defenderCasualties": 14,
+      "organization": [
+        85.55932203389831,
+        90.02816901408451
+      ],
+      "endReason": "duration",
+      "retreat": {
+        "retreated": true,
+        "to": "a-home",
+        "toName": "a-home",
+        "troops": 979,
+        "owner": "ATT"
+      }
+    }
+  ],
+  "cases": [
+    {
+      "count": 0,
+      "perSide": 1,
+      "reinforcement": false,
+      "air": false,
+      "arrival": {
+        "medianMs": 0.0004999999998744897,
+        "p95Ms": 0.001199999999926149
+      },
+      "continuous": {
+        "medianMs": 0.0001999999999497959,
+        "p95Ms": 0.00020000000017716957
+      },
+      "finalization": {
+        "medianMs": 0.0001999999999497959,
+        "p95Ms": 0.00020000000017716957
+      }
+    },
+    {
+      "count": 10,
+      "perSide": 1,
+      "reinforcement": false,
+      "air": false,
+      "arrival": {
+        "medianMs": 0.06490000000007967,
+        "p95Ms": 0.09490000000005239
+      },
+      "continuous": {
+        "medianMs": 0.19519999999988613,
+        "p95Ms": 0.2945999999999458
+      },
+      "finalization": {
+        "medianMs": 0.20929999999998472,
+        "p95Ms": 0.3281000000001768
+      }
+    },
+    {
+      "count": 25,
+      "perSide": 1,
+      "reinforcement": false,
+      "air": false,
+      "arrival": {
+        "medianMs": 0.19359999999983302,
+        "p95Ms": 0.2298000000000684
+      },
+      "continuous": {
+        "medianMs": 0.4669000000001233,
+        "p95Ms": 0.5996999999999844
+      },
+      "finalization": {
+        "medianMs": 0.5452000000000226,
+        "p95Ms": 0.8677000000000135
+      }
+    },
+    {
+      "count": 50,
+      "perSide": 1,
+      "reinforcement": false,
+      "air": false,
+      "arrival": {
+        "medianMs": 0.7307999999998174,
+        "p95Ms": 0.7942000000000462
+      },
+      "continuous": {
+        "medianMs": 1.178899999999885,
+        "p95Ms": 1.6095000000000255
+      },
+      "finalization": {
+        "medianMs": 1.5448999999998705,
+        "p95Ms": 1.8423999999999978
+      }
+    },
+    {
+      "count": 25,
+      "perSide": 3,
+      "reinforcement": false,
+      "air": false,
+      "arrival": {
+        "medianMs": 0.44810000000006767,
+        "p95Ms": 1.113399999999956
+      },
+      "continuous": {
+        "medianMs": 1.1686999999999443,
+        "p95Ms": 1.4150999999999385
+      },
+      "finalization": {
+        "medianMs": 1.6225999999999203,
+        "p95Ms": 1.9465000000000146
+      }
+    },
+    {
+      "count": 25,
+      "perSide": 3,
+      "reinforcement": true,
+      "air": false,
+      "arrival": {
+        "medianMs": 1.4421000000002095,
+        "p95Ms": 1.6102999999998246
+      },
+      "continuous": {
+        "medianMs": 1.1572999999998501,
+        "p95Ms": 1.542599999999993
+      },
+      "finalization": {
+        "medianMs": 1.5347000000001572,
+        "p95Ms": 1.856999999999971
+      }
+    },
+    {
+      "count": 25,
+      "perSide": 1,
+      "reinforcement": false,
+      "air": true,
+      "arrival": {
+        "medianMs": 0.08300000000008367,
+        "p95Ms": 0.08449999999993452
+      },
+      "continuous": {
+        "medianMs": 0.37429999999994834,
+        "p95Ms": 0.5117000000000189
+      },
+      "finalization": {
+        "medianMs": 0.46680000000014843,
+        "p95Ms": 0.6393000000002758
+      }
+    }
+  ]
+}

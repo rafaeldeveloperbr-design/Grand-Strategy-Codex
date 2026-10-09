@@ -1,3 +1,4 @@
+import { normalizeBattleSave } from './combat/battleSave';
 import { readAirSave } from './air/save';
 import type { AirState } from '../types/air';
 import { validateMilitarySave } from './military/saveCompatibility';
@@ -7,7 +8,7 @@ import { resolveBuildingType, normalizeBuildingLevel } from '../data/buildings';
 import { migrateDiplomacy } from './diplomacy';
 import { initializePolitics } from './politics';
 // Versioned saves: V1/V2 migrate to V3 research slots at the unknown boundary.
-import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../types';
+import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle, CombatResult } from '../types';
 import type { CountryTechState, LegacyCountryTechState } from '../types/technology';
 import type { DiplomaticRelation, War } from '../types/diplomacy';
 import { normalizeSavedFactions, normalizeSavedRebellion, migrateLegacyRebels } from './rebellion';
@@ -62,7 +63,7 @@ export type SaveGameV2 = {
   timestamp: number;
   date: GameDate;
   world: { provinces: Province[]; countries: Country[] };
-  military: { armies: Army[]; wars: War[]; activeBattles: ActiveBattle[]; recruitments: Recruitment[] };
+  military: { armies: Army[]; wars: War[]; activeBattles: ActiveBattle[]; recruitments: Recruitment[]; battleHistory?: CombatResult[] };
   air?: AirState;
   naval?: NavalState;
   diplomacy: { version?: 2; relations: DiplomaticRelation[] };
@@ -202,9 +203,12 @@ function migrateRebellionSave(save: SaveGameV3): SaveGameV3 {
   return { ...save, world: { provinces: migrated.provinces, countries: migrated.countries },
     military: { ...save.military, armies: migrated.armies,
       wars: save.military.wars.map(war => ({ ...war, attacker: rename(war.attacker), defender: rename(war.defender) })),
-      activeBattles: save.military.activeBattles.map(battle => ({ ...battle,
+      activeBattles: normalizeBattleSave(save.military.activeBattles.map(battle => ({ ...battle,
         attackerCountryId: rename(battle.attackerCountryId), defenderCountryId: rename(battle.defenderCountryId),
-        attackerInitialSnapshot: snapshot(battle.attackerInitialSnapshot), defenderInitialSnapshot: snapshot(battle.defenderInitialSnapshot) })) },
+        attackerInitialSnapshot: snapshot(battle.attackerInitialSnapshot), defenderInitialSnapshot: snapshot(battle.defenderInitialSnapshot),
+        participantSnapshots: battle.participantSnapshots ? Object.fromEntries(Object.entries(battle.participantSnapshots).map(([id,a])=>[id,snapshot(a)!])) : undefined,
+        warCasualtiesByCountry: battle.warCasualtiesByCountry ? Object.fromEntries(Object.entries(battle.warCasualtiesByCountry).map(([tag,loss])=>[rename(tag),loss])) : undefined,
+      })),migrated.armies) },
     diplomacy: { version: 2, relations: migrateDiplomacy(normalizedRelations.map(relation => ({ ...relation, countryA: rename(relation.countryA), countryB: rename(relation.countryB) })),
       save.military.wars.map(war => ({...war,attacker: rename(war.attacker),defender: rename(war.defender)})),save.date) } };
 }
@@ -241,6 +245,7 @@ function parseRawSave(rawString: string): SaveGameV3 | null {
 
 // ============ API PÚBLICA ============
 type SaveGameRefs = {
+  battleHistoryRef?: {current: CombatResult[]};
   provincesRef: { current: Province[] }; countriesRef: { current: Country[] }; armiesRef: { current: Army[] };
   warsRef: { current: War[] }; diplomaticRelationsRef: { current: DiplomaticRelation[] };
   recruitmentsRef: { current: Recruitment[] }; buildingConstructionsRef: { current: BuildingConstruction[] };
@@ -270,7 +275,7 @@ export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, cus
     air,
     naval: readNavalSave(refs.navalStateRef?.current),
     world: { provinces: refs.provincesRef.current, countries: refs.countriesRef.current },
-    military: { armies: refs.armiesRef.current, wars: refs.warsRef.current, activeBattles: refs.activeBattlesRef.current, recruitments: refs.recruitmentsRef.current },
+    military: { armies: refs.armiesRef.current, wars: refs.warsRef.current, activeBattles: refs.activeBattlesRef.current, recruitments: refs.recruitmentsRef.current, battleHistory: refs.battleHistoryRef?.current },
     diplomacy: { version: 2, relations: refs.diplomaticRelationsRef.current },
     economy: { constructions: refs.buildingConstructionsRef.current },
     technology: { player: normalizeTechState(refs.playerTechStateRef.current), bots: new Map([...refs.botTechStatesRef.current].map(([tag,state]) => [tag,normalizeTechState(state,tag)])) },

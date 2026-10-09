@@ -387,3 +387,6 @@
   font-family: var(--font-mono);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
+
+.map__battle-panels { position: absolute; top: 72px; right: 12px; z-index: 20; max-width: 340px; max-height: 40%; overflow: auto; color: #e5e7eb; background: #18212eee; border-radius: 6px; padding: 8px; font-size: 12px; }
+.active-battle-panel summary { cursor: pointer; }

@@ -19,7 +19,7 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
 }) => {
   const dialogRef = useMilitaryDialog(onClose);
   const { attackerOriginal, defenderOriginal, attacker, defender, winner, provinceName, duration } = battleResult;
-  const playerWon = (winner === 'attacker' && attackerOriginal.owner === playerCountry.tag) || (winner === 'defender' && defenderOriginal.owner === playerCountry.tag);
+  const playerWon = battleResult.participantDetails?.some(p => p.owner === playerCountry.tag && p.side === winner) || (winner === 'attacker' && attackerOriginal.owner === playerCountry.tag) || (winner === 'defender' && defenderOriginal.owner === playerCountry.tag);
   const attackerCountry = allCountries.find(c => c.tag === attackerOriginal.owner);
   const defenderCountry = allCountries.find(c => c.tag === defenderOriginal.owner);
   const getRealSize = (army: typeof attackerOriginal): number =>
@@ -27,6 +27,7 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
 
   const retreatInfo = battleResult.retreatInfo;
   const combatReport = battleResult.combatReport;
+  const cancelled = battleResult.endReason === 'hostility_ended' || battleResult.endReason === 'territory_invalid';
 
   const formatPercent = (value: number) =>
     `${Math.round(value)}%`;
@@ -43,13 +44,17 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
   };
 
   const formatEndReason = () => {
-    switch (combatReport?.endReason) {
+    switch (battleResult.endReason ?? combatReport?.endReason) {
       case 'organization':
         return 'Colapso de organização';
       case 'morale':
         return 'Colapso de moral';
       case 'annihilation':
         return 'Aniquilação';
+      case 'no_retreat': return 'Aniquilação sem rota de retirada';
+      case 'hostility_ended': return 'Hostilidade encerrada';
+      case 'territory_invalid': return 'Província indisponível';
+      case 'side_empty': return 'Lado sem participantes';
       case 'duration':
         return 'Fim da duração do combate';
       default:
@@ -123,7 +128,6 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
       : battleResult.defenderCurrentTroops ?? getRealSize(defender);
   // Força final = 127 se teve recuo
   if (retreatInfo?.retreated) {
-    console.log(`🏃 Modal recebeu recuo: ${retreatInfo.troops} para ${retreatInfo.toName}`);
     if (retreatInfo.owner === defenderOriginal.owner) {
       totalDefenderFinal = retreatInfo.troops;
     } else {
@@ -137,22 +141,18 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
   const attackerAnnihilated = isAttackerLoser && totalAttackerFinal === 0 && !retreatInfo?.retreated;
   const defenderAnnihilated = isDefenderLoser && totalDefenderFinal === 0 && !retreatInfo?.retreated;
 
-  console.log('📊 BattleReportModal - CORRIGIDO:');
-  if (retreatInfo?.retreated) console.log(`🏃 RECUO: ${retreatInfo.owner} com ${retreatInfo.troops} para ${retreatInfo.toName}`);
-  console.log(` Atacante - Inicial: ${totalAttackerInitial}, Final: ${totalAttackerFinal}`);
-  console.log(` Defensor - Inicial: ${totalDefenderInitial}, Final: ${totalDefenderFinal}`);
 
 
   return (
     <div className="battle-report-overlay">
       <div ref={dialogRef} className="battle-report-modal" role="dialog" aria-modal="true" aria-label={`Relatório de batalha em ${provinceName}`}>
-        <div className={`battle-report-header ${playerWon ? 'victory' : 'defeat'}`}>
-          <div className="battle-report-icon">{playerWon ? '🏆' : '💀'}</div>
-          <h2 className="battle-report-title">{playerWon ? 'VITÓRIA!' : 'DERROTA'}</h2>
+        <div className={`battle-report-header ${cancelled ? '' : playerWon ? 'victory' : 'defeat'}`}>
+          <div className="battle-report-icon">{cancelled ? '⚔️' : playerWon ? '🏆' : '💀'}</div>
+          <h2 className="battle-report-title" tabIndex={0}>{cancelled ? 'COMBATE ENCERRADO' : playerWon ? 'VITÓRIA!' : 'DERROTA'}</h2>
           <p className="battle-report-subtitle">Batalha de {provinceName}</p>
         </div>
         <div className="battle-report-info">
-          {combatReport && (
+          {(combatReport || battleResult.endReason) && (
             <div className="battle-report-info-item">
               <span className="label">Motivo:</span>
               <span className="value">
@@ -165,9 +165,15 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
           {isStackwipe && <div className="battle-report-info-item"><span className="label" style={{ color: '#ff4444' }}>💀 STACKWIPE!</span></div>}
           {retreatInfo?.retreated && <div className="battle-report-info-item"><span className="label" style={{ color: '#4ade80' }}>🏃 RECUO para {retreatInfo.toName} com {retreatInfo.troops}</span></div>}
         </div>
+        <div className="battle-report-info">
+          {battleResult.participantDetails?.map(p => <p key={p.id}>{p.side === 'attacker' ? 'Atacante' : 'Defensor'}: {p.name ?? p.id} ({p.owner}) · {p.initial ?? p.final + (p.loss ?? 0)} → {p.final} · Baixas {p.loss ?? 0}</p>)}
+          {Object.entries(battleResult.countryCasualties ?? {}).map(([tag,loss]) => <p key={tag}>Baixas {tag}: {loss}</p>)}
+          {Object.entries(battleResult.airModifiers ?? {}).map(([tag,air]) => <p key={tag}>{tag}: Superioridade ×{air.superiority.toFixed(2)} · CAS +{air.cas.toFixed(2)}</p>)}
+          {Object.entries(battleResult.retreatOutcomes ?? {}).map(([id,outcome]) => <p key={id}>{battleResult.participantDetails?.find(participant => participant.id === id)?.name ?? id}: {outcome.reason === 'no_retreat' ? 'Aniquilado sem rota' : `Retirada para ${outcome.destinationName ?? outcome.destinationId}`}</p>)}
+        </div>
         <div className="battle-report-armies">
           <div className={`battle-report-army ${winner === 'attacker' ? 'winner' : 'loser'}`}>
-            <div className="army-header"><span className="army-flag">{attackerCountry?.flag}</span><div className="army-info"><h3>{attackerCountry?.name}</h3><p>{attackerOriginal.name} {isAttackerLoser && (retreatInfo?.retreated && retreatInfo.owner === attackerOriginal.owner ? `🏃 recuou para ${retreatInfo.toName} com ${retreatInfo.troops}` : attackerAnnihilated ? '💀 ANIQUILADO' : '')}</p></div>{winner === 'attacker' && <span className="winner-badge">VENCEDOR</span>}</div>
+            <div className="army-header"><span className="army-flag">{attackerCountry?.flag}</span><div className="army-info"><h3>{attackerCountry?.name}</h3><p>{attackerOriginal.name} {isAttackerLoser && (retreatInfo?.retreated && retreatInfo.owner === attackerOriginal.owner ? `🏃 recuou para ${retreatInfo.toName} com ${retreatInfo.troops}` : attackerAnnihilated ? '💀 ANIQUILADO' : '')}</p></div>{!cancelled && winner === 'attacker' && <span className="winner-badge">VENCEDOR</span>}</div>
             <div className="army-stats">
               <div className="stat-row"><span className="stat-label">Tropas Iniciais:</span><span className="stat-value">{formatArmySize(totalAttackerInitial)}</span></div>
               <div className="stat-row"><span className="stat-label">Sobreviventes:</span><span className="stat-value">{totalAttackerFinal === 0 ? '0 💀' : `${formatArmySize(totalAttackerFinal)} ${retreatInfo?.owner === attackerOriginal.owner ? '🏃' : ''}`}</span></div>
@@ -229,7 +235,7 @@ export const BattleReportModal: React.FC<BattleReportModalProps> = ({
           </div>
           <div className="battle-report-vs">VS</div>
           <div className={`battle-report-army ${winner === 'defender' ? 'winner' : 'loser'}`}>
-            <div className="army-header"><span className="army-flag">{defenderCountry?.flag}</span><div className="army-info"><h3>{defenderCountry?.name}</h3><p>{defenderOriginal.name} {isDefenderLoser && (retreatInfo?.retreated && retreatInfo.owner === defenderOriginal.owner ? `🏃 recuou para ${retreatInfo.toName} com ${retreatInfo.troops}` : defenderAnnihilated ? '💀 ANIQUILADO' : '')}</p></div>{winner === 'defender' && <span className="winner-badge">VENCEDOR</span>}</div>
+            <div className="army-header"><span className="army-flag">{defenderCountry?.flag}</span><div className="army-info"><h3>{defenderCountry?.name}</h3><p>{defenderOriginal.name} {isDefenderLoser && (retreatInfo?.retreated && retreatInfo.owner === defenderOriginal.owner ? `🏃 recuou para ${retreatInfo.toName} com ${retreatInfo.troops}` : defenderAnnihilated ? '💀 ANIQUILADO' : '')}</p></div>{!cancelled && winner === 'defender' && <span className="winner-badge">VENCEDOR</span>}</div>
             {combatReport && (
               <div
                 style={{

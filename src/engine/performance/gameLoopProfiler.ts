@@ -10,6 +10,7 @@ export const GAME_LOOP_PHASES = ['economy', 'politics', 'unrest', 'diplomacyTech
   'statePublication', 'TOTAL'] as const;
 type Phase = typeof GAME_LOOP_PHASES[number];
 export type PhaseStats = { count: number; total: number; average: number; max: number; last: number };
+export type BattleCounters = {activeBattles:number; battleParticipants:number; reinforcements:number; retreats:number; annihilations:number; battleCasualties:number};
 export type AirProductionCounters = { activeAirBuilds: number; queuedAirBuilds: number; completedAirWings: number; waitingAirBuilds: number };
 
 export type AIBreakdown = {
@@ -27,7 +28,7 @@ export type AIBreakdown = {
 /** Production uses an inert instance; every report resets the recent window. */
 export function createGameLoopProfiler(enabled: boolean, options: {
   now?: () => number; reportEvery?: number;
-  report?: (summary: { speed: number; targetInterval: number; total: PhaseStats | undefined; slowTicks: number; speedCounts: Record<number, number>; aiBreakdown: AIBreakdown; airCounters: AirCounters; airProduction: AirProductionCounters; navalCounters: NavalCounters; amphibious: AmphibiousCounters; navalConstruction: { activeNavalBuilds: number; queuedNavalBuilds: number; completedShips: number; shipyardUpgrades: number }; phases: Partial<Record<Phase, PhaseStats>> }) => void;
+  report?: (summary: { speed: number; targetInterval: number; total: PhaseStats | undefined; slowTicks: number; speedCounts: Record<number, number>; aiBreakdown: AIBreakdown; battleCounters: BattleCounters; airCounters: AirCounters; airProduction: AirProductionCounters; navalCounters: NavalCounters; amphibious: AmphibiousCounters; navalConstruction: { activeNavalBuilds: number; queuedNavalBuilds: number; completedShips: number; shipyardUpgrades: number }; phases: Partial<Record<Phase, PhaseStats>> }) => void;
 } = {}) {
   const clock = options.now ?? profilerNow;
   const phases: Partial<Record<Phase, PhaseStats>> = {};
@@ -37,6 +38,7 @@ export function createGameLoopProfiler(enabled: boolean, options: {
   let ticks = 0, slowTicks = 0;
   let started = 0, phaseStarted = 0;
   let politicalActivationDuration = 0;
+  let battleCounters: BattleCounters = {activeBattles:0,battleParticipants:0,reinforcements:0,retreats:0,annihilations:0,battleCasualties:0};
   let airCounters: AirCounters = { airWings: 0, activeAirMissions: 0, airAIBots: 0, airEngagements: 0, aircraftLost: 0, casMissions: 0, bombingMissions: 0 };
   let navalCounters: NavalCounters = { fleets: 0, movingFleets: 0, navalAIBots: 0, activeNavalBattles: 0, pathfindCalls: 0 };
   let navalConstruction = { activeNavalBuilds: 0, queuedNavalBuilds: 0, completedShips: 0, shipyardUpgrades: 0 };
@@ -50,6 +52,7 @@ export function createGameLoopProfiler(enabled: boolean, options: {
   };
   return {
     phases, aiProfiler,
+    recordBattle(counters: BattleCounters) { if (enabled) for (const key of Object.keys(counters) as (keyof BattleCounters)[]) battleCounters[key] += counters[key]; },
     recordAirProduction(counters: AirProductionCounters) { if (enabled) for (const key of Object.keys(counters) as (keyof AirProductionCounters)[]) airProduction[key] += counters[key]; },
     recordAir(counters: AirCounters) { if (enabled) for (const key of Object.keys(counters) as (keyof AirCounters)[]) airCounters[key] += counters[key]; },
     recordAmphibious(counters: AmphibiousCounters) { if (enabled) for (const key of Object.keys(counters) as (keyof AmphibiousCounters)[]) amphibious[key] += counters[key]; },
@@ -108,7 +111,7 @@ export function createGameLoopProfiler(enabled: boolean, options: {
       }
       if (duration > target) slowTicks++;
       if (ticks % (options.reportEvery ?? 60) === 0) {
-        const summary = { speed, targetInterval: target, total: phases.TOTAL ? { ...phases.TOTAL } : undefined, slowTicks, speedCounts: { ...speedCounts }, aiBreakdown: structuredClone(aiBreakdown), airCounters: { ...airCounters }, airProduction: { ...airProduction }, navalCounters: { ...navalCounters }, navalConstruction: { ...navalConstruction }, amphibious: { ...amphibious }, phases: structuredClone(phases) };
+        const summary = { speed, targetInterval: target, total: phases.TOTAL ? { ...phases.TOTAL } : undefined, slowTicks, speedCounts: { ...speedCounts }, aiBreakdown: structuredClone(aiBreakdown), battleCounters: {...battleCounters}, airCounters: { ...airCounters }, airProduction: { ...airProduction }, navalCounters: { ...navalCounters }, navalConstruction: { ...navalConstruction }, amphibious: { ...amphibious }, phases: structuredClone(phases) };
         if (options.report) options.report(summary);
         else {
           const breakdown = AI_PHASES
@@ -125,6 +128,7 @@ export function createGameLoopProfiler(enabled: boolean, options: {
         // Each report contains a fresh, non-overlapping window (60 ticks by default).
         for (const phase of GAME_LOOP_PHASES) delete phases[phase];
         ticks = 0; slowTicks = 0; speedCounts = {}; aiBreakdown = { phases: {} };
+        battleCounters = {activeBattles:0,battleParticipants:0,reinforcements:0,retreats:0,annihilations:0,battleCasualties:0};
         airCounters = { airWings: 0, activeAirMissions: 0, airAIBots: 0, airEngagements: 0, aircraftLost: 0, casMissions: 0, bombingMissions: 0 };
         airProduction = { activeAirBuilds: 0, queuedAirBuilds: 0, completedAirWings: 0, waitingAirBuilds: 0 };
         navalConstruction = { activeNavalBuilds: 0, queuedNavalBuilds: 0, completedShips: 0, shipyardUpgrades: 0 };

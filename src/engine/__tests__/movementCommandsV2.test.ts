@@ -127,11 +127,11 @@ describe('Movement Commands V2', () => {
     const result = retreatArmyManually(own.id, battle.id, [own, enemy], [battle], places);
     expect(result.retreatSuccess).toBe(true);
     const retreated = result.armies.find(a => a.id === own.id)!;
-    expect(retreated.location).not.toBe('b'); expect(retreated.movementPlan?.waypoints).toEqual(['b', 'c', 'd']);
+    expect(retreated.location).not.toBe('b'); expect(retreated.movementPlan).toBeUndefined();
     const continued = advanceMovementPlans([retreated], places, [relation('BRA', 'ARG')]).armies[0];
-    expect(continued.location).toBe(retreated.location); expect(continued.targetDestination).toBe('b');
+    expect(continued.location).toBe(retreated.location); expect(continued.targetDestination).toBeNull();
   });
-  it('preserves a losing army plan through actual battle retreat and stops if the new route is blocked', () => {
+  it('clears a losing army plan and protects it from immediate reengagement after retreat', () => {
     const places = commandMap();
     const own = { ...planned(), location: 'b', destination: null, targetDestination: null, path: [], inCombat: true };
     own.regiments[0].organization = 0; own.regiments[0].morale = 0;
@@ -140,9 +140,9 @@ describe('Movement Commands V2', () => {
     const result = processBattleDay(battle, [own, enemy], places[1], places);
     const retreated = result.armies.find(a => a.id === own.id)!;
     expect(result.finished).toBe(true); expect(retreated.location).not.toBe('b');
-    expect(retreated.movementPlan?.waypoints).toEqual(['b', 'c', 'd']);
+    expect(retreated.movementPlan).toBeUndefined(); expect(retreated.retreatProtectionDays).toBe(2);
     places[1].owner = 'ARG';
     const resumed = advanceMovementPlans([retreated], places, []);
-    expect(resumed.interruptions).toHaveLength(1); expect(resumed.armies[0].destination).toBeNull();
+    expect(resumed.interruptions).toHaveLength(0); expect(resumed.armies[0].destination).toBeNull();
   });
 });

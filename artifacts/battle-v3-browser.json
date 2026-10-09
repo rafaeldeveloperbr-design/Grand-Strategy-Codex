@@ -1,0 +1,70 @@
+{
+  "browser": "Chrome headless CDP",
+  "checks": [
+    "mid-battle save/load retains one battle and elapsed days",
+    {
+      "name": "plain",
+      "duration": 8,
+      "reason": "organization",
+      "casualties": [
+        1413,
+        233
+      ]
+    },
+    {
+      "name": "mountains",
+      "duration": 21,
+      "reason": "organization",
+      "casualties": [
+        1173,
+        219
+      ]
+    },
+    {
+      "name": "fortress",
+      "duration": 15,
+      "reason": "organization",
+      "casualties": [
+        1179,
+        78
+      ]
+    },
+    {
+      "name": "air",
+      "duration": 8,
+      "reason": "organization",
+      "casualties": [
+        1217,
+        265
+      ]
+    },
+    {
+      "name": "reinforcement",
+      "duration": 13,
+      "reason": "organization",
+      "casualties": [
+        1593,
+        1129
+      ]
+    },
+    {
+      "name": "annihilation",
+      "duration": 1,
+      "reason": "no_retreat",
+      "casualties": [
+        0,
+        10000
+      ]
+    },
+    {
+      "name": "amphibious",
+      "duration": 15,
+      "reason": "organization",
+      "casualties": [
+        11000,
+        945
+      ]
+    }
+  ],
+  "errors": []
+}

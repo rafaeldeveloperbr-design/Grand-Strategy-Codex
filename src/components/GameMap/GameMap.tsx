@@ -1,3 +1,4 @@
+import { ActiveBattlePanel } from '../ActiveBattlePanel';
 import { mapMetadata } from '../../data/map';
 import type { MapViewBox } from '../../data/map/types';
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
@@ -285,6 +286,9 @@ export const GameMap: React.FC<MapProps> = ({
       </div>
 
       {/* === Instruções === */}
+      {!selectionMode && activeBattles.length > 0 && <aside className="map__battle-panels" aria-label="Batalhas terrestres">
+        {activeBattles.map(battle => {const province = presentation.provinceById.get(battle.provinceId);return province ? <ActiveBattlePanel key={battle.id} battle={battle} armies={armies} province={province}/> : null;})}
+      </aside>}
       <div className="map__instructions">
         <span>{selectionMode ? 'Clique: escolher país · Arrastar: mapa · Wheel: zoom · Setas: navegar' : <>Clique: selecionar · Ctrl+clique: multi-seleção · Direito: mover/substituir · Shift+direito: waypoint · Escape: limpar seleção · Arrastar: mapa · Wheel: zoom · Setas: navegar</>}</span>
       </div>

@@ -4,3 +4,5 @@ export * from './combatRetreats';
 export * from './battleResolver';
 export * from './continuousBattle';
 export * from './battleFinalizer';
+export * from './battleConfig';
+export * from './battleParticipants';

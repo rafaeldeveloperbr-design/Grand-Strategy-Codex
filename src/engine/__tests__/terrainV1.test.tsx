@@ -9,7 +9,7 @@ import { calculateLocalSupplyCapacity, getArmySupply } from '../military/supplyE
 import { processArmyMovement, findPath } from '../military/movementEngine';
 import { recoverArmy } from '../military/recoveryEngine';
 import { calculateDefenderTotalPower } from '../combat/combatCalculations';
-import { startContinuousBattle, processBattleDay } from '../combat';
+import { startContinuousBattle, processBattleDay, BATTLE_V3 } from '../combat';
 import { army, date } from './helpers/southAmericaAudit';
 import { GameMap } from '../../components/GameMap/GameMap';
 import { GameMapTooltip } from '../../components/GameMap/GameMapTooltip';
@@ -76,8 +76,8 @@ describe('Terrain V1 data and military integration', () => {
     const actual = processBattleDay(battle, forces, p, [p]);
     const baselineLoss = 3000 - baseline.battle.defenderCurrentTroops;
     const actualLoss = 3000 - actual.battle.defenderCurrentTroops;
-    expect(Math.abs(actualLoss - baselineLoss / TERRAIN_DEFINITIONS[terrain].defenseModifier)).toBeLessThanOrEqual(1);
-    expect(actual.battle.attackerCurrentTroops).toBeLessThanOrEqual(baseline.battle.attackerCurrentTroops);
+    expect(Math.abs(actualLoss - baselineLoss * BATTLE_V3.terrainTempo[terrain] / TERRAIN_DEFINITIONS[terrain].defenseModifier)).toBeLessThanOrEqual(1);
+    expect(actual.battle.attackerCurrentTroops).toBeGreaterThanOrEqual(baseline.battle.attackerCurrentTroops);
   });
   it('handles invalid supply capacity and empty armies finitely', () => {
     expect(calculateLocalSupplyCapacity({ ...base, development: NaN })).toBe(0);

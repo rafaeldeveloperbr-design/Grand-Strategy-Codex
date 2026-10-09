@@ -13,6 +13,13 @@ import type { GameDate } from './date';
 export interface ActiveBattle {
   /** ID único da batalha */
   id: string;
+  phase?: 'ENGAGEMENT' | 'MAIN_COMBAT' | 'BREAK_RETREAT';
+  durationDays?: number;
+  participantInitialSizes?: Record<string, number>;
+  participantSnapshots?: Record<string, Army>;
+  airModifiers?: Record<string, { superiority: number; cas: number }>;
+  retreatOutcomes?: Record<string, { destinationId?: string; destinationName?: string; reason: 'retreat' | 'no_retreat' }>;
+
   /** Optional additive statistics cache, retained across active-battle save/load. */
   warCasualtiesByCountry?: Record<string, number>;
   /** ID da província onde ocorre a batalha */

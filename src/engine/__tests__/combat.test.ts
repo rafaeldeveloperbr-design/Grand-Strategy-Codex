@@ -75,7 +75,7 @@ describe('fluxo de batalha contínua', () => {
   });
 
   it('recuo automático processa coletivamente todos os sobreviventes derrotados', () => {
-    const attackers = [army('a1', 'ATT', 400), army('a2', 'ATT', 400)];
+    const attackers = [army('a1', 'ATT', 400), army('a2', 'ATT', 400)].map(a => ({...a,regiments:a.regiments.map(r=>({...r,organization:10}))}));
     const defender = army('d1', 'DEF', 2000);
     const field = province();
     const home = province({ id: 'att-home', owner: 'ATT', neighbors: ['front'] });
@@ -87,7 +87,7 @@ describe('fluxo de batalha contínua', () => {
   });
 
   it('aniquila participante derrotado que não possui rota de fuga', () => {
-    const attacker = army('a1', 'ATT', 700);
+    const attacker = army('a1', 'ATT', 700, {regiments:[{type:'infantry',strength:700,morale:100,organization:10}]});
     const defender = army('d1', 'DEF', 2000);
     const field = province({ neighbors: [] });
     const battle = { ...startContinuousBattle([attacker], [defender], field, date, 'b7'), daysRemaining: 1 };
@@ -98,7 +98,7 @@ describe('fluxo de batalha contínua', () => {
 
   it('não deixa defensores derrotados bloqueando conquista após retirada completa', () => {
     const attacker = army('a1', 'ATT', 3000);
-    const defenders = [army('d1', 'DEF', 500), army('d2', 'DEF', 500)];
+    const defenders = [army('d1', 'DEF', 500), army('d2', 'DEF', 500)].map(a => ({...a,regiments:a.regiments.map(r=>({...r,organization:10}))}));
     const field = province();
     const home = province({ id: 'def-home', owner: 'DEF', neighbors: ['front'] });
     const battle = { ...startContinuousBattle([attacker], defenders, field, date, 'b8'), daysTotal: 3, daysRemaining: 1 };

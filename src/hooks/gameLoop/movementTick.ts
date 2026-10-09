@@ -24,6 +24,7 @@ type Params = {
 export function processMovementTick(p: Params) {
   let { armies, provinces, countries, relations } = p;
   const { addLog } = p;
+  armies = armies.map(a => a.retreatProtectionDays ? {...a, retreatProtectionDays: Math.max(0,a.retreatProtectionDays - 1)} : a);
   const prepared = advanceMovementPlans(armies, provinces, relations);
   armies = prepared.armies;
   const interruptions: MovementPlanInterruption[] = [...prepared.interruptions];

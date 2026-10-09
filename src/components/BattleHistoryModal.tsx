@@ -53,16 +53,17 @@ export const BattleHistoryModal: React.FC<BattleHistoryModalProps> = ({
               {battleHistory.map((battle, index) => {
                 const attackerCountry = getCountryByTag(battle.attackerOriginal?.owner || battle.attacker?.owner);
                 const defenderCountry = getCountryByTag(battle.defenderOriginal?.owner || battle.defender?.owner);
-                const playerWon =
+                const playerWon = battle.participantDetails?.some(p=>p.owner===playerCountryTag&&p.side===battle.winner) ||
                   (battle.winner === 'attacker' && (battle.attackerOriginal?.owner === playerCountryTag || battle.attacker?.owner === playerCountryTag)) ||
                   (battle.winner === 'defender' && (battle.defenderOriginal?.owner === playerCountryTag || battle.defender?.owner === playerCountryTag));
 
+                const cancelled=battle.endReason==='hostility_ended'||battle.endReason==='territory_invalid';
                 const retreatInfo = battle.retreatInfo;
 
                 return (
                   <div
-                    key={index}
-                    className={`battle-history-item ${playerWon ? 'victory' : 'defeat'}`}
+                    key={battle.id ?? index}
+                    className={`battle-history-item ${cancelled ? '' : playerWon ? 'victory' : 'defeat'}`}
                     role="button"
                     tabIndex={0}
                     aria-label={`Abrir relatório de ${battle.provinceName}`}
@@ -104,8 +105,8 @@ export const BattleHistoryModal: React.FC<BattleHistoryModalProps> = ({
                     </div>
 
                     <div className="battle-history-item-footer">
-                      <span className={`battle-history-result ${playerWon ? 'victory' : 'defeat'}`}>
-                        {playerWon ? '🏆 Vitória' : '💀 Derrota'}
+                      <span className={`battle-history-result ${cancelled ? '' : playerWon ? 'victory' : 'defeat'}`}>
+                        {cancelled ? 'Combate encerrado' : playerWon ? '🏆 Vitória' : '💀 Derrota'}
                       </span>
                       <span className="battle-history-ratio">
                         Ratio: {safeRatio(battle.powerRatio)}:1

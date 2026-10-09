@@ -262,7 +262,7 @@ describe('rebellion announcement lifecycle', () => {
     expect(notices).toHaveLength(1);
   });
 
-  it('reports same-tick military defeat as a resolved revolt instead of announcing a nonexistent active rebellion', () => {
+  it('announces a revolt once while its V3 battle continues across days', () => {
     vi.useFakeTimers();
     const initial = fixture();
     const silva = { name: 'Silva Antiqua', population: { total: 15000, growthRate: .002, employed: 7500, unemployed: 1500, satisfaction: 60 }, maxPopulation: 35000, development: 3, defense: 1 };
@@ -270,12 +270,12 @@ describe('rebellion announcement lifecycle', () => {
     initial.armies = [{ ...createArmy('A', 'Exército manual de 6k', 'p'), regiments: Array.from({ length: 6 }, () => createRegiment('infantry')) }];
     const onToast = vi.fn(), game = mountGame(initial, onToast);
     act(() => vi.advanceTimersByTime(1000));
-    expect(game.result.current.countries[0].rebellions?.[0].status).toBe('defeated');
-    expect(game.result.current.armies.filter(a => a.rebellionFactionId)).toHaveLength(0);
-    expect(game.result.current.armies[0].owner).toBe('A');
-    expect(onToast.mock.calls.some(([message]) => message.startsWith('Rebelião de'))).toBe(false);
-    expect(onToast.mock.calls.some(([message]) => message === 'Revolta em Silva Antiqua derrotada no mesmo dia.')).toBe(true);
-    expect(game.log.mock.calls.some(([message]) => message.startsWith('Facção de'))).toBe(false);
+    expect(game.result.current.countries[0].rebellions?.[0].status).toBe('active');
+    expect(game.result.current.activeBattles).toHaveLength(1);
+    expect(onToast.mock.calls.filter(([message]) => message.startsWith('Rebeli\u00e3o de'))).toHaveLength(1);
+    act(() => vi.advanceTimersByTime(1000));
+    expect(onToast.mock.calls.filter(([message]) => message.startsWith('Rebeli\u00e3o de'))).toHaveLength(1);
+
   });
 
   it('tracks exact births, without reannouncing ended or existing factions from the same day', () => {

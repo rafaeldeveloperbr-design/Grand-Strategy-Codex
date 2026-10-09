@@ -1,3 +1,5 @@
+import { getValidParticipantsBySide } from '../../engine/combat';
+import { calculateArmyOrganization } from '../../engine/military';
 import React from 'react';
 import { ActiveBattle, Army, Country, Province } from '../../types';
 
@@ -20,14 +22,14 @@ export const BattleMarkersOverlay: React.FC<BattleMarkersOverlayProps> = React.m
         const province = provinces.find((p) => p.id === battle.provinceId);
         if (!province) return null;
 
-        const attacker = armies.find((a) => a.id === battle.attackerArmyId);
-        const defender = armies.find((a) => a.id === battle.defenderArmyId);
+        const attacker = getValidParticipantsBySide(battle,armies,'attacker')[0];
+        const defender = getValidParticipantsBySide(battle,armies,'defender')[0];
         if (!attacker || !defender) return null;
 
         const attackerCountry = countries.find((c) => c.tag === attacker.owner);
         const defenderCountry = countries.find((c) => c.tag === defender.owner);
 
-        const progress = ((battle.daysTotal - battle.daysRemaining) / battle.daysTotal) * 100;
+        const progress = Math.max(0, Math.min(100,100 - Math.min(calculateArmyOrganization(attacker),calculateArmyOrganization(defender))));
 
         return (
           <g key={`battle-${battle.id}`} pointerEvents="none">
@@ -95,7 +97,7 @@ export const BattleMarkersOverlay: React.FC<BattleMarkersOverlayProps> = React.m
               stroke="#000"
               strokeWidth="0.5"
             >
-              {battle.daysRemaining}d
+              {battle.durationDays ?? Math.max(0,battle.daysTotal-battle.daysRemaining)}d
             </text>
 
             {/* Tooltip nativo com informações da batalha */}
@@ -103,7 +105,7 @@ export const BattleMarkersOverlay: React.FC<BattleMarkersOverlayProps> = React.m
               {`Batalha em ${province.name}\n`}
               {`${attackerCountry?.flag} ${attackerCountry?.name}: ${battle.attackerCurrentTroops} tropas\n`}
               {`${defenderCountry?.flag} ${defenderCountry?.name}: ${battle.defenderCurrentTroops} tropas\n`}
-              {`Dias restantes: ${battle.daysRemaining}/${battle.daysTotal}\n`}
+              {`Duração: ${battle.durationDays ?? Math.max(0,battle.daysTotal-battle.daysRemaining)} dias\n`}
               {`Baixas: ${battle.attackerCasualties} vs ${battle.defenderCasualties}`}
             </title>
           </g>

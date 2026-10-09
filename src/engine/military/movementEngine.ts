@@ -15,7 +15,7 @@ export function canMoveToProvince(
 }
 
 export function stopArmyMovement(army: Army): Army {
-  if (army.inCombat) {
+  if ((army.inCombat || !!army.retreatProtectionDays)) {
     console.log(`⚠️ Exército ${army.id} está em combate - não pode cancelar movimento`);
     return army;
   }
@@ -66,7 +66,7 @@ export function moveArmy(
   provinces: Province[],
   diplomacy: DiplomaticRelation[]
 ): Army | null {
-  if (army.embarkedFleetId || !army.location || army.inCombat || army.location === destinationId) return null;
+  if (army.embarkedFleetId || !army.location || (army.inCombat || !!army.retreatProtectionDays) || army.location === destinationId) return null;
   if (army.destination) return null;
 
   const originProvince = provinces.find((p) => p.id === army.location);
@@ -124,7 +124,7 @@ export function processArmyMovement(
   const arrivedArmies: Army[] = [], updatedArmies: Army[] = [];
   const cancel = (army: Army): Army => ({ ...army, destination: null, targetDestination: null, path: [], movementProgress: 0, position: null });
   for (const army of armies) {
-    if (army.embarkedFleetId || army.inCombat || !army.destination) { updatedArmies.push(army); continue; }
+    if (army.embarkedFleetId || (army.inCombat || !!army.retreatProtectionDays) || !army.destination) { updatedArmies.push(army); continue; }
     const origin = army.location ? index.get(army.location) : undefined;
     const next = index.get(army.destination);
     const route = army.path.length ? army.path : [army.destination];

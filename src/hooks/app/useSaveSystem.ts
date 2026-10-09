@@ -3,12 +3,13 @@ import { useState, useCallback } from 'react';
 import { loadGame, saveGame, getSaveCompatibilityError, isAutoSaveEnabled, setAutoSaveEnabled, listSaves, deleteSave } from '../../engine/saveSystem';
 import { isSaveCompatibleWithActiveMap } from '../../data/map/saveCompatibility';
 import { mapMetadata } from '../../data/map';
-import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle } from '../../types';
+import type { Province, Country, GameDate, Army, Recruitment, BuildingConstruction, ActiveBattle, CombatResult } from '../../types';
 import type { CountryTechState } from '../../types/technology';
 import type { DiplomaticRelation, War } from '../../types/diplomacy';
 import type { NavalState } from '../../types/naval';
 
 interface SaveRefs {
+  battleHistoryRef?: {current: CombatResult[]};
   airStateRef?: { current: AirState };
   navalStateRef?: { current: NavalState };
   provincesRef: { current: Province[] };
@@ -25,6 +26,7 @@ interface SaveRefs {
 }
 
 interface SaveSetters {
+  setBattleHistory?: (v: CombatResult[]) => void;
   setAirState?: (v: AirState) => void;
   setNavalState?: (v: NavalState) => void;
   setPlayerCountryTag?: (tag: string) => void;
@@ -86,6 +88,8 @@ export function useSaveSystem(
     setters.setArmies(saved.military.armies);
     setters.setWars(saved.military.wars);
     setters.setActiveBattles(saved.military.activeBattles);
+    const uniqueHistory = (saved.military.battleHistory ?? []).filter((battle,index,all)=>!battle.id || all.findIndex(b=>b.id===battle.id)===index);
+    setters.setBattleHistory?.(uniqueHistory);
     setters.setRecruitments(saved.military.recruitments);
     setters.setDiplomaticRelations(saved.diplomacy.relations);
     setters.setBuildingConstructions(saved.economy.constructions);

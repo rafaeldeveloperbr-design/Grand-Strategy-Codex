@@ -113,6 +113,8 @@ export interface Army {
   targetProvinceId?: string | null;
   /** Indica se o exército está em combate (bloqueia movimento) */
   inCombat?: boolean;
+  retreatProtectionDays?: number;
+  retreatFromBattleId?: string;
   originalOwner?: string; // País de origem dos rebeldes (para IA separatista)
   separatistMode?: boolean; // Flag para ativar a marcha de reconquista
 
@@ -155,6 +157,8 @@ export interface RetreatInfo {
 }
 
 export interface BattleParticipantDetail {
+  name?: string;
+  initial?: number;
   id: string;
   owner?: string;
   loss?: number;
@@ -171,6 +175,12 @@ export interface BattleProvinceInfo {
  * Resultado de um combate
  */
 export interface CombatResult {
+  endReason?: BattleEndReason;
+  phase?: 'ENGAGEMENT' | 'MAIN_COMBAT' | 'BREAK_RETREAT';
+  id?: string;
+  countryCasualties?: Record<string, number>;
+  airModifiers?: Record<string, { superiority: number; cas: number }>;
+  retreatOutcomes?: Record<string, { destinationId?: string; destinationName?: string; reason: 'retreat' | 'no_retreat' }>;
   attacker: Army;
   defender: Army;
   attackerOriginal: Army;
@@ -203,7 +213,10 @@ export type BattleEndReason =
   | 'annihilation'
   | 'duration'
   | 'retreat'
-  | 'no_retreat';
+  | 'no_retreat'
+  | 'hostility_ended'
+  | 'territory_invalid'
+  | 'side_empty';
 
 export interface BattleSideReport {
   initialTroops: number;

@@ -225,6 +225,7 @@ describe('Rebellion V2 responses, military and migration', () => {
     const result = spawn(), f = result.countries[0].rebellions![0];
     const p = province({ neighbors: escape ? ['q'] : [] });
     const rebel = createRebelArmy({ ...f, militaryStrength: 700 }, p);
+    rebel.regiments = rebel.regiments.map(r => ({...r,organization:10}));
     const defender = { ...army(), regiments: Array.from({ length: 2 }, () => createRegiment('infantry')) };
     const battle = { ...startContinuousBattle([rebel], [defender], p, date, 'rebellion_battle'), daysRemaining: 1 };
     const resolved = processBattleDay(battle, [rebel, defender], p, [p, province({ id: 'q', owner: f.id })]);

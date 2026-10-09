@@ -148,9 +148,9 @@ export function useArmyActions(params: Params) {
         return;
       }
       armiesRef.current = result.armies;
-      activeBattlesRef.current = result.activeBattles;
+      activeBattlesRef.current = result.completedBattle ? [...result.activeBattles,result.completedBattle] : result.activeBattles;
       setArmies(result.armies);
-      setActiveBattles(result.activeBattles);
+      setActiveBattles(activeBattlesRef.current);
       addLog(`Ex?rcito ${army.name} recuou da batalha ${battleId}`);
     },
     [armiesRef, provincesRef, activeBattlesRef, setActiveBattles, playerCountryTag, setArmies, addLog, addToast]

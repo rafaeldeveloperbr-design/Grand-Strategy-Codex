@@ -306,9 +306,11 @@ export function useGameLoop(props: Props) {
 
     profiler.endPhase('battleArrival');
 
+    const beforeBattleStrength = armies.reduce((sum,a)=>sum+a.regiments.reduce((n,r)=>n+r.strength,0),0);
     const cont = processBattleContinuous({ air, armies, provinces, countries, wars, relations, currentActiveBattles, recruitments, buildingConstructions, snapshot, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, allCountries, addLog, addToast, setActiveBattles, setArmies, setBattleHistory, setBattleReport, setIsPaused: setLoopPaused, activeBattlesRef, cancelProvinceActivities });
     armies = cont.armies; provinces = cont.provinces; countries = cont.countries; currentActiveBattles = cont.currentActiveBattles; wars = cont.wars; recruitments = cont.recruitments; buildingConstructions = cont.buildingConstructions;
 
+    profiler.recordBattle({activeBattles:currentActiveBattles.length,battleParticipants:currentActiveBattles.reduce((sum,b)=>sum+b.participantArmyIds.length,0),reinforcements:arr.reinforcements,retreats:cont.retreats,annihilations:cont.annihilations,battleCasualties:Math.max(0,beforeBattleStrength-armies.reduce((sum,a)=>sum+a.regiments.reduce((n,r)=>n+r.strength,0),0))});
     profiler.endPhase('battleContinuous');
 
     const resolvedWars = processWarResolutionTick({provinces,countries,wars,relations,armies,activeBattles:currentActiveBattles,recruitments,constructions:buildingConstructions,date:snapshot.date});
@@ -373,7 +375,7 @@ export function useGameLoop(props: Props) {
     // AUTOSAVE - todo dia 1 - FIX: agora com slotId
     if (dateRef.current.day === 1 && isAutoSaveEnabled()) {
       const saved = saveGame(
-        { provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef, navalStateRef: props.navalStateRef, airStateRef: props.airStateRef },
+        { battleHistoryRef: {current:props.battleHistory}, provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef, navalStateRef: props.navalStateRef, airStateRef: props.airStateRef },
         'autosave',
         'Autosave'
       );

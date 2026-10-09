@@ -26,9 +26,11 @@ it('the real withdrawal action retreats one adjacent edge and permits occupation
   const withdrawn = armiesRef.current.find(a => a.id === defender.id)!;
   expect(province(location).neighbors).toContain(withdrawn.location);
   expect(withdrawn.inCombat).toBe(false);
-  expect(activeBattlesRef.current).toEqual([]);
-  expect(setActiveBattles).toHaveBeenCalledWith([]);
-  const state = day(campaign(armiesRef.current, [relation('ARG', 'BRA')], [war('ARG', 'BRA')]));
+  expect(activeBattlesRef.current[0].phase).toBe('BREAK_RETREAT');
+  expect(setActiveBattles).toHaveBeenCalledWith(activeBattlesRef.current);
+  const state = day({...campaign(armiesRef.current, [relation('ARG', 'BRA')], [war('ARG', 'BRA')]),currentActiveBattles:activeBattlesRef.current});
+  expect(state.currentActiveBattles).toHaveLength(0);
+  expect(state.battleHistory).toHaveLength(1);
   expect(state.provinces.find(p => p.id === location)!.owner).toBe('ARG');
   expect(state.countries.find(c => c.tag === 'ARG')!.provinces).toContain(location);
   expect(state.countries.find(c => c.tag === 'BRA')!.provinces).not.toContain(location);

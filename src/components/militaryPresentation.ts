@@ -14,10 +14,13 @@ export function groupMovementFeedback(moved: number, destination: string, failur
   return failures.length ? `${success} ${failures.length} falharam: ${failures.map(f => `${f.name} (${f.reason})`).join('; ')}.` : success;
 }
 export function battleEndFeedback(result: CombatResult, player: string, conquered = false) {
-  const attacking = result.attackerOriginal.owner === player;
+  if (result.endReason === 'hostility_ended' || result.endReason === 'territory_invalid') return `Combate encerrado em ${result.provinceName}.`;
+  const side = result.participantDetails?.find(participant => participant.owner === player)?.side;
+  const attacking = side ? side === 'attacker' : result.attackerOriginal.owner === player;
   const won = result.winner === (attacking ? 'attacker' : 'defender');
   const own = attacking ? result.attackerCasualties : result.defenderCasualties;
   const enemy = attacking ? result.defenderCasualties : result.attackerCasualties;
-  const retreat = result.retreatInfo?.retreated ? (result.retreatInfo.owner === player ? ' Suas tropas recuaram.' : ' O inimigo recuou.') : '';
+  const playerRetreated = result.participantDetails?.some(participant => participant.owner === player && result.retreatOutcomes?.[participant.id]?.reason === 'retreat');
+  const retreat = result.retreatInfo?.retreated ? (playerRetreated || result.retreatInfo.owner === player ? ' Suas tropas recuaram.' : ' O inimigo recuou.') : '';
   return `${won ? 'Vitória' : 'Derrota'} em ${result.provinceName}: ${Math.round(own).toLocaleString('pt-BR')} baixas aliadas / ${Math.round(enemy).toLocaleString('pt-BR')} inimigas.${conquered ? ' Província conquistada.' : ''}${retreat}`;
 }

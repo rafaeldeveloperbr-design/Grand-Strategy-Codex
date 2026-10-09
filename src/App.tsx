@@ -193,8 +193,8 @@ export const GameApp: React.FC<CampaignStart> = ({ playerCountryTag: initialPlay
 
 
   const saveSystem = useSaveSystem(
-    { airStateRef, navalStateRef, provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef },
-    { setAirState, setNavalState, setProvinces, setAllCountries, setArmies, setWars, setDiplomaticRelations, setRecruitments, setBuildingConstructions, setPlayerTechState, setBotTechStates, setActiveBattles, setDate, setPlayerCountryTag },
+    { battleHistoryRef: {current:battleHistory}, airStateRef, navalStateRef, provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef },
+    { setBattleHistory, setAirState, setNavalState, setProvinces, setAllCountries, setArmies, setWars, setDiplomaticRelations, setRecruitments, setBuildingConstructions, setPlayerTechState, setBotTechStates, setActiveBattles, setDate, setPlayerCountryTag },
     addToast,
     modals.setShowSettingsModal
   );

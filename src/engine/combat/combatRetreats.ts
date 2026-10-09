@@ -1,6 +1,10 @@
+import { BATTLE_V3 } from './battleConfig';
+import type { DiplomaticRelation } from '../../types';
+import { canEnterTerritory } from '../diplomacy';
+import { createBattleHostility, type WarPair } from './battleParticipants';
 import { Army } from '../../types/army';
 import { Province } from '../../types/province';
-import { ActiveBattle } from '../../types/battle';
+import { ActiveBattle, BattleExtended } from '../../types/battle';
 import { calculateArmySize } from './combatCalculations';
 
 /**
@@ -11,13 +15,16 @@ export function findRetreatProvince(
   loserOwner: string,
   battleProvince: Province,
   allProvinces: Province[],
-  allArmies: Army[] = []
+  allArmies: Army[] = [],
+  context?: {wars: WarPair[]; relations: DiplomaticRelation[]}
 ): Province | null {
+  const hostility=context ? createBattleHostility(context.wars) : undefined;
   // Busca províncias vizinhas que pertencem ao país do perdedor
   const retreatProvinces = battleProvince.neighbors
     .map(neighborId => allProvinces.find(p => p.id === neighborId))
-    .filter(p => p && p.owner === loserOwner && !allArmies.some(army =>
-      army.location === p.id && army.owner !== loserOwner && calculateArmySize(army) > 0));
+    .sort((a,b) => Number(b?.owner === loserOwner) - Number(a?.owner === loserOwner) || (a?.id ?? '').localeCompare(b?.id ?? ''))
+    .filter(p => p && (p.owner === loserOwner || (context && canEnterTerritory(context.relations,loserOwner,p.owner) && !hostility!({owner:loserOwner},{owner:p.owner}))) && !allArmies.some(army =>
+      army.location === p.id && !army.embarkedFleetId && !army.retreatProtectionDays && (hostility ? hostility({owner:loserOwner},army) : army.owner !== loserOwner) && calculateArmySize(army) > 0));
 
   if (retreatProvinces.length === 0) {
     // Perdedor está cercado - não há rota de fuga
@@ -33,7 +40,6 @@ export function findRetreatProvince(
  * Retorna um exército com 0 tropas
  */
 export function applySiegeAnnihilation(army: Army): Army {
-  console.log(`💀 Exército ${army.owner} aniquilado por cerco!`);
   return {
     ...army,
     regiments: [], // Remove todos os regimentos
@@ -56,6 +62,7 @@ export function retreatArmyManually(
   retreatSuccess: boolean;
   battleEnded: boolean;
   winner?: 'attacker' | 'defender';
+  completedBattle?: BattleExtended;
 } {
   // Encontra o exército
   const army = armies.find(a => a.id === armyId);
@@ -98,7 +105,6 @@ export function retreatArmyManually(
     return { armies, activeBattles, retreatSuccess: false, battleEnded: false };
   }
 
-  console.log(`🏃 Exército ${armyId} (${army.owner}) recuando de ${battleProvince.name} para ${retreatProvince.name}`);
 
   // Remove exército da lista de participantes
   const updatedBattle = {
@@ -117,7 +123,7 @@ export function retreatArmyManually(
   // Move exército para província de recuo e libera do combate
   const updatedArmies = armies.map(a => {
     if (a.id === armyId) {
-      return { ...a, location: retreatProvince.id, inCombat: false, battleId: null,
+      return { ...a, retreatProtectionDays: BATTLE_V3.retreatProtectionDays, retreatFromBattleId: battleId, movementPlan: undefined, location: retreatProvince.id, inCombat: false, battleId: null,
         destination: null, targetDestination: null, path: [], position: null, movementProgress: 0 };
     }
     return a;
@@ -125,7 +131,6 @@ export function retreatArmyManually(
 
   // Se não há mais exércitos de um lado, finaliza a batalha
   if (updatedBattle.attackerCurrentTroops === 0 || updatedBattle.defenderCurrentTroops === 0) {
-    console.log(`🏁 Batalha ${battleId} finalizada - todos os exércitos recuaram`);
     
     // Remove batalha da lista
     const updatedBattles = activeBattles.filter(b => b.id !== battleId);
@@ -137,6 +142,7 @@ export function retreatArmyManually(
       armies: updatedArmies.map(a => updatedBattle.participantArmyIds.includes(a.id)
         ? { ...a, inCombat: false, battleId: null } : a),
       activeBattles: updatedBattles,
+      completedBattle: {...battle,endReason:'retreat',phase:'BREAK_RETREAT',retreatOutcomes:{...battle.retreatOutcomes,[armyId]:{reason:'retreat',destinationId:retreatProvince.id,destinationName:retreatProvince.name}}},
       retreatSuccess: true,
       battleEnded: true,
       winner

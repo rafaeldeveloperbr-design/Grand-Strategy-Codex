@@ -32,7 +32,7 @@ const atWar = (a: string, b: string, wars: WarPair[]) => wars.some(w =>
 function participants(battle: BattleExtended, armies: Army[], side: 'attacker' | 'defender') {
   const attackerCountry = battle.attackerCountryId || armies.find(a => a.id === battle.attackerArmyId)?.owner;
   const defenderCountry = battle.defenderCountryId || armies.find(a => a.id === battle.defenderArmyId)?.owner;
-  return armies.filter(army => battle.participantArmyIds.includes(army.id)
+  return armies.filter(army => !army.embarkedFleetId && battle.participantArmyIds.includes(army.id)
     && ((battle.participantSides?.[army.id] ??
       (army.owner === attackerCountry ? 'attacker' : army.owner === defenderCountry ? 'defender' : undefined)) === side)
     && calculateArmySize(army) > 0);
@@ -96,7 +96,7 @@ export function checkAllProvinceCombats(
     }
     const province = provinces.find(p => p.id === battle!.provinceId);
     if (!province) continue;
-    for (const army of updatedArmies.filter(a => a.location === province.id && !a.inCombat)) {
+    for (const army of updatedArmies.filter(a => !a.embarkedFleetId && a.location === province.id && !a.inCombat)) {
       const side = army.owner === battle.attackerCountryId ? 'attacker'
         : army.owner === battle.defenderCountryId ? 'defender'
           : atWar(army.owner, battle.defenderCountryId, wars) ? 'attacker'
@@ -111,7 +111,7 @@ export function checkAllProvinceCombats(
 
   for (const province of provinces) {
     if (updatedBattles.some(b => b.provinceId === province.id)) continue;
-    const available = updatedArmies.filter(a => a.location === province.id && !a.inCombat && calculateArmySize(a) > 0);
+    const available = updatedArmies.filter(a => !a.embarkedFleetId && a.location === province.id && !a.inCombat && calculateArmySize(a) > 0);
     const defenders = available.filter(a => a.owner === province.owner);
     const attackers = available.filter(a => a.owner !== province.owner && atWar(a.owner, province.owner, wars));
     if (!attackers.length || !defenders.length) continue;

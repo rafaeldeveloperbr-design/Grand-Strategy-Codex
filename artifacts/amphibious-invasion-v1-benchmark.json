@@ -1,0 +1,122 @@
+{
+  "environment": {
+    "node": "v26.8.2",
+    "platform": "win32"
+  },
+  "countries": 201,
+  "provinces": 494,
+  "cases": [
+    {
+      "transportedArmies": 0,
+      "activeLandings": 0,
+      "transportBookkeeping": {
+        "samples": 200,
+        "medianMs": 0.00029999999992469384,
+        "p95Ms": 0.0003000000001520675,
+        "meanMs": 0.00026999999999929966
+      },
+      "landingTick": {
+        "samples": 200,
+        "medianMs": 0.00040000000012696546,
+        "p95Ms": 0.0032999999998537533,
+        "meanMs": 0.000964000000001306
+      },
+      "capacityHandling": {
+        "samples": 200,
+        "medianMs": 0.0004999999998744897,
+        "p95Ms": 0.0007000000000516593,
+        "meanMs": 0.0005685000000073614
+      },
+      "capacityLossHandling": {
+        "samples": 200,
+        "medianMs": 0.00040000000012696546,
+        "p95Ms": 0.0006000000000767614,
+        "meanMs": 0.0005175000000019736
+      }
+    },
+    {
+      "transportedArmies": 10,
+      "activeLandings": 0,
+      "transportBookkeeping": {
+        "samples": 200,
+        "medianMs": 0.001399999999875945,
+        "p95Ms": 0.0018000000000029104,
+        "meanMs": 0.0015129999999987831
+      },
+      "landingTick": {
+        "samples": 200,
+        "medianMs": 0.0017000000000280124,
+        "p95Ms": 0.0036000000000058208,
+        "meanMs": 0.007410499999997456
+      },
+      "capacityHandling": {
+        "samples": 200,
+        "medianMs": 0.0036999999999807187,
+        "p95Ms": 0.007599999999911233,
+        "meanMs": 0.004258500000004233
+      },
+      "capacityLossHandling": {
+        "samples": 200,
+        "medianMs": 0.10599999999999454,
+        "p95Ms": 0.13619999999991705,
+        "meanMs": 0.10948100000000067
+      }
+    },
+    {
+      "transportedArmies": 50,
+      "activeLandings": 0,
+      "transportBookkeeping": {
+        "samples": 200,
+        "medianMs": 0.002499999999827196,
+        "p95Ms": 0.003399999999828651,
+        "meanMs": 0.002687499999992724
+      },
+      "landingTick": {
+        "samples": 200,
+        "medianMs": 0.004100000000107684,
+        "p95Ms": 0.005199999999831562,
+        "meanMs": 0.004325000000000046
+      },
+      "capacityHandling": {
+        "samples": 200,
+        "medianMs": 0.009400000000141517,
+        "p95Ms": 0.014300000000048385,
+        "meanMs": 0.013520999999998366
+      },
+      "capacityLossHandling": {
+        "samples": 200,
+        "medianMs": 0.45329999999989923,
+        "p95Ms": 0.570699999999988,
+        "meanMs": 0.4750670000000036
+      }
+    },
+    {
+      "transportedArmies": 20,
+      "activeLandings": 20,
+      "transportBookkeeping": {
+        "samples": 200,
+        "medianMs": 0.0009999999999763531,
+        "p95Ms": 0.001199999999926149,
+        "meanMs": 0.001006000000000995
+      },
+      "landingTick": {
+        "samples": 200,
+        "medianMs": 0.020099999999956708,
+        "p95Ms": 0.03160000000002583,
+        "meanMs": 0.02154649999999833
+      },
+      "capacityHandling": {
+        "samples": 200,
+        "medianMs": 0.003400000000056025,
+        "p95Ms": 0.004200000000082582,
+        "meanMs": 0.0035524999999972805
+      },
+      "capacityLossHandling": {
+        "samples": 200,
+        "medianMs": 0.18689999999992324,
+        "p95Ms": 0.2320999999999458,
+        "meanMs": 0.19648199999999974
+      }
+    }
+  ]
+}

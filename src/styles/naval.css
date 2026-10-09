@@ -1,0 +1,10 @@
+.naval-panel { position:absolute; right:16px; top:90px; z-index:30; width:350px; max-width:calc(100% - 32px); max-height:calc(100% - 120px); overflow:auto; background:#16283bed; color:#edf4fc; border:1px solid #739bad; border-radius:8px; padding:16px; box-shadow:0 8px 30px #0006; font-size:13px; }
+.naval-panel__header { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.naval-panel__header h3 { margin:0; }
+.naval-panel button { color:#e7f2fa; background:#2b4359; border:1px solid #64839b; border-radius:4px; padding:6px 9px; cursor:pointer; }
+.naval-panel button:disabled { opacity:.4; cursor:default; }
+.naval-panel__actions { display:flex; flex-wrap:wrap; gap:7px; }
+.naval-panel__hint { color:#b6cddd; font-size:12px; }
+.amphibious-target-hint { position:absolute; left:50%; top:12px; transform:translateX(-50%); z-index:35; background:#16283bf2; color:#edf4fc; border:1px solid #739bad; border-radius:6px; padding:10px; }
+.naval-port-info { border:1px solid #486e81; background:#1d3545; color:#dcebf2; border-radius:6px; padding:10px; margin:8px; font-size:12px; }
+.naval-port-info button { display:block; margin-top:5px; }

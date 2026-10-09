@@ -1,13 +1,20 @@
 import { isRecognizedUnitType } from '../../data/units';
+import { readNavalSave } from '../naval/saveCompatibility';
+import { validateTransportSave } from '../naval/transportSave';
+import type { Army, Province, ActiveBattle } from '../../types';
 
 export class MilitarySaveCompatibilityError extends Error {}
 /** Validate military IDs throughout raw saves, before migrations can index catalogs. */
 export function validateMilitarySave(value: unknown, path = 'save', provinceIds?: Set<string>): void {
+  // The naval namespace has its own unit catalog and validated additive V3 schema.
+  if (path === 'save.naval') { readNavalSave(value); return; }
   if (path === 'save' && value && typeof value === 'object' && !Array.isArray(value)) {
     const raw = value as Record<string, unknown>;
     const world = raw.world && typeof raw.world === 'object' ? raw.world as Record<string, unknown> : undefined;
     const provinces = raw.provinces ?? world?.provinces;
     if (Array.isArray(provinces)) provinceIds = new Set(provinces.flatMap(p => p && typeof p === 'object' && typeof p.id === 'string' ? [p.id] : []));
+    const military = raw.military && typeof raw.military === 'object' ? raw.military as Record<string, unknown> : raw;
+    if (Array.isArray(military.armies) && Array.isArray(provinces)) validateTransportSave(military.armies as Army[], readNavalSave(raw.naval), provinces as Province[], (military.activeBattles ?? []) as ActiveBattle[]);
   }
   if (!value || typeof value !== 'object') return;
   if (Array.isArray(value)) { value.forEach((item, i) => validateMilitarySave(item, `${path}[${i}]`, provinceIds)); return; }

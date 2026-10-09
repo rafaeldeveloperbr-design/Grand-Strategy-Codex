@@ -126,11 +126,13 @@ export function processEconomyTick(p: Params) {
   }));
   provinces = provinces.map(pr => prepared.get(pr.id) ?? pr);
   ({countries,provinces} = processInternationalTrade({countries,provinces,wars: p.wars,relations: p.relations ?? [],date}));
+  const transportedMaintenance = new Map<string, number>();
+  for (const army of armies) if (army.embarkedFleetId) transportedMaintenance.set(army.owner, (transportedMaintenance.get(army.owner) ?? 0) + calculateArmyMaintenance(army));
   countries = countries.map(country => {
     const countryProvinces = provinces.filter(pr => pr.owner === country.tag);
     const atWar = p.wars.some(war => war.attacker === country.tag || war.defender === country.tag);
     const state = stateFor(country.tag);
-    const { country: updatedCountry, provinces: updatedProvs } = processDailyTick(country, countryProvinces, state ? calculateTechBonuses(state) : undefined, atWar, true);
+    const { country: updatedCountry, provinces: updatedProvs } = processDailyTick(country, countryProvinces, state ? calculateTechBonuses(state) : undefined, atWar, true, transportedMaintenance.get(country.tag) ?? 0);
 
     for (const updatedProv of updatedProvs) {
       const idx = provinces.findIndex(pr => pr.id === updatedProv.id);

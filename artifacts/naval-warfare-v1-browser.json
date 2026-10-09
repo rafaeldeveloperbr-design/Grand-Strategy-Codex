@@ -1,0 +1,34 @@
+{
+  "browser": "Chrome headless CDP",
+  "checks": [
+    "New Game BRA",
+    "Fleet selection and camera Locate",
+    "Naval Mode",
+    "Atlantic movement at x3",
+    "Reset / focus camera",
+    "Save V3 persists movement",
+    "Load restores fleet route/progress without duplicates",
+    "Declare war against USA through diplomacy UI",
+    "Wartime fixture: hostile encounter, battle panel and battle camera focus",
+    "Battle resolves with retreat",
+    "Return to port and recovery",
+    "x3 with camera navigation",
+    "Monthly autosave persists naval battle and recovery"
+  ],
+  "errors": [],
+  "performance": {
+    "normalMode": {
+      "frames": 49,
+      "maxFrameGapMs": 300,
+      "over50ms": 8,
+      "renderedNavalEdges": 0
+    },
+    "navalMode": {
+      "frames": 43,
+      "maxFrameGapMs": 316.7000000000007,
+      "over50ms": 8,
+      "renderedNavalEdges": 70
+    }
+  },
+  "afterBattle": "Brasil · 1ª Frota✕🇧🇷 BrasilAtlantic · sea-590Status: HOLDING · 0%Velocidade: 18 · Força: 222 · Organização: 16%Destino: —DESTROYER: 44/100 · Org 16DESTROYER: 44/100 · Org 16CRUISER: 44/100 · Org 16BATTLESHIP: 44/100 · Org 16TRANSPORT: 44/100 · Org 16Locate (F)Return to PortCancel OrderAtive Naval Mode e clique com o botão direito num SeaNode para mover ou num porto para atracar."
+}

@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { ProvinceNavalConstruction } from './ProvinceNavalConstruction';
+import type { NavalState, NavalUnitType, Fleet } from '../../types/naval';
+import { portByProvince } from '../../engine/naval';
+import { NAVAL_BALANCE } from '../../data/navalUnits';
 import type { LogisticsSnapshot } from '../../engine/logistics';
 import { Province, Country, BuildingType, Army, Recruitment, UnitType, BuildingConstruction } from '../../types';
 import { getCountryByTag } from '../../data/countries';
@@ -11,6 +15,11 @@ import { getProvinceRebellion, type RebellionAction } from '../../engine/rebelli
 import type { CountryTechState } from '../../types/technology';
 
 export interface ProvincePanelProps {
+  navalState?: NavalState;
+  onNavalBuild?: (provinceId: string, type: NavalUnitType | 'UPGRADE', targetFleetId?: string) => void;
+  onNavalCancel?: (id: string) => void;
+  fleets?: readonly Fleet[];
+  onSelectFleet?: (id: string) => void;
   logistics?: LogisticsSnapshot;
   onRebellionAction?: (provinceId: string, action: RebellionAction) => void;
   selectedArmyIds?: string[];
@@ -32,9 +41,12 @@ export interface ProvincePanelProps {
   onCancelBuilding: (constructionId: string) => void;
 }
 
-type PanelTab = 'info' | 'buildings' | 'military';
+type PanelTab = 'info' | 'buildings' | 'military' | 'port';
 
 export const ProvincePanel: React.FC<ProvincePanelProps> = ({
+  navalState, onNavalBuild, onNavalCancel,
+  fleets = [],
+  onSelectFleet,
   logistics,
   province,
   provinces,
@@ -56,13 +68,17 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
   onSelectArmy,
 }) => {
   const [activeTab, setActiveTab] = useState<PanelTab>('info');
+  const port = portByProvince.get(province.id);
+  if (activeTab === 'port' && !port) setActiveTab('info');
+  const navalBuilds = useMemo(() => navalState?.construction?.builds.filter(b => b.provinceId === province.id) ?? [], [navalState?.construction?.builds, province.id]);
+  const navalUpgrade = useMemo(() => navalState?.construction?.upgrades.find(u => u.provinceId === province.id), [navalState?.construction?.upgrades, province.id]);
   const ownerCountry = countries.find(c => c.tag === province.owner);
   const isPlayerOwned = province.owner === playerCountry.tag;
   const ownerTechState = isPlayerOwned ? playerTechState : botTechStates.get(province.owner);
   const faction = getProvinceRebellion(province, countries);
 
   const armiesHere = armies.filter((a) => a.location === province.id);
-  const recruitmentsHere = recruitments.filter((r) => r.provinceId === province.id);
+  const recruitmentsHere = useMemo(() => recruitments.filter((r) => r.provinceId === province.id), [recruitments, province.id]);
 
   const neighborProvinces = province.neighbors.map((nId) => {
     const allProvinces = countries.flatMap((c) =>
@@ -73,9 +89,9 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
     return { id: nId, country: neighborCountry };
   });
 
-  const provinceConstructions = buildingConstructions.filter(
+  const provinceConstructions = useMemo(() => buildingConstructions.filter(
     (c) => c.provinceId === province.id && c.owner === province.owner
-  );
+  ), [buildingConstructions, province.id, province.owner]);
 
   return (
     <div className="province-panel">
@@ -112,10 +128,20 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
             >
               ⚔️ Militar
             </button>
+            {port && <button
+              className={`province-panel__tab ${activeTab === 'port' ? 'province-panel__tab--active' : ''}`}
+              onClick={() => setActiveTab('port')}
+            >⚓ Porto</button>}
           </div>
 
           {/* Conteúdo Ativo */}
           <div className="province-panel__content">
+            {activeTab === 'port' && port && <section className="naval-port-info" aria-label="Port information">
+              <strong>Porto · nível {port.level} · operacional</strong>
+              <p>Recuperação: {NAVAL_BALANCE.recoveryOrganization * port.level} organização e até {(NAVAL_BALANCE.repairStrength * port.level).toFixed(1)} força/navio/dia. Reparo: {NAVAL_BALANCE.repairGoldPerStrength} ouro/força; requer porto amigo.</p>
+              {fleets.filter(f => f.portProvinceId === province.id).map(f => <button key={f.id} onClick={() => onSelectFleet?.(f.id)}>{f.name}</button>)}
+              {navalState && ownerCountry && <ProvinceNavalConstruction key={province.id} province={province} country={ownerCountry} actor={playerCountry.tag} naval={navalState} onBuild={onNavalBuild} onCancel={onNavalCancel}/>}
+            </section>}
             {activeTab === 'info' && (
               <ProvinceInfoTab
                 province={province}
@@ -172,7 +198,9 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
         {isPlayerOwned && (
           <ProvinceSidebar
             provinceConstructions={provinceConstructions}
-            recruitmentsHere={activeTab === 'military' ? [] : recruitmentsHere}
+            recruitmentsHere={recruitmentsHere}
+            navalBuilds={navalBuilds}
+            navalUpgrade={navalUpgrade}
             onCancelBuilding={onCancelBuilding}
             onCancelRecruitment={onCancelRecruitment}
           />

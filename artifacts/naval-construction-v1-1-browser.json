@@ -1,0 +1,14 @@
+{
+  "browser": "Chrome headless UI / real daily ticks",
+  "checks": [
+    {
+      "check": "New Game BRA / Sao Paulo shipyard / Destroyer paid from treasury and local stock",
+      "before": "Shipyard · nível 1 · velocidade 1×Estoque local: IRON 60 · TOOLS 45. Ouro nacional: 7450.Pagamento ao encomendar. Cancelamento sem reembolso. Uma produção por porto; até 5 navios na fila.Destino dos reforços Frota docked disponível / nova frotaBrasil · 1ª FrotaUpgrade ShipyardBuild Destroyer 180 ouro · 18 IRON · 8 TOOLS · 120 dias · DisponívelBuild Transport 120 ouro · 12 IRON · 5 TOOLS · 90 dias · DisponívelBuild Cruiser 420 ouro · 40 IRON · 18 TOOLS · 240 dias · Requer shipyard nível 2.Build Battleship 900 ouro · 90 IRON · 40 TOOLS · 480 dias · Requer shipyard nível 3.",
+      "after": "Shipyard · nível 1 · velocidade 1×Estoque local: IRON 42 · TOOLS 37. Ouro nacional: 7270.Pagamento ao encomendar. Cancelamento sem reembolso. Uma produção por porto; até 5 navios na fila.Destino dos reforços Frota docked disponível / nova frotaBrasil · 1ª FrotaUpgrade ShipyardIRON local insuficiente.Build Destroyer 180 ouro · 18 IRON · 8 TOOLS · 120 dias · DisponívelBuild Transport 120 ouro · 12 IRON · 5 TOOLS · 90 dias · DisponívelBuild Cruiser 420 ouro · 40 IRON · 18 TOOLS · 240 dias · Requer shipyard nível 2.Build Battleship 900 ouro · 90 IRON · 40 TOOLS · 480 dias · Requer shipyard nível 3.Destroyer · 0% · Ativo → Brasil · 1ª Frota Cancelar"
+    },
+    "Real x3 daily progress completes Destroyer and adds sixth ship to initial fleet",
+    "Explicit resource/progress fixture: upgrade completes, unlocks Cruiser and paid queue starts",
+    "Save V3 / load restores one paid queue item and shipyard level"
+  ],
+  "errors": []
+}

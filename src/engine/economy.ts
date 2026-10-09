@@ -172,7 +172,8 @@ export function processDailyTick(
   provinces: Province[],
   techBonuses?: TechnologyBonuses,
   atWar: boolean = false,
-  marketsPrepared: boolean = false
+  marketsPrepared: boolean = false,
+  transportedMilitaryMaintenance: number = 0
 ): { country: Country; provinces: Province[] } {
   // Calcula economia total do país
   let totalGoldIncome = 0;
@@ -213,7 +214,7 @@ export function processDailyTick(
 
   // Calcula despesas
   const baseExpenses = calculateCountryExpenses(country, updatedProvinces);
-  const militaryMaintenance = updatedProvinces.reduce((sum, province) => sum + (province.stationedMilitaryMaintenance ?? (province.stationedTroops ?? 0) / 1000 * 0.1), 0)
+  const militaryMaintenance = (transportedMilitaryMaintenance + updatedProvinces.reduce((sum, province) => sum + (province.stationedMilitaryMaintenance ?? (province.stationedTroops ?? 0) / 1000 * 0.1), 0))
     * (techBonuses?.militaryMaintenanceMultiplier ?? 1) * lawModifiers.militaryMaintenanceMultiplier;
   const socialExpense = updatedProvinces.reduce((sum,province) => sum+province.population.total,0)*politicalModifiers.socialCostPerPerson;
   const expenses = baseExpenses + militaryMaintenance*politicalModifiers.maintenance + socialExpense;

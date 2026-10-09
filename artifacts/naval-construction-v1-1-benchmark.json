@@ -1,0 +1,99 @@
+{
+  "initialShipyards": {
+    "total": 18,
+    "levels": [
+      {
+        "level": 1,
+        "count": 18
+      },
+      {
+        "level": 2,
+        "count": 0
+      },
+      {
+        "level": 3,
+        "count": 0
+      }
+    ],
+    "brazil": [
+      {
+        "provinceId": "sa_bra_sao_paulo",
+        "level": 1
+      }
+    ]
+  },
+  "environment": {
+    "node": "v26.8.2",
+    "platform": "win32"
+  },
+  "cases": [
+    {
+      "queuedBuilds": 0,
+      "activePorts": 0,
+      "constructionTick": {
+        "samples": 100,
+        "medianMs": 0.04179999999996653,
+        "p95Ms": 0.06880000000001019,
+        "meanMs": 0.05778300000000854
+      },
+      "aiDecisions": {
+        "samples": 100,
+        "medianMs": 1.029299999999921,
+        "p95Ms": 1.4182000000000698,
+        "meanMs": 1.091956000000007
+      },
+      "pathfindCalls": 0
+    },
+    {
+      "queuedBuilds": 20,
+      "activePorts": 4,
+      "constructionTick": {
+        "samples": 100,
+        "medianMs": 0.05900000000019645,
+        "p95Ms": 0.08519999999998618,
+        "meanMs": 0.06266599999999699
+      },
+      "aiDecisions": {
+        "samples": 100,
+        "medianMs": 1.3576000000000477,
+        "p95Ms": 1.5862999999999374,
+        "meanMs": 1.3369039999999972
+      },
+      "pathfindCalls": 0
+    },
+    {
+      "queuedBuilds": 50,
+      "activePorts": 10,
+      "constructionTick": {
+        "samples": 100,
+        "medianMs": 0.04310000000009495,
+        "p95Ms": 0.050700000000006185,
+        "meanMs": 0.04377799999999752
+      },
+      "aiDecisions": {
+        "samples": 100,
+        "medianMs": 1.0696000000000367,
+        "p95Ms": 1.393100000000004,
+        "meanMs": 1.1061849999999958
+      },
+      "pathfindCalls": 0
+    },
+    {
+      "queuedBuilds": 100,
+      "activePorts": 20,
+      "constructionTick": {
+        "samples": 100,
+        "medianMs": 0.04539999999997235,
+        "p95Ms": 0.0724999999999909,
+        "meanMs": 0.05057099999999764
+      },
+      "aiDecisions": {
+        "samples": 100,
+        "medianMs": 0.4416999999998552,
+        "p95Ms": 1.044099999999844,
+        "meanMs": 0.5463829999999984
+      },
+      "pathfindCalls": 0
+    }
+  ]
+}

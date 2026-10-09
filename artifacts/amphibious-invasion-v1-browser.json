@@ -1,0 +1,12 @@
+{
+  "browser": "Chrome headless / actual React UI / real daily ticks",
+  "checks": [
+    "New Game BRA: land move to São Paulo, Embark, no land marker, FleetPanel cargo/capacity",
+    "Fleet moves through Atlantic; Save V3 / manual Load preserves exactly one embarked army",
+    "Return to friendly port and per-army Disembark restores land presence",
+    "Real UI war declaration against Argentina before planning invasion",
+    "Labeled accelerated war/coastal save fixture: Plan Invasion UI, real x3 ticks, three-day landing, empty target capture",
+    "Labeled fragile-transport/enemy save fixture: real NavalBattle destroys Transport and embarked Army, reports troop losses"
+  ],
+  "errors": []
+}

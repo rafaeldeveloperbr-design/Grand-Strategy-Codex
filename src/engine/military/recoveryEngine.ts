@@ -10,7 +10,7 @@ import type { LogisticsSnapshot } from '../logistics';
 
 /** Daily recovery consumes the canonical national manpower and local market. */
 export function recoverArmy(army: Army, country: Country, province: Province, colocatedArmies: Army[] = [army], logistics?: LogisticsSnapshot): { army: Army; country: Country; province: Province; reinforced: number } {
-  if (army.inCombat || army.destination) return { army, country, province, reinforced: 0 };
+  if (army.embarkedFleetId || army.inCombat || army.destination) return { army, country, province, reinforced: 0 };
   const supply = getArmySupply(army, province, colocatedArmies, logistics);
   const recoveryModifier = politicsModifiers(country).recovery;
   const market = normalizeMarket(province.market);

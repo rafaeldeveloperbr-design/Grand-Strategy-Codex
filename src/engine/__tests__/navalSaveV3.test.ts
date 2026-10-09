@@ -1,0 +1,60 @@
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { countries, provincesData } from '../../data/map';
+import { createInitialNavies, orderFleetMove, navalCombatTick, portByProvince, seaNodeById } from '../naval';
+import { createNavalUnit } from '../../data/navalUnits';
+import type { NavalState, Fleet } from '../../types/naval';
+import type { War, DiplomaticRelation } from '../../types';
+import { readNavalSave } from '../naval/saveCompatibility';
+import { getSaveCompatibilityError, loadGame, saveGame } from '../saveSystem';
+import { createInitialTechState } from '../technology';
+import { useSaveSystem } from '../../hooks/app/useSaveSystem';
+import { diplomacyDay } from '../diplomacy/diplomacyRelations';
+import { createInitialShipyards, startNavalConstruction, processNavalConstructionTick, cancelNavalConstruction } from '../naval/construction';
+import { createDefaultMarket } from '../market';
+afterEach(()=>{vi.restoreAllMocks();localStorage.clear();});
+const war:War={id:'w',attacker:'BRA',defender:'ARG',startDate:{year:1444,month:1,day:1},warScore:0,attackerCasualties:0,defenderCasualties:0,occupiedByAttacker:[],occupiedByDefender:[]};
+function fixture() {
+  const f=createInitialNavies(countries,provincesData).find(f=>f.countryTag==='BRA')!;
+  const node=portByProvince.get(f.portProvinceId!)!.seaNodeId, neighbor=seaNodeById.get(node)!.neighbors[0];
+  const moving=orderFleetMove(f,neighbor,'BRA')!;moving.movementProgress=.37;
+  return {dateRef:{current:{day:1,month:11,year:1444}},provincesRef:{current:structuredClone(provincesData)},countriesRef:{current:structuredClone(countries)},armiesRef:{current:[]},warsRef:{current:[] as War[]},diplomaticRelationsRef:{current:[] as DiplomaticRelation[]},recruitmentsRef:{current:[]},buildingConstructionsRef:{current:[]},activeBattlesRef:{current:[]},playerTechStateRef:{current:createInitialTechState('BRA')},botTechStatesRef:{current:new Map()},navalStateRef:{current:{fleets:[moving],battles:[]} as NavalState}};
+}
+describe('Naval additive Save V3',()=>{
+  it('persists paid build/upgrade progress and target without costs or duplicate delivery on load',()=>{
+    const refs=fixture(),port='sa_bra_sao_paulo';
+    const p=refs.provincesRef.current.find(p=>p.id===port)!;p.market=createDefaultMarket();p.market.goods.iron.stock=1000;p.market.goods.tools.stock=1000;
+    refs.countriesRef.current.find(c=>c.tag==='BRA')!.resources.gold=10000;
+    refs.navalStateRef.current={fleets:createInitialNavies(countries,provincesData),battles:[],construction:createInitialShipyards(countries,provincesData)};
+    const target=refs.navalStateRef.current.fleets.find(f=>f.countryTag==='BRA')!.id;
+    const started=startNavalConstruction(refs.navalStateRef.current,refs.provincesRef.current,refs.countriesRef.current,'BRA',port,'DESTROYER',-190000,target);
+    refs.provincesRef.current=started.provinces;refs.countriesRef.current=started.countries;
+    refs.navalStateRef.current=processNavalConstructionTick(started.naval,started.provinces,started.countries).naval;
+    expect(saveGame(refs,'construction')).toBe(true);
+    const loaded=loadGame('construction')!;expect(loaded.version).toBe(3);expect(loaded.naval).toEqual(refs.navalStateRef.current);
+    expect(loaded.world.countries.find(c=>c.tag==='BRA')!.resources.gold).toBe(9820);
+    const upgrade=startNavalConstruction(loaded.naval!,loaded.world.provinces,loaded.world.countries,'BRA',port,'UPGRADE',-190000);
+    refs.provincesRef.current=upgrade.provinces;refs.countriesRef.current=upgrade.countries;
+    refs.navalStateRef.current=processNavalConstructionTick(upgrade.naval,upgrade.provinces,upgrade.countries).naval;
+    expect(saveGame(refs,'construction')).toBe(true);expect(loadGame('construction')!.naval).toEqual(refs.navalStateRef.current);
+    const upgradeId=refs.navalStateRef.current.construction!.upgrades[0].id;
+    let naval=cancelNavalConstruction(loadGame('construction')!.naval!,upgradeId,'BRA');naval.construction!.builds[0].progress=naval.construction!.builds[0].requiredProgress-1;
+    naval=processNavalConstructionTick(naval,loaded.world.provinces,loaded.world.countries).naval;
+    refs.navalStateRef.current=naval;expect(saveGame(refs,'construction')).toBe(true);
+    const completed=loadGame('construction')!.naval!;
+    expect(processNavalConstructionTick(completed,loaded.world.provinces,loaded.world.countries).naval.fleets).toEqual(naval.fleets);
+  });
+  it('compacts optional empty diplomacy fields which V3 load restores identically',()=>{const refs=fixture();const relation:DiplomaticRelation={countryA:'ARG',countryB:'BRA',status:'peace',opinion:0,trust:50,militaryAccess:[],guarantees:[],casusBelli:[],proposals:[],cooldowns:{}};refs.diplomaticRelationsRef.current=[relation];saveGame(refs,'compact');const raw=JSON.parse(localStorage.getItem('imperium_save_compact')!);expect(raw.diplomacy.relations[0].proposals).toBeUndefined();expect(raw.diplomacy.relations[0].cooldowns).toBeUndefined();expect(loadGame('compact')!.diplomacy.relations[0]).toEqual(relation);expect(refs.diplomaticRelationsRef.current[0]).toEqual(relation);});
+  it('omits derived UI explanations which loading already discards',()=>{const refs=fixture();refs.provincesRef.current[0].unrestExplanation={total:3,modifiers:[]};saveGame(refs,'transient');const raw=JSON.parse(localStorage.getItem('imperium_save_transient')!);expect(raw.world.provinces[0].unrestExplanation).toBeUndefined();expect(refs.provincesRef.current[0].unrestExplanation.total).toBe(3);expect(loadGame('transient')!.naval).toEqual(refs.navalStateRef.current);});
+  it('reports storage quota failure without throwing or destroying the previous save',()=>{const refs=fixture();saveGame(refs,'quota');const original=localStorage.getItem('imperium_save_quota');const set=vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw new DOMException('Quota exceeded','QuotaExceededError');});expect(saveGame(refs,'quota')).toBe(false);expect(getSaveCompatibilityError()).toContain('Armazenamento');expect(localStorage.getItem('imperium_save_quota')).toBe(original);set.mockRestore();});
+  it('preserves fleets, units, destinations, routes and movement progress',()=>{const refs=fixture();expect(saveGame(refs,'naval')).toBe(true);const loaded=loadGame('naval')!;expect(loaded.version).toBe(3);expect(loaded.naval).toEqual(refs.navalStateRef.current);expect(loaded.technology.player.countryTag).toBe('BRA');});
+  it('persists naval battles without resetting their duration or losses',()=>{const refs=fixture(),node=portByProvince.get(refs.navalStateRef.current.fleets[0].portProvinceId!)!.seaNodeId;const f=(tag:string):Fleet=>({id:tag,name:tag,countryTag:tag,locationSeaNodeId:node,units:[createNavalUnit(tag,'CRUISER')],route:[],movementProgress:0,status:'HOLDING'});refs.navalStateRef.current=navalCombatTick({fleets:[f('BRA'),f('ARG')],battles:[]},[war],diplomacyDay(refs.dateRef.current),provincesData,[]);refs.warsRef.current=[war];saveGame(refs,'battle');expect(loadGame('battle')!.naval).toEqual(refs.navalStateRef.current);});
+  it('never serializes static graph or ports',()=>{saveGame(fixture(),'naval');const raw=JSON.parse(localStorage.getItem('imperium_save_naval')!);expect(Object.keys(raw.naval).sort()).toEqual(['battles','fleets']);expect(raw.seaNodes).toBeUndefined();expect(raw.ports).toBeUndefined();});
+  it.each([2,3])('older V%s without naval data loads an empty navy without initial spawning',version=>{saveGame(fixture(),'legacy');const raw=JSON.parse(localStorage.getItem('imperium_save_legacy')!);delete raw.naval;raw.version=version;localStorage.setItem('imperium_save_legacy',JSON.stringify(raw));expect(loadGame('legacy')!.naval).toEqual({fleets:[],battles:[]});});
+  it('preserves an explicitly empty navy across repeated loads',()=>{const refs=fixture();refs.navalStateRef.current={fleets:[],battles:[]};saveGame(refs,'empty');expect(loadGame('empty')!.naval!.fleets).toEqual([]);expect(loadGame('empty')!.naval!.fleets).toEqual([]);});
+  it('rejects invalid movement routes at the unknown JSON boundary',()=>{const value=fixture().navalStateRef.current;value.fleets[0].route=['missing'];expect(()=>readNavalSave(value)).toThrow('Rota naval inválida');});
+  it('rejects invalid strengths and duplicate fleet IDs',()=>{const value=fixture().navalStateRef.current;value.fleets[0].units[0].strength=Infinity;expect(()=>readNavalSave(value)).toThrow();const duplicate=fixture().navalStateRef.current;duplicate.fleets.push(duplicate.fleets[0]);expect(()=>readNavalSave(duplicate)).toThrow();});
+  it('rejects corrupted saved naval state instead of silently losing it',()=>{saveGame(fixture(),'bad');const raw=JSON.parse(localStorage.getItem('imperium_save_bad')!);raw.naval.fleets[0].locationSeaNodeId='missing';localStorage.setItem('imperium_save_bad',JSON.stringify(raw));const log=vi.spyOn(console,'error').mockImplementation(()=>{});expect(loadGame('bad')).toBeNull();log.mockRestore();});
+  it('manual load restores the live naval ref and setter without duplication',()=>{const refs=fixture();saveGame(refs,'naval');const expected=structuredClone(refs.navalStateRef.current);refs.navalStateRef.current={fleets:[],battles:[]};const setters={setNavalState:vi.fn(),setPlayerCountryTag:vi.fn(),setProvinces:vi.fn(),setAllCountries:vi.fn(),setArmies:vi.fn(),setWars:vi.fn(),setDiplomaticRelations:vi.fn(),setRecruitments:vi.fn(),setBuildingConstructions:vi.fn(),setPlayerTechState:vi.fn(),setBotTechStates:vi.fn(),setActiveBattles:vi.fn(),setDate:vi.fn()};const hook=renderHook(()=>useSaveSystem(refs,setters,vi.fn()));act(()=>hook.result.current.handleLoad('naval'));expect(refs.navalStateRef.current).toEqual(expected);expect(setters.setNavalState).toHaveBeenCalledWith(expected);expect(setters.setPlayerCountryTag).toHaveBeenCalledWith('BRA');});
+});

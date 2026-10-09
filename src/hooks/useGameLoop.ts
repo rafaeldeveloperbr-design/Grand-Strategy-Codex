@@ -2,6 +2,10 @@ import { processWarResolutionTick } from '../engine/diplomacy/warResolution';
 import { processPoliticalTick } from '../engine/politics';
 import { buildSimulationActivation } from '../engine/simulationActivation';
 import { cleanupDiplomacy } from '../engine/diplomacy';
+import type { NavalState } from '../types/naval';
+import { amphibiousTick, resolveTransportLosses } from '../engine/naval/transport';
+import { processNavalConstructionTick, navalConstructionAI, cleanupNavalState, navalAITick, navalMovementTick, navalCombatTick, navalRecoveryTick, resetNavalPathfindCalls, getNavalPathfindCalls } from '../engine/naval';
+import { diplomacyDay } from '../engine/diplomacy/diplomacyRelations';
 import {
   useCallback,
   useRef,
@@ -24,7 +28,7 @@ import { processUnrestTick } from './gameLoop/unrestTick';
 import { processDiplomacyTechTick } from './gameLoop/diplomacyTechTick';
 import { processAiTick } from './gameLoop/aiTick';
 import { processRebelTick } from './gameLoop/rebelTick';
-import { saveGame, isAutoSaveEnabled } from '../engine/saveSystem';
+import { saveGame, getSaveCompatibilityError, isAutoSaveEnabled } from '../engine/saveSystem';
 import { collectRebellionFormationFeedback, collectRebellionResolutionFeedback } from '../engine/rebellion';
 
 /**
@@ -46,6 +50,8 @@ import { SPEED_INTERVALS, useGameLoopScheduler } from './gameLoop/useGameLoopSch
 import { createGameLoopProfiler } from '../engine/performance/gameLoopProfiler';
 
 type Props = {
+  navalStateRef?: MutableRefObject<NavalState>;
+  setNavalState?: Dispatch<SetStateAction<NavalState>>;
   // Refs principais do jogo
   provincesRef: MutableRefObject<Province[]>;
   countriesRef: MutableRefObject<Country[]>;
@@ -201,6 +207,8 @@ export function useGameLoop(props: Props) {
     let currentActiveBattles = [...activeBattlesRef.current];
     let currentPlayerTechState = playerTechStateRef.current;
     let currentBotTechStates = new Map<string, CountryTechState>(botTechStatesRef.current);
+    let naval = props.navalStateRef?.current ?? { fleets: [], battles: [] };
+    resetNavalPathfindCalls();
 
     // 2. ECONOMY - primeiro, gera recursos e recrutamentos
     const eco = processEconomyTick({ recruitments, armies, countries, provinces, buildingConstructions, wars, relations, playerCountryTag, playerTechState: currentPlayerTechState, botTechStates: currentBotTechStates, date: snapshot.date, allCountries, addToast, addAILog, addLog, formatGameDate });
@@ -233,11 +241,42 @@ export function useGameLoop(props: Props) {
 
     profiler.endPhase('AI');
 
+    const navalActivation = buildSimulationActivation({ countries, provinces, armies, wars, relations, playerCountryTag, date: snapshot.date });
+    const navalProductionAI = props.navalStateRef ? navalConstructionAI(naval, provinces, countries, navalActivation.fullCountryTags, playerCountryTag, wars, diplomacyDay(snapshot.date)) : { naval, provinces, countries };
+    naval = navalProductionAI.naval; provinces = navalProductionAI.provinces; countries = navalProductionAI.countries;
+    const navalProduction = processNavalConstructionTick(naval, provinces, countries);
+    naval = navalProduction.naval;
+    profiler.recordNavalConstruction(navalProduction.counters);
+    profiler.endPhase('navalConstruction');
+    // War participants already activate every country eligible for a hostile naval engagement.
+    const navalAI = navalAITick(naval.fleets, navalActivation.fullCountryTags, playerCountryTag, provinces, relations, wars, new Set(naval.invasions?.map(o => o.fleetId)));
+    naval = { ...naval, fleets: navalAI.fleets };
+    profiler.endPhase('navalAI');
+
     // 8. MOVEMENT - IA já decidiu pra onde ir
     const mov = processMovementTick({ armies, provinces, relations, countries, wars, addLog, addToast, playerCountryTag });
     armies = mov.armies; provinces = mov.provinces; countries = mov.countries; const arrivedArmies = mov.arrivedArmies;
 
     profiler.endPhase('movement');
+
+    naval = { ...naval, fleets: navalMovementTick(naval.fleets, provinces, relations, wars) };
+    profiler.endPhase('navalMovement');
+
+    const previousNavalDays = new Map(naval.battles.map(b => [b.id, b.days]));
+    naval = navalCombatTick(naval, wars, diplomacyDay(snapshot.date), provinces, relations);
+    const engagedThisTick = new Set(naval.battles.filter(b => b.status === 'ACTIVE' || b.days > (previousNavalDays.get(b.id) ?? 0)).flatMap(b => [...b.sideA, ...b.sideB]));
+    const transportLosses = resolveTransportLosses(naval, armies, provinces);
+    ({ naval, armies, provinces } = transportLosses);
+    const recovery = navalRecoveryTick(naval.fleets, countries, provinces, relations, wars);
+    naval = { ...naval, fleets: recovery.fleets }; countries = recovery.countries;
+    profiler.endPhase('navalCombat');
+    const landing = amphibiousTick(naval, armies, provinces, wars, engagedThisTick);
+    naval = landing.naval; armies = landing.armies; arrivedArmies.push(...landing.arrivals);
+    profiler.recordAmphibious({ ...landing.counters, troopLossesAtSea: transportLosses.troopLossesAtSea });
+    for (const feedback of [...transportLosses.messages, ...landing.messages]) {
+      if (feedback.owner === playerCountryTag) addToast(feedback.message, 'info', 'Transporte naval');
+    }
+    profiler.endPhase('amphibious');
 
     // 9. COMBAT - só depois de mover
     const arr = processBattleArrival({ arrivedArmies, armies, provinces, countries, wars, relations, recruitments, buildingConstructions, currentActiveBattles, snapshot, playerCountryTag, allCountries, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities });
@@ -270,6 +309,14 @@ export function useGameLoop(props: Props) {
     profiler.endPhase('rebellion');
 
     ({relations,wars} = cleanupDiplomacy({relations,wars,countries,provinces,armies,date: snapshot.date}));
+    naval = cleanupNavalState(naval, provinces, wars);
+    const cleanupLosses = resolveTransportLosses(naval, armies, provinces);
+    ({ naval, armies, provinces } = cleanupLosses);
+    if (cleanupLosses.troopLossesAtSea) profiler.recordAmphibious({ embarkedArmies: 0, transportedTroops: 0, activeLandings: 0, completedLandings: 0, troopLossesAtSea: cleanupLosses.troopLossesAtSea });
+    for (const feedback of cleanupLosses.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
+    const revalidated = amphibiousTick(naval, armies, provinces, wars, new Set(), false);
+    naval = revalidated.naval;
+    for (const feedback of revalidated.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
     profiler.endPhase('cleanup');
 
     setArmies(armies); setProvinces(provinces); setAllCountries(countries); setWars(wars);
@@ -280,6 +327,9 @@ export function useGameLoop(props: Props) {
     warsRef.current = wars; diplomaticRelationsRef.current = relations; recruitmentsRef.current = recruitments;
     activeBattlesRef.current = currentActiveBattles; buildingConstructionsRef.current = buildingConstructions;
     playerTechStateRef.current = currentPlayerTechState; botTechStatesRef.current = currentBotTechStates;
+    if (props.navalStateRef) props.navalStateRef.current = naval;
+    props.setNavalState?.(naval);
+    profiler.recordNaval({ fleets: naval.fleets.length, movingFleets: naval.fleets.filter(f => f.status === 'MOVING' || f.status === 'RETREATING').length, navalAIBots: navalAI.bots, activeNavalBattles: naval.battles.filter(b => b.status === 'ACTIVE').length, pathfindCalls: getNavalPathfindCalls() });
 
     // Announcements observe the same final state as the UI and save system.
     for (const feedback of collectRebellionResolutionFeedback(snapshot.countries, countries, provinces)) {
@@ -294,11 +344,12 @@ export function useGameLoop(props: Props) {
 
     // AUTOSAVE - todo dia 1 - FIX: agora com slotId
     if (dateRef.current.day === 1 && isAutoSaveEnabled()) {
-      saveGame(
-        { provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef },
+      const saved = saveGame(
+        { provincesRef, countriesRef, armiesRef, warsRef, diplomaticRelationsRef, recruitmentsRef, buildingConstructionsRef, playerTechStateRef, botTechStatesRef, activeBattlesRef, dateRef, navalStateRef: props.navalStateRef },
         'autosave',
         'Autosave'
       );
+      if (!saved) addToast(getSaveCompatibilityError() ?? 'Não foi possível gravar o autosave.', 'warning', 'Autosave');
     }
     profiler.endPhase('statePublication');
     profiler.finish(gameSpeed, SPEED_INTERVALS[gameSpeed]);

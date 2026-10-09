@@ -1,0 +1,23 @@
+{
+  "browser": "Chrome headless, physical CDP right mouse input",
+  "checks": [
+    {
+      "check": "DOCKED -> MOVING in peace, 8px away from center",
+      "x": 494.33203125,
+      "y": 738.27978515625,
+      "id": "sea-568",
+      "r": 12,
+      "pointerEvents": "all"
+    },
+    {
+      "check": "Physical right click after zoom",
+      "x": 435.9150390625,
+      "y": 790.100227355957,
+      "id": "sea-568",
+      "r": 12.000000000000002,
+      "pointerEvents": "all"
+    },
+    "HOLDING -> MOVING through physical contextmenu"
+  ],
+  "errors": []
+}

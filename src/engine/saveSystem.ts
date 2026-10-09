@@ -1,4 +1,4 @@
-import { validateMilitarySave, MilitarySaveCompatibilityError } from './military/saveCompatibility';
+import { validateMilitarySave } from './military/saveCompatibility';
 let lastMilitaryLoadError: string | null = null;
 export const getSaveCompatibilityError = () => lastMilitaryLoadError;
 import { resolveBuildingType, normalizeBuildingLevel } from '../data/buildings';
@@ -16,6 +16,8 @@ import { normalizeTechState } from './technology';
 import { normalizeActiveLaws } from './government';
 import { normalizeNationalTrade } from './economy/tradeState';
 import { mapMetadata, mapCapitals, provincesData } from '../data/map';
+import type { NavalState } from '../types/naval';
+import { readNavalSave } from './naval/saveCompatibility';
 
 // ============ META ============
 export type SaveMeta = {
@@ -59,6 +61,7 @@ export type SaveGameV2 = {
   date: GameDate;
   world: { provinces: Province[]; countries: Country[] };
   military: { armies: Army[]; wars: War[]; activeBattles: ActiveBattle[]; recruitments: Recruitment[] };
+  naval?: NavalState;
   diplomacy: { version?: 2; relations: DiplomaticRelation[] };
   economy: { constructions: BuildingConstruction[] };
   technology: { player: LegacyCountryTechState; bots: Map<string, LegacyCountryTechState> };
@@ -110,14 +113,26 @@ function isSerializedSave(value: unknown): value is SerializedSaveGame {
 function serializeV3(save: SaveGameV3): SerializedSaveGame {
   return { ...save, world: { ...save.world, provinces: save.world.provinces.map(province => {
     const base = provincesData.find(item => item.id === province.id);
-    if (base?.terrain !== province.terrain) return province;
-    const copy = { ...province }; delete copy.terrain; return copy;
+    const copy = { ...province };
+    // This derived UI explanation is already discarded by normalizeSavedProvince.
+    // Omitting it keeps full-world autosaves below browser storage pressure.
+    delete copy.unrestExplanation;
+    if (base?.terrain === province.terrain) delete copy.terrain;
+    return copy;
+  }) }, diplomacy: { ...save.diplomacy, relations: save.diplomacy.relations.map(relation => {
+    const copy = { ...relation };
+    // V3 migration restores these optional empty fields. Keeping 20,100 copies
+    // after load needlessly exceeds localStorage without adding campaign state.
+    for (const key of ['militaryAccess', 'guarantees', 'casusBelli', 'proposals'] as const) if (!copy[key]?.length) delete copy[key];
+    if (copy.cooldowns && !Object.keys(copy.cooldowns).length) delete copy.cooldowns;
+    return copy;
   }) }, technology: { player: save.technology.player, bots: Array.from(save.technology.bots.entries()) } };
 }
 function migrateStructuredSave(raw: SerializedSaveGame): SaveGameV3 {
   return {
     ...raw,
     version: CURRENT_VERSION,
+    naval: readNavalSave(raw.naval),
     economy: { constructions: migrateBuildingConstructions(raw.economy.constructions) },
     world: { ...raw.world, provinces: raw.world.provinces.map(normalizeSavedProvince), countries: raw.world.countries.map(normalizeSavedCountry) },
     technology: { player: normalizeTechState(raw.technology.player), bots: new Map(raw.technology.bots.map(([tag, state]) => [tag, normalizeTechState(state, tag)])) },
@@ -214,7 +229,7 @@ function parseRawSave(rawString: string): SaveGameV3 | null {
     console.warn(`Save com formato desconhecido ou corrompido`);
     return null;
   } catch (e) {
-    if (e instanceof MilitarySaveCompatibilityError) lastMilitaryLoadError = e.message;
+    if (e instanceof Error) lastMilitaryLoadError = e.message;
     console.error('Erro ao parsear save', e);
     return null;
   }
@@ -227,9 +242,11 @@ type SaveGameRefs = {
   recruitmentsRef: { current: Recruitment[] }; buildingConstructionsRef: { current: BuildingConstruction[] };
   playerTechStateRef: { current: CountryTechState }; botTechStatesRef: { current: Map<string, CountryTechState> };
   activeBattlesRef: { current: ActiveBattle[] }; dateRef: { current: GameDate };
+  navalStateRef?: { current: NavalState };
 };
 
 export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, customName?: string) {
+  lastMilitaryLoadError = null;
   const now = Date.now();
   const activeIds = new Set(provincesData.map(province => province.id));
   const isActiveMap = refs.provincesRef.current.length === activeIds.size &&
@@ -238,6 +255,7 @@ export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, cus
     mapId: isActiveMap ? mapMetadata.id : undefined,
     version: CURRENT_VERSION, id: slotId, name: customName || (slotId === AUTO_SAVE_KEY ? 'Autosave' : `Save ${new Date(now).toLocaleString('pt-BR')}`),
     timestamp: now, date: refs.dateRef.current,
+    naval: readNavalSave(refs.navalStateRef?.current),
     world: { provinces: refs.provincesRef.current, countries: refs.countriesRef.current },
     military: { armies: refs.armiesRef.current, wars: refs.warsRef.current, activeBattles: refs.activeBattlesRef.current, recruitments: refs.recruitmentsRef.current },
     diplomacy: { version: 2, relations: refs.diplomaticRelationsRef.current },
@@ -253,7 +271,14 @@ export function saveGame(refs: SaveGameRefs, slotId: string = AUTO_SAVE_KEY, cus
       return false;
     }
   }
-  localStorage.setItem(SAVE_PREFIX + slotId, JSON.stringify(serializeV3(save)));
+  try {
+    localStorage.setItem(SAVE_PREFIX + slotId, JSON.stringify(serializeV3(save)));
+  } catch (error) {
+    lastMilitaryLoadError = typeof error === 'object' && error !== null && 'name' in error && error.name === 'QuotaExceededError'
+      ? 'Armazenamento do navegador cheio. Exclua um save antigo e tente novamente.'
+      : 'Não foi possível gravar o save no navegador.';
+    return false;
+  }
   return true;
 }
 

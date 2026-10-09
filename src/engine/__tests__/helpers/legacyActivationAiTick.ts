@@ -1,24 +1,24 @@
-import { createAITickProfiler, type AITickProfiler } from '../../engine/performance/aiTickProfiler';
-import { createMilitaryAIContext } from '../../engine/aiEngine/militaryAIContext';
-import { buildLogisticsNetworks } from '../../engine/logistics';
-import { processDiplomacyAI } from '../../engine/diplomacy';
-import { buildSimulationActivation } from '../../engine/simulationActivation';
+// Frozen pre-activation Performance Pass V1 baseline for equivalence and benchmarks.
+import { createAITickProfiler, type AITickProfiler } from '../../../engine/performance/aiTickProfiler';
+import { createMilitaryAIContext } from '../../../engine/aiEngine/militaryAIContext';
+import { buildLogisticsNetworks } from '../../../engine/logistics';
+import { processDiplomacyAI } from './legacyActivationDiplomacyAI';
 /**
  * aiTick.ts - 180 linhas - PASSO 4.7 - CORRIGIDO
  * IA dos bots + Fusão automática + IA separatista
  */
-import { processAI, processAIEconomicDecisions } from '../../engine/aiEngine';
-import { processSeparatistAI } from '../../engine/rebellions';
-import { planRebelMovement, respondToRebellions } from '../../engine/rebellion';
-import { calculateArmySize } from '../../engine/combat';
-import { mergeArmies } from '../../engine/military';
-import type { Army, Province, Country, War, Recruitment, BuildingConstruction } from '../../types';
-import type { CountryTechState } from '../../types/technology';
-import type { DiplomaticRelation } from '../../types/diplomacy';
-import type { AIDifficulty } from '../../types/difficulty';
-import type { GameDate } from '../../types/date';
-import type { AIActionType } from '../../types/aiLog';
-import type { ToastType } from '../../types/toast';
+import { processAI, processAIEconomicDecisions } from '../../../engine/aiEngine';
+import { processSeparatistAI } from '../../../engine/rebellions';
+import { planRebelMovement, respondToRebellions } from '../../../engine/rebellion';
+import { calculateArmySize } from '../../../engine/combat';
+import { mergeArmies } from '../../../engine/military';
+import type { Army, Province, Country, War, Recruitment, BuildingConstruction } from '../../../types';
+import type { CountryTechState } from '../../../types/technology';
+import type { DiplomaticRelation } from '../../../types/diplomacy';
+import type { AIDifficulty } from '../../../types/difficulty';
+import type { GameDate } from '../../../types/date';
+import type { AIActionType } from '../../../types/aiLog';
+import type { ToastType } from '../../../types/toast';
 
 const defaultProfiler = createAITickProfiler(import.meta.env.DEV);
 
@@ -55,9 +55,7 @@ export function processAiTick(p: Params) {
   const profiler = p.profiler ?? defaultProfiler;
   profiler.begin(snapshot.date);
 
-  const activationInput = () => ({ countries, provinces, armies, wars, relations, playerCountryTag, date: snapshot.date });
-  const diplomaticActivation = profiler.measure('simulationActivation', () => buildSimulationActivation(activationInput()));
-  const diplomaticAI = profiler.measure('diplomacyAI', () => processDiplomacyAI({relations,wars,countries,armies,provinces,date: snapshot.date},playerCountryTag,profiler.diplomacyProfiler,diplomaticActivation.fullCountryTags));
+  const diplomaticAI = profiler.measure('diplomacyAI', () => processDiplomacyAI({relations,wars,countries,armies,provinces,date: snapshot.date},playerCountryTag,profiler.diplomacyProfiler));
   profiler.measure('botLoggingFeedback', () => {
     const oldProposals = new Set(relations.flatMap(r => r.proposals ?? []).map(p => p.id));
     for (const proposal of diplomaticAI.relations.flatMap(r => r.proposals ?? []).filter(q => q.to === playerCountryTag && !oldProposals.has(q.id))) {
@@ -71,10 +69,8 @@ export function processAiTick(p: Params) {
   const rebellionResponse = profiler.measure('rebellionResponse', () => respondToRebellions(provinces, countries, armies, relations, p.snapshot.date, p.playerCountryTag));
   ({ provinces, countries, armies } = rebellionResponse);
   profiler.measure('botLoggingFeedback', () => rebellionResponse.logs.forEach(message => addAILog('Rebeliões', 'government', message, formatGameDate(snapshot.date), '#e67e22')));
-  const activation = profiler.measure('simulationActivation', () => buildSimulationActivation(activationInput()));
-  const logistics = profiler.measure('buildLogisticsNetworks', () => buildLogisticsNetworks({countries: countries.filter(c => activation.fullCountryTags.has(c.tag)),provinces,relations,wars}));
-  const activeBots = countries.filter(c => c && c.tag !== playerCountryTag && activation.fullCountryTags.has(c.tag));
-  profiler.recordActivation(activation.summary, activeBots.length, countries.filter(c => c.tag !== playerCountryTag && !activation.fullCountryTags.has(c.tag)).length);
+  const logistics = profiler.measure('buildLogisticsNetworks', () => buildLogisticsNetworks({countries,provinces,relations,wars}));
+  const activeBots = countries.filter(c => c && c.tag !== playerCountryTag);
   const dateString = formatGameDate(snapshot.date);
   const militaryContext = profiler.militaryProfiler.measure('indexBuild', () => createMilitaryAIContext(countries, provinces, armies, relations, wars));
 
@@ -115,7 +111,6 @@ export function processAiTick(p: Params) {
     const armiesToMerge = new Map<string, Army[]>();
     for (const army of armies) {
       if (army.owner === playerCountryTag) continue;
-      if (!activation.fullCountryTags.has(army.owner)) continue;
       if (!army.location) continue;
       const key = `${army.owner}_${army.location}`;
       if (!armiesToMerge.has(key)) armiesToMerge.set(key, []);

@@ -35,9 +35,14 @@ describe('selected country uses existing player systems', () => {
     fireEvent.click(screen.getByTitle('Velocidade 1'));
     act(() => vi.advanceTimersByTime(1000));
     expect(screen.getByText('12 de Novembro, 1444')).toBeTruthy();
-    expect(military.mock.calls).toHaveLength(200);
+    expect(military.mock.calls.length).toBeGreaterThanOrEqual(24);
+    expect(military.mock.calls.length).toBeLessThan(200);
     expect(military.mock.calls.map(call => call[0])).not.toContain('AND');
     expect(military.mock.calls.map(call => call[0])).toContain('BRA');
+    expect(military.mock.calls.map(call => call[0])).toContain('FRA');
+    expect(military.mock.calls.map(call => call[0])).toContain('ESP');
+    expect(military.mock.calls.map(call => call[0])).not.toContain('TUV');
+    expect(economic.mock.calls.map(call => call[0].tag)).toEqual(military.mock.calls.map(call => call[0]));
     expect(economic.mock.calls.map(call => call[0].tag)).not.toContain('AND');
     fireEvent.click(screen.getByTitle('Pausar'));
     act(() => vi.advanceTimersByTime(5000));

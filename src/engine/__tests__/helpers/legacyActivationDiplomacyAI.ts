@@ -1,12 +1,13 @@
-import { DiplomacyAIIndex } from './diplomacyAIIndex';
-import { createDiplomacyAIProfiler, type DiplomacyAIProfiler } from '../performance/diplomacyAIProfiler';
-import type { ProposalKind } from '../../types';
-import { DIPLOMACY_BALANCE as B } from './diplomacyBalance';
-import { getRelation, diplomacyDay, relationKey, updateRelation } from './diplomacyRelations';
-import { getAllies, getCountryWars, hasMilitaryAccess, isDiplomaticCountry } from './diplomacySelectors';
-import { actionBlockReason, breakAlliance, breakNonAggressionPact, guaranteeIndependence, offerAgreement, proposalAction, respondAgreement } from './diplomacyActions';
-import { callAllyToWar, respondToWarCall } from './diplomacyWar';
-import type { DiplomacyContext } from './diplomacyTypes';
+// Frozen pre-activation diplomacy baseline.
+import { DiplomacyAIIndex } from '../../diplomacy/diplomacyAIIndex';
+import { createDiplomacyAIProfiler, type DiplomacyAIProfiler } from '../../performance/diplomacyAIProfiler';
+import type { ProposalKind } from '../../../types';
+import { DIPLOMACY_BALANCE as B } from '../../diplomacy/diplomacyBalance';
+import { getRelation, diplomacyDay, relationKey, updateRelation } from '../../diplomacy/diplomacyRelations';
+import { getAllies, getCountryWars, hasMilitaryAccess, isDiplomaticCountry } from '../../diplomacy/diplomacySelectors';
+import { actionBlockReason, breakAlliance, breakNonAggressionPact, guaranteeIndependence, offerAgreement, proposalAction, respondAgreement } from '../../diplomacy/diplomacyActions';
+import { callAllyToWar, respondToWarCall } from '../../diplomacy/diplomacyWar';
+import type { DiplomacyContext } from '../../diplomacy/diplomacyTypes';
 const currentCampaigns = (ctx: DiplomacyContext,tag: string,index?: DiplomacyAIIndex): number => index ? (index.campaignsByTag.get(tag)?.size ?? 0) : new Set(getCountryWars(ctx.wars,tag).map(w => w.campaignId ?? w.id)).size;
 
 export function diplomaticPower(ctx: DiplomacyContext,tag: string,index?: DiplomacyAIIndex): number {
@@ -109,14 +110,14 @@ export function hasUsefulMilitaryAccessRoute(ctx: DiplomacyContext,from: string,
   return false;
 }
 /** Proactive requirements are separate from player actions and AI acceptance. */
-export function collectProactiveProposalCandidates(ctx: DiplomacyContext,playerTag: string, profiler?: DiplomacyAIProfiler, suppliedIndex?: DiplomacyAIIndex, fullCountryTags?: ReadonlySet<string>): DiplomaticProposalCandidate[] {
+export function collectProactiveProposalCandidates(ctx: DiplomacyContext,playerTag: string, profiler?: DiplomacyAIProfiler, suppliedIndex?: DiplomacyAIIndex): DiplomaticProposalCandidate[] {
   const index = suppliedIndex ?? (profiler ? profiler.measure('indexBuild', () => new DiplomacyAIIndex(ctx)) : new DiplomacyAIIndex(ctx));
   const day = diplomacyDay(ctx.date),valid = ctx.countries.filter(isDiplomaticCountry),candidates: DiplomaticProposalCandidate[] = [];
   const requirements = {
     alliance: [B.aiAllianceMinOpinion,B.aiAllianceMinTrust],
     nap: [B.aiNapMinOpinion,B.aiNapMinTrust],access: [B.aiAccessMinOpinion,B.aiAccessMinTrust],
   } as const;
-  for (const a of valid.filter(c => c.tag !== playerTag && (!fullCountryTags || fullCountryTags.has(c.tag)))) for (const b of valid.filter(c => c.tag !== a.tag)) {
+  for (const a of valid.filter(c => c.tag !== playerTag)) for (const b of valid.filter(c => c.tag !== a.tag)) {
     profiler?.count('candidatePairs');
     const pair = { from: a.tag, to: b.tag };
     const r = profiler ? profiler.measure('relationEvaluation', () => index.relation(a.tag,b.tag), pair) : index.relation(a.tag,b.tag);
@@ -150,7 +151,7 @@ export function collectProactiveProposalCandidates(ctx: DiplomacyContext,playerT
 }
 const defaultProfiler = createDiplomacyAIProfiler(import.meta.env.DEV);
 /** Deterministic decisions, persisted per-action cooldowns, no daily proposal spam. */
-export function processDiplomacyAI(ctx: DiplomacyContext,playerTag: string, profiler = defaultProfiler, fullCountryTags?: ReadonlySet<string>) {
+export function processDiplomacyAI(ctx: DiplomacyContext,playerTag: string, profiler = defaultProfiler) {
   profiler.begin(ctx);
   try {
     let next = ctx; const messages: string[] = [];
@@ -182,9 +183,7 @@ export function processDiplomacyAI(ctx: DiplomacyContext,playerTag: string, prof
     if (day % B.aiMaintenanceInterval !== 0) return {...next,messages};
     lookup();
     const valid = ctx.countries.filter(isDiplomaticCountry);
-    // The central activation pass includes pending recipients and war callers
-    // before responses. Existing proposal processing above stays global.
-    for (const a of valid.filter(c => c.tag !== playerTag && (!fullCountryTags || fullCountryTags.has(c.tag)))) {
+    for (const a of valid.filter(c => c.tag !== playerTag)) {
       for (const b of valid.filter(c => c.tag !== a.tag)) {
         profiler.count('maintenancePairs');
         const pair = { from: a.tag, to: b.tag };
@@ -205,7 +204,7 @@ export function processDiplomacyAI(ctx: DiplomacyContext,playerTag: string, prof
     let sent = next.relations.reduce((count,r) => count+Object.entries(r.cooldowns ?? [])
       .filter(([key,until]) => key.includes(':aiProposal:') && until === cycleUntil).length,0);
     const selectedPairs = new Set<string>();
-    for (const candidate of collectProactiveProposalCandidates(next,playerTag,profiler,lookup(),fullCountryTags)) {
+    for (const candidate of collectProactiveProposalCandidates(next,playerTag,profiler,lookup())) {
       if (sent >= B.aiMaxProposalsPerCycle) break;
       const {from,to,kind} = candidate,key = relationKey(from,to);
       if (selectedPairs.has(key) || getRelation(next.relations,from,to)?.proposals?.some(p => p.kind !== 'call' && p.expiresAt > day)) continue;

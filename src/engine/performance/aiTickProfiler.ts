@@ -3,13 +3,17 @@ import { createMilitaryAIProfiler } from './militaryAIProfiler';
 import { profilerNow } from './aiTickProfilerClock';
 export { profilerNow } from './aiTickProfilerClock';
 import type { GameDate } from '../../types/date';
+import type { SimulationActivation } from '../simulationActivation';
 
-export const AI_PHASES = ['diplomacyAI', 'rebellionResponse', 'buildLogisticsNetworks',
+export const AI_PHASES = ['simulationActivation', 'diplomacyAI', 'rebellionResponse', 'buildLogisticsNetworks',
   'botEconomicDecisions', 'botMilitaryAI', 'botLoggingFeedback', 'armyMerge', 'separatistAI',
   'rebelMovement', 'overhead', 'TOTAL'] as const;
 export type AIPhase = typeof AI_PHASES[number];
 export type SlowestBot = { tag: string; duration: number; date: GameDate };
 export type AITickProfile = {
+  simulationActivation?: SimulationActivation['summary'] & { duration: number };
+  activeBotsProcessed?: number;
+  passiveBotsSkipped?: number;
   phases: Record<AIPhase, number>;
   slowestEconomicBot?: SlowestBot;
   slowestMilitaryBot?: SlowestBot;
@@ -38,6 +42,12 @@ export function createAITickProfiler(enabled: boolean, options: {
     diplomacyProfiler,
     militaryProfiler,
     get last() { return last; },
+    recordActivation(summary: SimulationActivation['summary'], activeBotsProcessed: number, passiveBotsSkipped: number) {
+      if (!enabled || !current) return;
+      current.simulationActivation = { ...summary, duration: current.phases.simulationActivation };
+      current.activeBotsProcessed = activeBotsProcessed;
+      current.passiveBotsSkipped = passiveBotsSkipped;
+    },
     begin(gameDate: GameDate) {
       if (!enabled) return;
       started = clock(); date = { ...gameDate }; warned.clear();

@@ -9,6 +9,7 @@ export * from './world';
 export * from './pathfinding';
 export * from './construction';
 export * from './transport';
+export * from './beachExtraction';
 export const fleetSpeed = (f: Fleet): number => f.units.length ? Math.min(...f.units.map(u=>u.speed)) : 0;
 export const fleetStrength = (f: Fleet): number => f.units.reduce((s,u)=>s+u.strength,0);
 export const fleetOrganization = (f: Fleet): number => f.units.length ? f.units.reduce((s,u)=>s+u.organization/u.maxOrganization,0)/f.units.length*100 : 0;
@@ -41,7 +42,11 @@ export function buildNavalPresence(fleets: readonly Fleet[], wars: readonly War[
   return presence;
 }
 export function canUseNavalPort(tag:string, province:Province, relations:readonly DiplomaticRelation[], hostility:Map<string,Set<string>>):boolean {
-  if(!portByProvince.has(province.id) || hostility.get(tag)?.has(province.owner)) return false;
+  return portByProvince.has(province.id) && canUseNavalAccess(tag,province,relations,hostility);
+}
+/** Shared port/beach ownership, alliance and access contract. */
+export function canUseNavalAccess(tag:string, province:Province, relations:readonly DiplomaticRelation[], hostility:Map<string,Set<string>>):boolean {
+  if(hostility.get(tag)?.has(province.owner)) return false;
   if(province.owner===tag) return true;
   const r=relations.find(r=>r.countryA===tag&&r.countryB===province.owner||r.countryB===tag&&r.countryA===province.owner);
   return !!r?.alliance || !!r?.militaryAccess?.includes(province.owner);

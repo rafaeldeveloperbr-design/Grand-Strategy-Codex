@@ -1,12 +1,12 @@
+import { transportFixture } from './transportFixture';
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { countries, provincesData } from '../../data/map';
 import { createNavalUnit } from '../../data/navalUnits';
-import type { DiplomaticRelation, War } from '../../types';
-import type { NavalState } from '../../types/naval';
+import type { War } from '../../types';
 import { amphibiousTick, buildTransportIndexes, disembarkArmy, embarkArmy, fleetTransportCapacity, fleetTransportUsed, LANDING_DAYS, planInvasion, resolveTransportLosses, TRANSPORT_CAPACITY } from '../naval/transport';
-import { createInitialNavies, navalAITick, navalCombatTick, navalMovementTick, orderFleetMove, portByProvince, isCoastalProvince } from '../naval';
-import { createArmy, getArmyReorganizationBlockReason, issueMoveCommand, processArmyMovement, recoverArmy, calculateArmyMaintenance } from '../military';
+import { navalAITick, navalCombatTick, navalMovementTick, orderFleetMove, portByProvince, isCoastalProvince } from '../naval';
+import { getArmyReorganizationBlockReason, issueMoveCommand, processArmyMovement, recoverArmy, calculateArmyMaintenance } from '../military';
 import { calculateArmySize, checkAllProvinceCombats } from '../combat';
 import { processBattleArrival } from '../../hooks/gameLoop/battleArrivalTick';
 import { validateTransportSave } from '../naval/transportSave';
@@ -20,14 +20,7 @@ import * as territory from '../territoryTransfer';
 
 const date = { year: 1444, month: 11, day: 1 };
 const war: War = { id: 'w', attacker: 'BRA', defender: 'ARG', startDate: date, warScore: 0, attackerCasualties: 0, defenderCasualties: 0, occupiedByAttacker: [], occupiedByDefender: [] };
-export function transportFixture(troops = 3600) {
-  const fleet = createInitialNavies(countries, provincesData).find(f => f.countryTag === 'BRA')!;
-  const target = provincesData.find(p => p.owner === 'ARG' && portByProvince.has(p.id))!;
-  const army = createArmy('BRA', '1º Exército', fleet.portProvinceId!);
-  army.id = 'army-transport';
-  army.regiments = Array.from({ length: Math.ceil(troops / 1000) }, (_, i) => ({ type: 'infantry', strength: Math.min(1000, troops - i * 1000), morale: 100, organization: 100, originProvinceId: fleet.portProvinceId }));
-  return { army, fleet, target, ctx: { armies: [army], naval: { fleets: [fleet], battles: [] } as NavalState, provinces: structuredClone(provincesData), wars: [structuredClone(war)], relations: [] as DiplomaticRelation[], actor: 'BRA' } };
-}
+
 function aboard(troops = 3600) { const s = transportFixture(troops); s.ctx.armies = embarkArmy(s.ctx, s.army.id, s.fleet.id).armies; return s; }
 function landing(troops = 3600) {
   const s = aboard(troops);
@@ -66,7 +59,7 @@ describe('Disembark and amphibious arrivals', () => {
   it('rejects disembark at sea', () => { const s = landing(); expect(disembarkArmy(s.ctx, s.army.id).error).toContain('DOCKED'); });
   it('accepts coastal enemy war target and plans a real sea route', () => { const s = aboard(); const result = planInvasion(s.ctx, s.fleet.id, [s.army.id], s.target.id); expect(result.error).toBeUndefined(); expect(result.naval.invasions?.[0]).toMatchObject({ status: 'SAILING', landingDays: 0, targetProvinceId: s.target.id }); expect(result.naval.fleets[0].route.length).toBeGreaterThan(0); });
   it('rejects inland targets', () => { const s = aboard(); const p = provincesData.find(p => !isCoastalProvince(p.id))!; expect(planInvasion(s.ctx, s.fleet.id, [s.army.id], p.id).error).toContain('não costeiro'); });
-  it('explicitly rejects coast without validated landing connection', () => { const s = aboard(); const p = provincesData.find(p => isCoastalProvince(p.id) && !portByProvince.has(p.id))!; expect(planInvasion(s.ctx, s.fleet.id, [s.army.id], p.id).error).toContain('V1 exige'); });
+  it('accepts enemy coast without port', () => { const s = aboard(); const p = provincesData.find(p => p.owner === 'ARG' && isCoastalProvince(p.id) && !portByProvince.has(p.id))!; expect(planInvasion(s.ctx, s.fleet.id, [s.army.id], p.id).error).toBeUndefined(); });
   it('rejects neutral targets and invalid army selection', () => { const s = aboard(); s.ctx.wars = []; expect(planInvasion(s.ctx, s.fleet.id, [s.army.id], s.target.id).error).toContain('Não está em guerra'); s.ctx.wars = [war]; expect(planInvasion(s.ctx, s.fleet.id, ['missing'], s.target.id).error).toContain('Selecione Armies'); });
   it('reports no route when fleet has no valid naval origin', () => { const s = aboard(); s.fleet.portProvinceId = undefined; s.fleet.locationSeaNodeId = 'missing'; expect(planInvasion(s.ctx, s.fleet.id, [s.army.id], s.target.id).error).toContain('Sem rota marítima'); });
   it.each(['COMBAT', 'RETREATING'] as const)('rejects fleet %s', status => { const s = aboard(); s.fleet.status = status; expect(planInvasion(s.ctx, s.fleet.id, [s.army.id], s.target.id).error).toContain('combate ou retirada'); });

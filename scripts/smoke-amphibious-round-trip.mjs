@@ -5,15 +5,15 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-const profile = await mkdtemp(join(tmpdir(), 'amphibious-smoke-'));
-const server = await createServer({ server: { host: '127.0.0.1', port: 3012, strictPort: true, hmr: false }, logLevel: 'error' });
+const profile = await mkdtemp(join(tmpdir(), 'amphibious-v12-smoke-'));
+const server = await createServer({ server: { host: '127.0.0.1', port: 3017, strictPort: true, hmr: false }, logLevel: 'error' });
 let chrome, ws, sequence = 0;
 const pending = new Map(), errors = [], checks = [];
 try {
   await server.listen();
-  chrome = spawn(process.env.NAVAL_CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe', ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=9334', `--user-data-dir=${profile}`, 'about:blank'], { windowsHide: true, stdio: 'ignore' });
+  chrome = spawn(process.env.NAVAL_CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe', ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=9339', `--user-data-dir=${profile}`, 'about:blank'], { windowsHide: true, stdio: 'ignore' });
   let page;
-  for (let i = 0; i < 80; i++) { try { page = (await (await fetch('http://127.0.0.1:9334/json/list')).json()).find(p => p.type === 'page'); if (page) break; } catch {} await delay(250); }
+  for (let i = 0; i < 80; i++) { try { page = (await (await fetch('http://127.0.0.1:9339/json/list')).json()).find(p => p.type === 'page'); if (page) break; } catch {} await delay(250); }
   if (!page) throw new Error('Chrome debugger unavailable');
   ws = new WebSocket(page.webSocketDebuggerUrl); await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
   ws.onmessage = e => { const msg = JSON.parse(e.data); if (msg.id) { const p = pending.get(msg.id); pending.delete(msg.id); if (msg.error) p.reject(new Error(msg.error.message)); else p.resolve(msg.result); } if (msg.method === 'Runtime.exceptionThrown') errors.push(msg.params.exceptionDetails.exception?.description ?? msg.params.exceptionDetails.text); };
@@ -24,7 +24,7 @@ try {
   const button = async (label, scope = 'document') => { await evaluate(`(()=>{const el=[...${scope}.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(label)});if(!el||el.disabled)throw new Error('Unavailable button '+${JSON.stringify(label)});el.click();})()`); await delay(150); };
   const assert = (v, m) => { if (!v) throw new Error(m); };
   await call('Runtime.enable'); await call('Page.enable'); await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
-  await call('Page.navigate', { url: 'http://127.0.0.1:3012/?newgame=1' });
+  await call('Page.navigate', { url: 'http://127.0.0.1:3017/?newgame=1' });
   await waitFor(`document.querySelector('.country-selection__list button')`);
   await button('Brasil', "document.querySelector('.country-selection__list')"); await event('.country-selection__play');
   await waitFor(`document.querySelector('[data-fleet-id="fleet-BRA-1"]')`);
@@ -45,7 +45,7 @@ try {
   assert(!await evaluate(`document.querySelector('.army-marker[aria-label^="Brasil:"]')`), 'Terrestrial army marker still rendered');
   await selectFleet(); assert(await evaluate(`document.querySelector('[aria-label="Transport Capacity"]').textContent.includes('Exército')`), 'Cargo panel missing');
   checks.push('New Game BRA: land move to São Paulo, Embark, no land marker, FleetPanel cargo/capacity');
-  const { seaNodeById, portByProvince } = await server.ssrLoadModule('/src/engine/naval/index.ts');
+  const { seaNodeById, portByProvince, resolveAmphibiousLandingSeaNode, navalPorts } = await server.ssrLoadModule('/src/engine/naval/index.ts');
   const homeNode = portByProvince.get(portId).seaNodeId, neighbor = seaNodeById.get(homeNode).neighbors[0];
   await event(`[aria-label="SeaNode ${neighbor}"]`, 'contextmenu'); await event('[title="Velocidade 3"]');
   await waitFor(live(`s.naval.fleets.find(f=>f.id==='fleet-BRA-1')?.locationSeaNodeId===${JSON.stringify(neighbor)}&&s.naval.fleets.find(f=>f.id==='fleet-BRA-1')?.status==='HOLDING'`)); await event('[title="Pausar"]');
@@ -66,24 +66,68 @@ try {
   assert((await snapshot()).armies.find(a => a.id === armyId).location === dock, 'Disembark location incorrect');
   checks.push('Return to friendly port and per-army Disembark restores land presence');
   await selectArmy(); await button('Embark');
-  // Accelerated fixture retains the real world/save schema and army, and avoids a long voyage.
-  const target = seaSave.world.provinces.find(p => p.owner === 'ARG' && portByProvince.has(p.id));
+  // War/access fixture retains the real naval graph and uses actual voyages.
+  const target = seaSave.world.provinces.find(p => p.id === 'sa_arg_restored_1');
   await event('[' + 'data-province-id=' + JSON.stringify(target.id) + ']'); await button('Declarar guerra'); await button('Confirmar Declaração de Guerra');
   assert((await snapshot()).wars.some(w=>w.attacker==='BRA'&&w.defender==='ARG'||w.defender==='BRA'&&w.attacker==='ARG'), 'UI war declaration failed');
   checks.push('Real UI war declaration against Argentina before planning invasion');
   seaSave.military.wars = [{ id: 'amphibious-browser-war', attacker: 'BRA', defender: 'ARG', startDate: seaSave.date, warScore: 0, attackerCasualties: 0, defenderCasualties: 0, occupiedByAttacker: [], occupiedByDefender: [] }];
   seaSave.diplomacy.relations = seaSave.diplomacy.relations.map(r => r.countryA === 'BRA' && r.countryB === 'ARG' || r.countryA === 'ARG' && r.countryB === 'BRA' ? { ...r, status: 'war', alliance: false, militaryAccess: [] } : r);
+  const portC = navalPorts.find(p=>seaSave.world.provinces.find(v=>v.id===p.provinceId)?.owner==='CHL');
+  assert(portC.provinceId!==portId,'Port C must differ from Port A');
+  const accessRelation=seaSave.diplomacy.relations.find(r=>r.countryA==='BRA'&&r.countryB==='CHL'||r.countryA==='CHL'&&r.countryB==='BRA');
+  if(accessRelation)accessRelation.militaryAccess=[...(accessRelation.militaryAccess??[]),'CHL'];
+  else seaSave.diplomacy.relations.push({countryA:'BRA',countryB:'CHL',status:'peace',opinion:0,trust:50,militaryAccess:['CHL']});
   seaSave.military.armies = seaSave.military.armies.filter(a => a.owner !== 'ARG');
   seaSave.naval.fleets = seaSave.naval.fleets.filter(f => f.countryTag === 'BRA');
   const transport = seaSave.naval.fleets.find(f => f.id === 'fleet-BRA-1');
-  Object.assign(transport, { portProvinceId: undefined, locationSeaNodeId: portByProvince.get(target.id).seaNodeId, status: 'HOLDING', route: [], movementProgress: 0, destinationSeaNodeId: undefined, destinationPortId: undefined });
-  const reloadFixture = async save => { await evaluate(`localStorage.clear();localStorage.setItem('imperium_save_autosave',${JSON.stringify(JSON.stringify(save))});window.__amphibiousNavigating=true`); await call('Page.navigate', { url: 'http://127.0.0.1:3012/' }); await waitFor(`!window.__amphibiousNavigating&&document.querySelector('[data-fleet-id="fleet-BRA-1"]')`); };
+  Object.assign(transport, { portProvinceId: undefined, locationSeaNodeId: homeNode, status: 'HOLDING', route: [], movementProgress: 0, destinationSeaNodeId: undefined, destinationPortId: undefined });
+  const reloadFixture = async save => { await evaluate(`localStorage.clear();localStorage.setItem('imperium_save_autosave',${JSON.stringify(JSON.stringify(save))});window.__amphibiousNavigating=true`); await call('Page.navigate', { url: 'http://127.0.0.1:3017/' }); await waitFor(`!window.__amphibiousNavigating&&document.querySelector('[data-fleet-id="fleet-BRA-1"]')`); };
   await reloadFixture(seaSave); await selectFleet(); await event(`[aria-label="Invade with ${name}"]`); await button('Plan Invasion'); await event(`[data-province-id="${target.id}"]`);
   const invasionState = await snapshot(); if (invasionState.naval.invasions?.length !== 1) console.log('Invasion diagnostic', {naval:invasionState.naval, army:invasionState.armies.find(a=>a.id===armyId), tail:await evaluate('document.body.textContent.slice(-1600)')});
   assert(invasionState.naval.invasions?.length === 1, 'Plan Invasion UI failed');
   await event('[title="Velocidade 3"]'); await waitFor(live(`s.provinces.find(p=>p.id===${JSON.stringify(target.id)})?.owner==='BRA'`)); await event('[title="Pausar"]');
   state = await snapshot(); assert(state.armies.find(a => a.id === armyId).location === target.id, 'Landing army missing');
-  checks.push('Labeled accelerated war/coastal save fixture: Plan Invasion UI, real x3 ticks, three-day landing, empty target capture');
+  checks.push('War/access fixture: Plan Invasion UI, actual voyage, five-day Tierra del Fuego landing and empty target occupation');
+
+  // Round trip uses real UI commands and daily simulation, including a mid-extraction save.
+  assert(!portByProvince.has(target.id), 'Tierra del Fuego unexpectedly has a port');
+  assert(state.naval.fleets.find(f=>f.id==='fleet-BRA-1').locationSeaNodeId===resolveAmphibiousLandingSeaNode(target).id, 'Fleet left the landing coast');
+  await event(`[data-province-id="${target.id}"]`); await event('[aria-label="Locate selected entity"]');
+  await selectArmy(); await waitFor(`document.querySelector('[aria-label="Army transport"] button')?.textContent==='Embark'`);
+  assert(await evaluate(`document.querySelector('[aria-label="Army transport"]').textContent.includes('Embarque pela praia')`), 'Beach extraction UI missing');
+  await button('Embark');
+  let extracting = await snapshot();
+  assert(extracting.armies.find(a=>a.id===armyId).location===target.id && extracting.armies.find(a=>a.id===armyId).beachExtraction?.elapsedDays===0, 'Extraction removed land presence early');
+  await event('[title="Velocidade 1"]'); await waitFor(live(`s.armies.find(a=>a.id===${JSON.stringify(armyId)})?.beachExtraction?.elapsedDays>=2`)); await event('[title="Pausar"]');
+  extracting = await snapshot();
+  const elapsedBeforeSave = extracting.armies.find(a=>a.id===armyId).beachExtraction.elapsedDays;
+  assert(elapsedBeforeSave<5, 'Extraction completed before mid-operation save');
+  await evaluate(`Object.keys(localStorage).filter(k=>k.startsWith('imperium_save_')).forEach(k=>localStorage.removeItem(k))`);
+  await event('[title^="Configura"]'); await event('.settings-modal__btn--primary');
+  await waitFor(`Object.keys(localStorage).some(k=>k.startsWith('imperium_save_')&&k!=='imperium_save_autosave')`);
+  const extractionKey = await evaluate(`Object.keys(localStorage).find(k=>k.startsWith('imperium_save_')&&k!=='imperium_save_autosave')`);
+  const extractionSave = await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(extractionKey)}))`);
+  assert(extractionSave.military.armies.find(a=>a.id===armyId).beachExtraction.elapsedDays===elapsedBeforeSave, 'Save lost extraction progress');
+  await event('.settings-modal__btn--small:not(.settings-modal__btn--danger)');
+  const loadedExtraction = (await snapshot()).armies.find(a=>a.id===armyId);
+  assert(loadedExtraction.location===target.id && loadedExtraction.beachExtraction.elapsedDays===elapsedBeforeSave, 'Load lost terrestrial extraction state');
+  const midShot = await call('Page.captureScreenshot', {format:'png'});
+  await writeFile('artifacts/amphibious-v1.2-extraction-browser.png',Buffer.from(midShot.data,'base64'));
+  await event('[title="Velocidade 3"]'); await waitFor(live(`s.armies.find(a=>a.id===${JSON.stringify(armyId)})?.embarkedFleetId==='fleet-BRA-1'`)); await event('[title="Pausar"]');
+  state = await snapshot();
+  const reembarked = state.armies.find(a=>a.id===armyId);
+  assert(reembarked.location===null && !reembarked.beachExtraction && state.armies.filter(a=>a.id===armyId).length===1, 'Completion left stale/duplicate Army state');
+  assert(state.naval.fleets.find(f=>f.id==='fleet-BRA-1').locationSeaNodeId===resolveAmphibiousLandingSeaNode(target).id, 'Extraction teleported Fleet');
+  await selectFleet(); await event(`[data-province-id="${portC.provinceId}"]`, 'contextmenu');
+  await event('[title="Velocidade 3"]'); await waitFor(live(`s.naval.fleets.find(f=>f.id==='fleet-BRA-1')?.status==='DOCKED'&&s.naval.fleets.find(f=>f.id==='fleet-BRA-1')?.portProvinceId===${JSON.stringify(portC.provinceId)}`)); await event('[title="Pausar"]');
+  await button(`Disembark ${name}`);
+  state = await snapshot();
+  const returned = state.armies.find(a=>a.id===armyId);
+  assert(returned.location===portC.provinceId && !returned.embarkedFleetId && !returned.beachExtraction && state.naval.invasions.length===0, 'Port C disembark left stale state');
+  const roundTripShot = await call('Page.captureScreenshot', {format:'png'});
+  await writeFile('artifacts/amphibious-v1.2-round-trip-browser.png',Buffer.from(roundTripShot.data,'base64'));
+  checks.push('Real Port A → Tierra del Fuego voyage, five-day beach landing and occupation; five-day extraction with mid-countdown Save V3/load; real voyage to distinct friendly Port C and Disembark; no stale state or new Port');
   const { createNavalUnit } = await server.ssrLoadModule('/src/data/navalUnits.ts');
   const battleSave = structuredClone(seaSave);
   const own = battleSave.naval.fleets.find(f => f.id === 'fleet-BRA-1'); own.units = [{ ...createNavalUnit('fragile-browser-transport', 'TRANSPORT'), strength: .001 }];
@@ -94,7 +138,7 @@ try {
   checks.push('Labeled fragile-transport/enemy save fixture: real NavalBattle destroys Transport and embarked Army, reports troop losses');
   assert(errors.length === 0, 'Browser runtime exceptions');
   const screenshot = await call('Page.captureScreenshot', { format: 'png' });
-  await writeFile('artifacts/amphibious-invasion-v1-browser.png', Buffer.from(screenshot.data, 'base64'));
+  await writeFile('artifacts/amphibious-v1.2-browser.png', Buffer.from(screenshot.data, 'base64'));
   const report = { browser: 'Chrome headless / actual React UI / real daily ticks', checks, errors };
-  await writeFile('artifacts/amphibious-invasion-v1-browser.json', JSON.stringify(report, null, 2)); console.log(JSON.stringify(report, null, 2));
+  await writeFile('artifacts/amphibious-v1.2-browser.json', JSON.stringify(report, null, 2)); console.log(JSON.stringify(report, null, 2));
 } finally { ws?.close(); chrome?.kill(); await server.close(); }

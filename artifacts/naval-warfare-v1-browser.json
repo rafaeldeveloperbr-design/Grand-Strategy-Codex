@@ -18,17 +18,17 @@
   "errors": [],
   "performance": {
     "normalMode": {
-      "frames": 49,
-      "maxFrameGapMs": 300,
-      "over50ms": 8,
+      "frames": 18,
+      "maxFrameGapMs": 316.7000000000007,
+      "over50ms": 9,
       "renderedNavalEdges": 0
     },
     "navalMode": {
-      "frames": 43,
-      "maxFrameGapMs": 316.7000000000007,
-      "over50ms": 8,
+      "frames": 19,
+      "maxFrameGapMs": 383.2999999999993,
+      "over50ms": 13,
       "renderedNavalEdges": 70
     }
   },
-  "afterBattle": "Brasil · 1ª Frota✕🇧🇷 BrasilAtlantic · sea-590Status: HOLDING · 0%Velocidade: 18 · Força: 222 · Organização: 16%Destino: —DESTROYER: 44/100 · Org 16DESTROYER: 44/100 · Org 16CRUISER: 44/100 · Org 16BATTLESHIP: 44/100 · Org 16TRANSPORT: 44/100 · Org 16Locate (F)Return to PortCancel OrderAtive Naval Mode e clique com o botão direito num SeaNode para mover ou num porto para atracar."
+  "afterBattle": "Brasil · 1ª Frota✕🇧🇷 BrasilAtlantic · sea-590Status: HOLDING · 0%Velocidade: 18 · Força: 222 · Organização: 16%Destino: —Transport Capacity: 0 / 5.000Embarked Armies:DESTROYER: 44/100 · Org 16DESTROYER: 44/100 · Org 16CRUISER: 44/100 · Org 16BATTLESHIP: 44/100 · Org 16TRANSPORT: 44/100 · Org 16Locate (F)Return to PortCancel OrderAtive Naval Mode e clique com o botão direito num SeaNode para mover, num porto para atracar ou numa frota hostil para interceptar seu node lógico atual/próximo."
 }

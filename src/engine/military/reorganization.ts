@@ -19,6 +19,7 @@ export function getArmyReorganizationBlockReason(army: Army | undefined, ctx: Re
   if (army.owner.startsWith('rebel_') || army.rebellionFactionId) return B.rebel;
   if (army.owner !== ctx.playerCountryTag) return B.foreign;
   if (army.embarkedFleetId) return 'Army embarcado: desembarque antes de reorganizar.';
+  if (army.beachExtraction) return 'Army em extra\u00e7\u00e3o: cancele antes de reorganizar.';
   if ((army.inCombat || !!army.retreatProtectionDays) || ctx.activeBattles?.some(b => b.participantArmyIds.includes(army.id))) return B.battle;
   if (army.destination || army.targetDestination || army.path.length || army.movementPlan?.waypoints.length || army.movementProgress > 0 || army.position) return B.moving;
   if (!army.location || !ctx.provinces.some(p => p.id === army.location)) return B.location;

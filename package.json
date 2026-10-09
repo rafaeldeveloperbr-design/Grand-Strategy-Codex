@@ -25,7 +25,9 @@
     "benchmark:naval-construction": "node scripts/benchmark-naval-construction.mjs",
     "smoke:naval-construction": "node scripts/smoke-naval-construction.mjs",
     "benchmark:battle-v3": "node scripts/benchmark-battle-v3.mjs",
-    "smoke:battle-v3": "node scripts/smoke-battle-v3-browser.mjs"
+    "smoke:battle-v3": "node scripts/smoke-battle-v3-browser.mjs",
+    "smoke:amphibious-round-trip": "node scripts/smoke-amphibious-round-trip.mjs",
+    "benchmark:beach-extraction": "node scripts/benchmark-beach-extraction.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",

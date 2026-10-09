@@ -1,3 +1,4 @@
+import { beachExtractionTick } from '../engine/naval/beachExtraction';
 import { airAITick, airCombatTick, airMissionsTick, cleanupAirState, airCounters, airProductionAI, processAirProductionTick, cleanupAirProduction } from '../engine/air';
 import type { AirState } from '../types/air';
 import { processWarResolutionTick } from '../engine/diplomacy/warResolution';
@@ -5,7 +6,7 @@ import { processPoliticalTick } from '../engine/politics';
 import { buildSimulationActivation } from '../engine/simulationActivation';
 import { cleanupDiplomacy } from '../engine/diplomacy';
 import type { NavalState } from '../types/naval';
-import { amphibiousTick, resolveTransportLosses } from '../engine/naval/transport';
+import { amphibiousTick, amphibiousAITick, resolveTransportLosses } from '../engine/naval/transport';
 import { processNavalConstructionTick, navalConstructionAI, cleanupNavalState, navalAITick, navalMovementTick, navalCombatTick, navalRecoveryTick, resetNavalPathfindCalls, getNavalPathfindCalls } from '../engine/naval';
 import { diplomacyDay } from '../engine/diplomacy/diplomacyRelations';
 import {
@@ -261,6 +262,7 @@ export function useGameLoop(props: Props) {
     for (const feedback of airProduction.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'info', 'Aircraft Production');
     profiler.endPhase('airProduction');
     // War participants already activate every country eligible for a hostile naval engagement.
+    naval = amphibiousAITick({ naval, armies, provinces, wars, relations }, navalActivation.fullCountryTags, playerCountryTag);
     const navalAI = navalAITick(naval.fleets, navalActivation.fullCountryTags, playerCountryTag, provinces, relations, wars, new Set(naval.invasions?.map(o => o.fleetId)));
     naval = { ...naval, fleets: navalAI.fleets };
     profiler.endPhase('navalAI');
@@ -304,6 +306,10 @@ export function useGameLoop(props: Props) {
     const arr = processBattleArrival({ arrivedArmies, armies, provinces, countries, wars, relations, recruitments, buildingConstructions, currentActiveBattles, snapshot, playerCountryTag, allCountries, activeBattlesRef, addLog, addToast, setActiveBattles, cancelProvinceActivities });
     armies = arr.armies; provinces = arr.provinces; countries = arr.countries; currentActiveBattles = arr.currentActiveBattles; recruitments = arr.recruitments; buildingConstructions = arr.buildingConstructions;
 
+    // Land arrivals must establish Battle V3 before extraction can complete.
+    const extraction = beachExtractionTick({ naval, armies, provinces, wars, relations, activeBattles: currentActiveBattles }, engagedThisTick);
+    armies = extraction.armies;
+    for (const feedback of extraction.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'info', 'Transporte naval');
     profiler.endPhase('battleArrival');
 
     const beforeBattleStrength = armies.reduce((sum,a)=>sum+a.regiments.reduce((n,r)=>n+r.strength,0),0);
@@ -341,6 +347,9 @@ export function useGameLoop(props: Props) {
     const revalidated = amphibiousTick(naval, armies, provinces, wars, new Set(), false);
     naval = revalidated.naval;
     for (const feedback of revalidated.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
+    const extractionCleanup = beachExtractionTick({ naval, armies, provinces, wars, relations, activeBattles: currentActiveBattles }, new Set(), false);
+    armies = extractionCleanup.armies;
+    for (const feedback of extractionCleanup.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
     const productionCleanup = cleanupAirProduction(air, provinces, countries);
     for (const feedback of productionCleanup.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Aircraft Production');
     air = cleanupAirState(productionCleanup.state, { provinces, countries, wars, relations });

@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { countries, provincesData } from '../../../data/map';
-import { createInitialNavies, portByProvince } from '../../../engine/naval';
+import { createInitialNavies, portByProvince, resolveAmphibiousLandingSeaNode } from '../../../engine/naval';
 import { createArmy } from '../../../engine/military';
 import { ArmyTransportPanel } from '../../ArmyTransportPanel';
 import { FleetPanel, NavalBattlePanel } from '../../FleetPanel';
@@ -25,4 +25,58 @@ describe('Army transport UI', () => {
   it('canceling target selection restores regular province selection', () => { const { container } = render(<GameMap {...mapProps} onInvasion={noop}/>); fireEvent.click(screen.getByLabelText(`Invade with ${army.name}`)); fireEvent.click(screen.getByText('Plan Invasion')); fireEvent.click(screen.getByText('Cancelar seleção')); fireEvent.click(container.querySelector(`[data-province-id="${target.id}"]`)!); expect(mapProps.onProvinceClick).toHaveBeenCalledWith(target.id); });
   it('embarked army has no terrestrial marker/group', () => { expect(buildArmyPresentation([embarked], provincesData).groups).toEqual([]); });
   it('NavalBattlePanel exposes troops aboard and distinct troop losses', () => { render(<NavalBattlePanel fleets={[fleet]} armies={[embarked]} battle={{ id: 'battle', seaNodeId: portByProvince.get(fleet.portProvinceId!)!.seaNodeId, sideA: [fleet.id], sideB: ['enemy'], startedAt: -100, days: 1, lossesA: 10, lossesB: 20, status: 'ENDED', embarkedTroopLosses: 2000 }} onLocate={noop} onClose={noop}/>); expect(screen.getByText(/Troops aboard/).textContent).toContain('3.600'); expect(screen.getByText(/Embarked troop losses/).textContent).toContain('2.000'); });
+});
+
+describe('Beach target UX',()=>{
+  it('right-click also selects a beach target',()=>{const invade=vi.fn();const beach=provincesData.find(p=>p.id==='sa_arg_restored_1')!;const {container}=render(<GameMap {...mapProps} onInvasion={invade}/>);fireEvent.click(screen.getByLabelText(`Invade with ${army.name}`));fireEvent.click(screen.getByText('Plan Invasion'));fireEvent.contextMenu(container.querySelector(`[data-province-id="${beach.id}"]`)!);expect(invade).toHaveBeenCalledWith([army.id],beach.id);expect(mapProps.onProvinceRightClick).not.toHaveBeenCalled();});
+  it.each([true,false])('hover shows port=%s duration',port=>{const province=port?target:provincesData.find(p=>p.id==='sa_arg_restored_1')!;render(<GameMap {...mapProps} hoveredProvince={province.id} wars={[{id:'ui-war',attacker:'BRA',defender:'ARG',startDate:{year:1444,month:11,day:1},warScore:0,attackerCasualties:0,defenderCasualties:0,occupiedByAttacker:[],occupiedByDefender:[]}]} onInvasion={noop}/>);fireEvent.click(screen.getByLabelText(`Invade with ${army.name}`));fireEvent.click(screen.getByText('Plan Invasion'));expect(screen.getByRole('status').textContent).toContain(port?'porto \u2014 3 dias':'praia \u2014 5 dias');});
+});
+
+describe('Beach extraction UI V1.2', () => {
+  const beachId = 'sa_arg_restored_1';
+  function beachSetup() {
+    const provinces = structuredClone(provincesData);
+    provinces.find(p => p.id === beachId)!.owner = 'BRA';
+    const land = { ...army, location: beachId };
+    const offshore = { ...fleet, status: 'HOLDING' as const, portProvinceId: undefined, locationSeaNodeId: resolveAmphibiousLandingSeaNode(beachId)!.id };
+    return { land, offshore, props: { army: land, armies: [land], fleets: [offshore], provinces, owner: true, onEmbark: vi.fn(), onDisembark: noop } };
+  }
+  it('offers the existing Fleet selector and Embark command for a valid beach', () => {
+    const s = beachSetup(); render(<ArmyTransportPanel {...s.props}/>);
+    expect(screen.getByText('Embarque pela praia — 5 dias')).toBeTruthy();
+    expect(screen.getByLabelText('Embark Fleet').textContent).toContain(s.offshore.name);
+    fireEvent.click(screen.getByText('Embark')); expect(s.props.onEmbark).toHaveBeenCalledWith(s.offshore.id);
+  });
+  it('shows progress and allows player cancellation while the Army stays on land', () => {
+    const s = beachSetup(), cancel = vi.fn(), extracting = { ...s.land, beachExtraction: { fleetId: s.offshore.id, provinceId: beachId, seaNodeId: s.offshore.locationSeaNodeId, elapsedDays: 2 } };
+    render(<ArmyTransportPanel {...s.props} army={extracting} armies={[extracting]} onCancelExtraction={cancel}/>);
+    expect(screen.getByText(/2\/5 dias/)).toBeTruthy(); expect(screen.queryByText('Embark')).toBeNull();
+    fireEvent.click(screen.getByText('Cancelar extração')); expect(cancel).toHaveBeenCalledOnce();
+  });
+  it('shows the wrong-coast reason when the Fleet is elsewhere', () => {
+    const s = beachSetup(); s.offshore.locationSeaNodeId = portByProvince.get(fleet.portProvinceId!)!.seaNodeId;
+    render(<ArmyTransportPanel {...s.props}/>); expect(screen.getByText(/SeaNode correto/)).toBeTruthy(); expect(screen.queryByText('Embark')).toBeNull();
+  });
+  it.each(['army', 'fleet'])('disables Embark and explains %s combat', reason => {
+    const s = beachSetup();
+    const land = { ...s.land, inCombat: reason === 'army' };
+    const offshore = { ...s.offshore, status: reason === 'fleet' ? 'COMBAT' as const : 'HOLDING' as const };
+    render(<ArmyTransportPanel {...s.props} army={land} armies={[land]} fleets={[offshore]}/>);
+    expect((screen.getByText('Embark') as HTMLButtonElement).disabled).toBe(true); expect(screen.getByText(/batalha|combate/)).toBeTruthy();
+  });
+  it('shows reserved capacity and prevents overbooking in the UI', () => {
+    const s = beachSetup(), reserving = { ...s.land, id: 'reserved', regiments: [{ type: 'infantry' as const, strength: 2000, morale: 100 }], beachExtraction: { fleetId: s.offshore.id, provinceId: beachId, seaNodeId: s.offshore.locationSeaNodeId, elapsedDays: 1 } };
+    render(<ArmyTransportPanel {...s.props} armies={[s.land, reserving]}/>);
+    expect(screen.getByLabelText('Embark Fleet').textContent).toContain('Reservada 2000');
+    expect((screen.getByText('Embark') as HTMLButtonElement).disabled).toBe(true); expect(screen.getByText(/Transporte insuficiente/)).toBeTruthy();
+  });
+  it('shows the access rejection explicitly', () => {
+    const s = beachSetup(); s.props.provinces.find(p => p.id === beachId)!.owner = 'CHL';
+    render(<ArmyTransportPanel {...s.props}/>); expect(screen.getByText(/Acesso/)).toBeTruthy();
+    expect((screen.getByText('Embark') as HTMLButtonElement).disabled).toBe(true);
+  });
+  it('FleetPanel displays capacity reserved by terrestrial extractions', () => {
+    const s = beachSetup(); render(<FleetPanel fleet={s.offshore} provinces={s.props.provinces} extractingArmies={[s.land]} owner onReturn={noop} onCancel={noop} onLocate={noop} onClose={noop}/>);
+    expect(screen.getByText(/Reserved for beach extraction/).textContent).toContain('3.600');
+  });
 });

@@ -73,7 +73,26 @@ try {
   for(const n of nodes) if(!visited.has(n.id)) { const ids=new Set([n.id]), queue=[n.id]; visited.add(n.id); for(let i=0;i<queue.length;i++) for(const id of byId.get(queue[i]).neighbors) if(!visited.has(id)) { visited.add(id); ids.add(id); queue.push(id); } components.push(ids); }
   components.sort((a,b)=>b.size-a.size); const main=components[0];
   const connectedPorts=ports.filter(p=>main.has(p.seaNodeId)), usedTags=new Set();
-  const graph={ nodes:nodes.filter(n=>main.has(n.id)).map(n=>({...n,neighbors:n.neighbors.filter(id=>main.has(id)).sort()})), edges:edges.filter(e=>main.has(e.a)&&main.has(e.b)), ports:connectedPorts.filter(p=>{const tag=provinces.find(v=>v.id===p.provinceId).owner;if(usedTags.has(tag)&&p.provinceId!=='na_usa_california')return false;usedTags.add(tag);return true;}), coastalProvinceIds:connectedPorts.map(p=>p.provinceId).sort() };
+  const operationalPorts=connectedPorts.filter(p=>{const tag=provinces.find(v=>v.id===p.provinceId).owner;if(usedTags.has(tag)&&p.provinceId!=='na_usa_california')return false;usedTags.add(tag);return true;});
+  // Explicit coast links are independent of operational ports. Only main-ocean
+  // nodes with an unobstructed water segment from a real coastline qualify.
+  const coastalSeaNodes = {};
+  for (const p of provinces) {
+    const links = new Map();
+    for (const { berth } of berths.get(p.id) ?? []) {
+      const candidates=[];
+      for(let x=Math.floor(berth[0]/160)-2;x<=Math.floor(berth[0]/160)+2;x++) for(let y=Math.floor(berth[1]/160)-2;y<=Math.floor(berth[1]/160)+2;y++) candidates.push(...(bins.get(`${x},${y}`)??[]));
+      const nearby=candidates.filter(n=>main.has(n.id)&&Math.hypot(n.x-berth[0],n.y-berth[1])<200).sort((a,b)=>Math.hypot(a.x-berth[0],a.y-berth[1])-Math.hypot(b.x-berth[0],b.y-berth[1])||a.id.localeCompare(b.id));
+      for (const n of nearby.slice(0,12)) {
+        if (!main.has(n.id) || Math.hypot(n.x-berth[0],n.y-berth[1]) >= 200 || !waterLine(berth,[n.x,n.y])) continue;
+        links.set(n.id,n);
+      }
+    }
+    const port=operationalPorts.find(port=>port.provinceId===p.id);
+    if(port) links.set(port.seaNodeId,byId.get(port.seaNodeId));
+    if (links.size) coastalSeaNodes[p.id] = [...links.values()].sort((a,b)=>Math.hypot(a.x-p.center.x,a.y-p.center.y)-Math.hypot(b.x-p.center.x,b.y-p.center.y) || a.id.localeCompare(b.id)).map(n=>n.id);
+  }
+  const graph={ coastalSeaNodes, waterBorderProvinceIds: coastal.sort(), nodes:nodes.filter(n=>main.has(n.id)).map(n=>({...n,neighbors:n.neighbors.filter(id=>main.has(id)).sort()})), edges:edges.filter(e=>main.has(e.a)&&main.has(e.b)), ports:operationalPorts, coastalProvinceIds:Object.keys(coastalSeaNodes).sort() };
   // Validation uses rounded output, exactly as consumed by the game.
   for(const n of graph.nodes) if(land(n.x,n.y)) throw new Error(`Land node ${n.id}`);
   for(const e of graph.edges) if(!e.logical && !waterLine([byId.get(e.a).x,byId.get(e.a).y],[byId.get(e.b).x,byId.get(e.b).y])) throw new Error(`Land edge ${e.a}/${e.b}`);

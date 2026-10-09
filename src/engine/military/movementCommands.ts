@@ -9,7 +9,7 @@ export function hasEquivalentMovementOrder(army: Army, destination: string): boo
 
 /** Clearing a plan never changes location, troops, battle or retreat state. */
 export function clearMovementPlan(army: Army): Army {
-  return { ...army, movementPlan: undefined, destination: null, targetDestination: null, path: [], movementProgress: 0, position: null };
+  return { ...army, beachExtraction: undefined, movementPlan: undefined, destination: null, targetDestination: null, path: [], movementProgress: 0, position: null };
 }
 
 export function issueMoveCommand(army: Army, destination: string, provinces: Province[], relations: DiplomaticRelation[]): Army | null {
@@ -27,7 +27,7 @@ export function appendWaypoint(army: Army, waypoint: string, provinces: Province
   const probe = moveArmy({ ...clearMovementPlan(army), location: start }, waypoint, provinces, relations);
   if (!probe) return null;
   const waypoints = [...(pending.length ? pending : active ? [active] : []), waypoint];
-  if (army.destination || pending.length) return { ...army, movementPlan: { waypoints } };
+  if (army.destination || pending.length) return { ...army, beachExtraction: undefined, movementPlan: { waypoints } };
   const moved = moveArmy(army, waypoint, provinces, relations);
   return moved ? { ...moved, movementPlan: { waypoints } } : null;
 }

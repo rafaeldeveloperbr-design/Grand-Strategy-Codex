@@ -1,18 +1,42 @@
-import { useState } from 'react';
-import type { Army, Province } from '../types';
-import type { Fleet } from '../types/naval';
-import { buildTransportIndexes, fleetTransportCapacity, fleetTransportUsed, portByProvince } from '../engine/naval';
+import { useMemo, useState } from 'react';
+import type { ActiveBattle, Army, DiplomaticRelation, Province, War } from '../types';
+import type { Fleet, NavalState } from '../types/naval';
+import { buildNavalIndexes, buildTransportIndexes, fleetTransportCapacity, fleetTransportUsed, getArmyEmbarkError, portByProvince, coastalLandingError, resolveAmphibiousLandingSeaNode, AMPHIBIOUS_BEACH_EXTRACTION_DAYS, BEACH_EXTRACTION_LABEL } from '../engine/naval';
 
-export function ArmyTransportPanel({ army, armies, fleets, provinces, owner, onEmbark, onDisembark }: { army: Army; armies: Army[]; fleets: Fleet[]; provinces: Province[]; owner: boolean; onEmbark: (fleetId: string) => void; onDisembark: () => void }) {
+type Props = {
+  army: Army; armies: Army[]; fleets: Fleet[]; provinces: Province[]; owner: boolean;
+  navalState?: NavalState; wars?: War[]; relations?: DiplomaticRelation[]; activeBattles?: readonly ActiveBattle[];
+  onEmbark: (fleetId: string) => void; onDisembark: () => void; onCancelExtraction?: () => void;
+};
+export function ArmyTransportPanel({ army, armies, fleets, provinces, owner, navalState, wars = [], relations = [], activeBattles = [], onEmbark, onDisembark, onCancelExtraction }: Props) {
   const [chosen, setChosen] = useState('');
-  const cargo = buildTransportIndexes(armies);
+  const fleetIndexes = useMemo(() => buildNavalIndexes(fleets), [fleets]);
+  const cargo = useMemo(() => buildTransportIndexes(armies), [armies]);
   if (army.embarkedFleetId) {
-    const fleet = fleets.find(f => f.id === army.embarkedFleetId);
+    const fleet = fleetIndexes.byId.get(army.embarkedFleetId);
     return <section aria-label="Army transport"><p>Embarked on {fleet?.name ?? army.embarkedFleetId}</p><p>{fleet?.status} · {provinces.find(p => p.id === fleet?.portProvinceId)?.name ?? fleet?.locationSeaNodeId ?? 'Em movimento naval'}</p>{owner && fleet?.status === 'DOCKED' && <button onClick={onDisembark}>Disembark</button>}</section>;
   }
-  if (!owner || !army.location || !portByProvince.has(army.location)) return null;
-  const candidates = fleets.filter(f => f.countryTag === army.owner && f.status === 'DOCKED' && f.portProvinceId === army.location);
-  if (!candidates.length) return null;
+  if (army.beachExtraction) {
+    const order = army.beachExtraction, fleet = fleetIndexes.byId.get(order.fleetId);
+    return <section aria-label="Army transport"><p>{BEACH_EXTRACTION_LABEL}</p><p>{fleet?.name ?? order.fleetId} · {order.elapsedDays}/{AMPHIBIOUS_BEACH_EXTRACTION_DAYS} dias</p><p>Army permanece na província durante a extração.</p>{owner && <button onClick={onCancelExtraction}>Cancelar extração</button>}</section>;
+  }
+  if (!owner || !army.location) return null;
+  const port = portByProvince.has(army.location), node = resolveAmphibiousLandingSeaNode(army.location);
+  const coastError = coastalLandingError(army.location);
+  if (!port && coastError) return <section aria-label="Army transport"><p>{coastError}</p></section>;
+  const candidates = (port ? fleetIndexes.byPort.get(army.location) ?? [] : fleetIndexes.bySeaNode.get(node!.id) ?? [])
+    .filter(f => f.countryTag === army.owner && (!port || f.status === 'DOCKED'))
+    .sort((a,b) => a.id.localeCompare(b.id));
+  if (!candidates.length) {
+    if (port) return null; // Preserve the existing docked-port UI.
+    const ownFleet = fleetIndexes.byCountry.get(army.owner)?.[0];
+    const error = ownFleet ? getArmyEmbarkError({ armies, naval: navalState ?? { fleets, battles: [] }, provinces, wars, relations, activeBattles, actor: army.owner }, army.id, ownFleet.id) : 'Nenhuma Fleet própria na costa.';
+    return <section aria-label="Army transport"><p>{BEACH_EXTRACTION_LABEL}</p><p>{error ?? 'Fleet não está parada no SeaNode correto da costa.'}</p></section>;
+  }
   const fleetId = candidates.some(f => f.id === chosen) ? chosen : candidates[0].id;
-  return <section aria-label="Army transport"><label>Fleet <select aria-label="Embark Fleet" value={fleetId} onChange={e => setChosen(e.target.value)}>{candidates.map(f => { const total = fleetTransportCapacity(f), used = fleetTransportUsed(cargo.byFleet.get(f.id) ?? []); return <option key={f.id} value={f.id}>{f.name} · Total {total} · Usada {used} · Disponível {total - used}</option>; })}</select></label><button disabled={army.inCombat} onClick={() => onEmbark(fleetId)}>Embark</button></section>;
+  const error = getArmyEmbarkError({ armies, naval: navalState ?? { fleets, battles: [] }, provinces, wars, relations, activeBattles, actor: army.owner }, army.id, fleetId);
+  return <section aria-label="Army transport">{!port && <p>{BEACH_EXTRACTION_LABEL}</p>}<label>Fleet <select aria-label="Embark Fleet" value={fleetId} onChange={e => setChosen(e.target.value)}>{candidates.map(f => {
+    const total = fleetTransportCapacity(f), used = fleetTransportUsed(cargo.byFleet.get(f.id) ?? []), reserved = fleetTransportUsed(cargo.extractionsByFleet.get(f.id) ?? []);
+    return <option key={f.id} value={f.id}>{f.name} · Total {total} · Usada {used} · Reservada {reserved} · Disponível {total - used - reserved}</option>;
+  })}</select></label><button disabled={!!error} onClick={() => onEmbark(fleetId)}>Embark</button>{error && <p>{error}</p>}</section>;
 }

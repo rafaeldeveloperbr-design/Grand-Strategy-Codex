@@ -1,6 +1,9 @@
+export const REBELLION_MARKER_THRESHOLD = 50;
+export const MAX_DAILY_REBELLION_PROGRESS = 1;
+export const REBELLION_NOTIFICATION_MILESTONES = [25, 50, 75, 90] as const;
 export const REBELLION_BALANCE = {
   bands: [25, 50, 70, 85],
-  progressRates: [-0.8, -0.1, 0.35, 0.8, 1.5],
+  progressRates: [-0.8, -0.1, 0.2275, 0.52, 0.975],
   progressLimit: 100, groupingUnrest: 70, pressureRate: 0.025,
   conquestPressure: 35, conquestDays: 720, conquestInitial: 50,
   dissatisfaction: 0.7, poverty: 0.45, foodPressure: 30,
@@ -16,7 +19,7 @@ export const REBELLION_BALANCE = {
   garrisonRelief: 4, garrisonProgress: 0.7, garrisonPopulationRatio: 0.03,
   resentmentDecay: 0.03, autonomyDecay: 0.01, reliefPressure: 18,
   investmentPressure: 12, autonomyPressure: 0.4,
-  minTroops: 100, maxTroops: 40000, populationMobilization: 0.025,
+  minTroops: 100, maxTroops: 40000, populationMobilization: 0.02,
   developmentStrength: 0.03, nationalStrength: 0.1,
   strength: { peasants: 0.7, separatists: 1, pretenders: 1.15, revolutionaries: 1.1, religious: 1, nationalists: 1 },
   objectiveDays: { tax_relief: 60, independence: 120, replace_government: 45, reform: 60 },
@@ -29,8 +32,8 @@ export const REBELLION_BALANCE = {
   actionProgress: { repression: 15, tax_relief: 8, concessions: 20, autonomy: 25, investment: 5, negotiate: 35 },
   autonomyGrant: 50, concessionResentment: 8,
   defeatProgress: 20, victoryProgress: 10, aiAdvantage: 1.25,
-  reinforcements: { minimumSupport: 25, controlledMinimumSupport: 0.25, supportPopulationRate: 0.001, controlledPopulationRate: 0.002,
-    dailyCap: 100, populationPoolRatio: 0.3, maximumStrength: 40000 },
+  reinforcements: { minimumSupport: 25, controlledMinimumSupport: 0.25, supportPopulationRate: 0.0005, controlledPopulationRate: 0.001,
+    dailyCap: 50, perProvinceCap: 25, populationPoolRatio: 0.3, maximumStrength: 40000 },
   escalation: { blockedDays: 90, minimumPowerRatio: 1.05 },
   projectedPower: { attackShockWeight: 0.45, defenseWeight: 0.35 },
 } as const;

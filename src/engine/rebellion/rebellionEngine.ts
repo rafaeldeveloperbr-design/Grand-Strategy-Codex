@@ -2,10 +2,10 @@ import type { Army, Country, GameDate, Province, War } from '../../types';
 import type { DiplomaticRelation } from '../../types/diplomacy';
 import { startInternalWar } from '../diplomacy';
 import { normalizePopulation } from '../population';
-import { REBELLION_BALANCE as B } from './balance';
+import { REBELLION_NOTIFICATION_MILESTONES, REBELLION_BALANCE as B } from './balance';
 import { politicalRebellionPressure } from '../politics';
 import { calculateUnrest } from './unrestEngine';
-import { advanceRebellionProgress, unrestBand } from './rebellionProgress';
+import { advanceRebellionProgress } from './rebellionProgress';
 import { clamp, friendlyTroops, normalizeRebellion, rebellionDay, troopCount } from './rebellionUtils';
 import { calculateRebellionStrength, createObjective, createRebelArmy, groupRebellion, nationalMilitaryStrength, selectRebelType } from './rebellionSpawner';
 import { advanceObjective, resolveRebellion } from './rebellionObjectives';
@@ -25,13 +25,14 @@ export function processProvincialPressure(provinces: Province[], date: GameDate,
     const unrest = clamp((p.unrest ?? 0) + (explanation.total - (p.unrest ?? 0)) * B.pressureRate);
     const ratio = friendlyTroops(p, armies) / Math.max(1, normalizePopulation(p.population).total * B.garrisonPopulationRatio);
     const progress = state.factionId ? state.progress : advanceRebellionProgress(state.progress, unrest, ratio, state.suppressionDays);
-    const band = unrestBand(unrest);
-    const log = band > state.lastBand && day - state.lastLogDay >= B.logDays;
+    const band = REBELLION_NOTIFICATION_MILESTONES.filter(t => progress >= t).length;
+    const milestone = REBELLION_NOTIFICATION_MILESTONES[band - 1] ?? 0;
+    const log = state.progress < milestone && (milestone > (state.notifiedMilestone ?? 0) || day - state.lastLogDay >= B.logDays);
     if (log) logs.push(`${['', 'Tensão crescente', 'Agitação severa', 'Rebelião iminente', 'Situação crítica'][band]} em ${p.name} (organização ${Math.round(progress)}%).`);
     return { ...p, unrest, unrestExplanation: explanation, rebellion: { ...state, progress,
       resentment: clamp(state.resentment - B.resentmentDecay), autonomy: clamp(state.autonomy - B.autonomyDecay),
       reliefDays: Math.max(0, state.reliefDays - 1), investmentDays: Math.max(0, state.investmentDays - 1), suppressionDays: Math.max(0, state.suppressionDays - 1),
-      lastBand: band, lastLogDay: log ? day : state.lastLogDay } };
+      notifiedMilestone: log ? Math.max(milestone, state.notifiedMilestone ?? 0) : state.notifiedMilestone, lastBand: band, lastLogDay: log ? day : state.lastLogDay } };
   });
   return { updatedProvinces, revoltedProvinces: updatedProvinces.filter(p => !p.owner.startsWith('rebel_') && !p.rebellion.factionId && p.rebellion.progress >= B.progressLimit), logs };
 }
@@ -48,7 +49,7 @@ export function spawnRebellions(provinces: Province[], countries: Country[], arm
     if (!country) continue;
     const group = groupRebellion(p, provinces, country, armies), type = selectRebelType(p, country, provinces, armies);
     const day = rebellionDay(date), id = `rebel_v2_${country.tag}_${p.id}_${day}`;
-    const faction: RebellionFaction = { id, type, originProvince: p.id, involvedProvinces: group.map(p => p.id), owner: country.tag,
+    const faction: RebellionFaction = { id, type, originProvince: p.id, baseProvince: p.id, involvedProvinces: group.map(p => p.id), owner: country.tag,
       originalCountry: country.tag, restorationCountry: type === 'separatists' ? p.originalOwner : undefined,
       support: group.reduce((sum, p) => sum + (p.unrest ?? 0), 0) / group.length,
       militaryStrength: calculateRebellionStrength(group, type, nationalMilitaryStrength(country, armies)),
@@ -71,7 +72,7 @@ export function processRebellionObjectives(provinces: Province[], countries: Cou
   for (const army of armies.filter(a => a.rebellionFactionId && a.location && !a.inCombat && !a.destination && troopCount(a) > 0)) {
     const faction = countries.flatMap(c => c.rebellions ?? []).find(f => f.id === army.rebellionFactionId && f.status === 'active');
     const province = provinces.find(p => p.id === army.location);
-    if (!province || !faction || province.owner !== faction.owner || armies.some(a => a.owner === faction.owner && a.location === province.id && troopCount(a) > 0)) continue;
+    if (!province || !faction || faction.cleanupPending || (faction.territoryEstablished && !provinces.some(p => p.owner === faction.id)) || (!faction.territoryEstablished && (province.id !== (faction.baseProvince ?? faction.originProvince) || faction.formedDay !== rebellionDay(date))) || province.owner !== faction.owner || armies.some(a => a.owner === faction.owner && a.location === province.id && troopCount(a) > 0)) continue;
     const transferred = transferProvince({ provinces, countries, recruitments, constructions }, province.id, faction.id, { date });
     ({ provinces, countries, recruitments, constructions } = transferred);
     logs.push(`Rebeldes tomaram ${province.name}.`);
@@ -85,11 +86,24 @@ export function processRebellionObjectives(provinces: Province[], countries: Cou
       wars = wars.filter(w => w.attacker !== faction.id && w.defender !== faction.id);
       relations = relations.filter(r => r.countryA !== faction.id && r.countryB !== faction.id);
       logs.push(next.status === 'defeated' ? `Rebelião derrotada em ${provinces.find(p => p.id === faction.originProvince)?.name}.` : `Rebelião de ${REBEL_TYPE_LABELS[faction.type]} venceu: ${OBJECTIVE_LABELS[faction.objective.kind]}.`);
-    } else if (next.objective.heldDays === 1) logs.push(`Rebeldes controlam os objetivos da facção de ${REBEL_TYPE_LABELS[faction.type]}.`);
+    } else if (next.objective.heldDays === 1 && faction.objective.heldDays !== 1) logs.push(`Rebeldes controlam os objetivos da facção de ${REBEL_TYPE_LABELS[faction.type]}.`);
     countries = countries.map(c => c.tag === country.tag ? { ...c, rebellions: c.rebellions?.map(f => f.id === next.id ? next : f) } : c);
   }
   // Negotiation can be invoked through the public action API between ticks.
   const ended = new Set(countries.flatMap(c => c.rebellions ?? []).filter(f => f.status !== 'active').map(f => f.id));
+  const knownActive = new Set(countries.flatMap(c => c.rebellions ?? []).filter(f => f.status === 'active').map(f => f.id));
+  // Repair terminal/missing faction occupations in old or inconsistent saves.
+  const records = new Map(countries.flatMap(c => c.rebellions ?? []).map(f => [f.id, f]));
+  const countriesByTag = new Set(countries.map(c => c.tag));
+  const historicalOwners = new Map(armies.filter(a => a.originalOwner).map(a => [a.owner, a.originalOwner!]));
+  for (const p of provinces) {
+    if (!p.owner.startsWith('rebel_v2_') || knownActive.has(p.owner)) continue;
+    const recipient = records.get(p.owner)?.owner ?? historicalOwners.get(p.owner) ?? p.originalOwner;
+    if (!recipient || recipient.startsWith('rebel_') || !countriesByTag.has(recipient)) continue;
+    ({ provinces, countries, recruitments, constructions } = transferProvince({ provinces, countries, recruitments, constructions }, p.id, recipient, { date }));
+  }
+  armies = armies.filter(a => !ended.has(a.owner) && (!a.owner.startsWith('rebel_v2_') || knownActive.has(a.owner)));
+  provinces = provinces.map(p => p.rebellion?.factionId && !knownActive.has(p.rebellion.factionId) ? { ...p, rebellion: { ...normalizeRebellion(p.rebellion), factionId: undefined, progress: B.defeatProgress } } : p);
   return { provinces, countries, armies, recruitments, constructions, wars: wars.filter(w => !ended.has(w.attacker) && !ended.has(w.defender)), relations: relations.filter(r => !ended.has(r.countryA) && !ended.has(r.countryB)), logs };
 }
 

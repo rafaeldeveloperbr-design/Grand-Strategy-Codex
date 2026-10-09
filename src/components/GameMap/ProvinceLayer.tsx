@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { Province, Country, Recruitment, BuildingConstruction } from '../../types';
 import { BUILDING_DEFINITIONS } from '../../data/buildings';
 import { UNIT_DEFINITIONS } from '../../data/units';
-import { getProvinceRebellion, REBEL_TYPE_LABELS } from '../../engine/rebellion';
+import { getProvinceRebellion, REBELLION_MARKER_THRESHOLD, REBEL_TYPE_LABELS } from '../../engine/rebellion';
 import { getTerrainDefinition } from '../../engine/terrain';
 import { numericMapColor, buildMapValues, type MapMode } from './mapPresentation';
 import { logisticsCategory } from '../../engine/logistics';
@@ -221,13 +221,13 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = React.memo(function P
               </g>
             )}
 
-            {faction && <g aria-label={`Província envolvida na revolta de ${REBEL_TYPE_LABELS[faction.type]} em ${province.name}`}>
+            {faction && (province.rebellion?.progress ?? 0) >= REBELLION_MARKER_THRESHOLD && <g aria-label={`Província envolvida na revolta de ${REBEL_TYPE_LABELS[faction.type]} em ${province.name}`}>
               <text x={province.center.x - 35} y={province.center.y - 25} fontSize="12" pointerEvents="none">🏴</text>
               <title>{`Revolta de ${REBEL_TYPE_LABELS[faction.type]} ativa. Origem: ${provincesById.get(faction.originProvince)?.name ?? 'origem desconhecida'}. As tropas podem estar em outra província da região.`}</title>
             </g>}
 
             {/* Indicador de agitação provincial (unrest) */}
-            {unrest > 0 && (() => {
+            {(province.rebellion?.progress ?? 0) >= REBELLION_MARKER_THRESHOLD && (!province.rebellion?.factionId || faction) && (!province.owner.startsWith('rebel_') || faction) && (() => {
               // Desloca para o canto superior direito da província
               const unrestX = province.center.x + 35;
               const unrestY = province.center.y - 25;

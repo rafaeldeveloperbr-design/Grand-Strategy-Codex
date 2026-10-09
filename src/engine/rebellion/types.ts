@@ -12,6 +12,7 @@ export interface ProvincialRebellion {
   lastActionDay: number;
   lastLogDay: number;
   lastBand: number;
+  notifiedMilestone?: number;
   factionId?: string;
 }
 export interface RebellionObjective {
@@ -24,6 +25,9 @@ export interface RebellionFaction {
   id: string;
   type: RebelType;
   originProvince: string;
+  baseProvince?: string;
+  territoryEstablished?: boolean;
+  cleanupPending?: boolean;
   involvedProvinces: string[];
   owner: string;
   originalCountry: string;

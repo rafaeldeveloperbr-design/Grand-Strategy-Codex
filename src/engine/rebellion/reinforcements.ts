@@ -8,23 +8,30 @@ import { createRebelArmy } from './rebellionSpawner';
 /** Finite local mobilization, once per faction/day; never resurrect a defeated force. */
 export function reinforceRebellions(provinces: Province[], countries: Country[], armies: Army[], date: GameDate) {
   const day = rebellionDay(date), rates = B.reinforcements;
+  const territories = new Map<string, Province[]>();
+  const forces = new Map<string, Army[]>();
+  for (const p of provinces) if (p.owner.startsWith('rebel_')) {
+    const group = territories.get(p.owner) ?? []; group.push(p); territories.set(p.owner, group);
+  }
+  for (const a of armies) if (a.owner.startsWith('rebel_') && troopCount(a) > 0) {
+    const group = forces.get(a.owner) ?? []; group.push(a); forces.set(a.owner, group);
+  }
   for (const faction of countries.flatMap(c => c.rebellions ?? [])) {
-    if (faction.status !== 'active' || faction.lastReinforcementDay === day) continue;
-    const living = armies.filter(a => a.owner === faction.id && troopCount(a) > 0);
-    const controlled = provinces.filter(p => p.owner === faction.id);
+    if (faction.status !== 'active' || faction.cleanupPending || faction.lastReinforcementDay === day) continue;
+    const living = forces.get(faction.id) ?? [];
+    const controlled = (territories.get(faction.id) ?? []).sort((a,b) => a.id.localeCompare(b.id));
     const support = clamp(faction.support) / 100;
-    const sources = provinces.filter(p => p.owner === faction.id || (support * 100 >= rates.minimumSupport
-      && faction.involvedProvinces.includes(p.id) && p.owner === faction.owner));
+    const sources = controlled;
     const population = sources.reduce((sum, p) => sum + p.population.total, 0);
     const controlledPopulation = controlled.reduce((sum, p) => sum + p.population.total, 0);
     const strength = living.reduce((sum, a) => sum + troopCount(a), 0);
     const recipient = living.filter(a => !a.inCombat && !a.destination && a.location && sources.some(p => p.id === a.location))
       .sort((a, b) => a.id.localeCompare(b.id))[0];
     const canRaise = living.length === 0 && controlled.length > 0;
-    let added = Math.max(0, Math.floor(Math.min(rates.dailyCap, rates.maximumStrength - strength,
+    let added = Math.max(0, Math.floor(Math.min(rates.dailyCap, controlled.length * rates.perProvinceCap, rates.maximumStrength - strength,
       population * rates.populationPoolRatio - (faction.recruitedTroops ?? 0),
       population * support * rates.supportPopulationRate + controlledPopulation * Math.max(support, rates.controlledMinimumSupport) * rates.controlledPopulationRate)));
-    if ((!recipient && !canRaise) || (!controlled.length && (!living.length || support * 100 < rates.minimumSupport))) added = 0;
+    if ((!recipient && !canRaise) || !controlled.length) added = 0;
     if (added > 0) {
       let remaining = added;
       provinces = provinces.map(p => {

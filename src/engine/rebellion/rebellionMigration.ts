@@ -13,6 +13,7 @@ export function normalizeSavedRebellion(v: unknown): ProvincialRebellion {
     autonomy: finite(v.autonomy) ? v.autonomy : 0, reliefDays: finite(v.reliefDays) ? v.reliefDays : 0,
     investmentDays: finite(v.investmentDays) ? v.investmentDays : 0, suppressionDays: finite(v.suppressionDays) ? v.suppressionDays : 0,
     lastActionDay: finite(v.lastActionDay) ? v.lastActionDay : undefined, lastLogDay: finite(v.lastLogDay) ? v.lastLogDay : undefined,
+    notifiedMilestone: finite(v.notifiedMilestone) ? v.notifiedMilestone : 0,
     lastBand: finite(v.lastBand) ? v.lastBand : 0, factionId: typeof v.factionId === 'string' ? v.factionId : undefined });
 }
 export function isRebellionFaction(v: unknown): v is RebellionFaction {
@@ -29,6 +30,8 @@ export function isRebellionFaction(v: unknown): v is RebellionFaction {
 }
 export function normalizeSavedFactions(value: unknown): RebellionFaction[] {
   return Array.isArray(value) ? value.filter(isRebellionFaction).map(f => ({ ...f, support: clamp(f.support), militaryStrength: clamp(f.militaryStrength, 1000000),
+    baseProvince: typeof f.baseProvince === 'string' ? f.baseProvince : f.originProvince,
+    territoryEstablished: f.territoryEstablished === true, cleanupPending: f.cleanupPending === true,
     lastReinforcementDay: finite(f.lastReinforcementDay) ? f.lastReinforcementDay : undefined,
     reinforcementRate: finite(f.reinforcementRate) ? clamp(f.reinforcementRate, 1000000) : 0,
     recruitedTroops: finite(f.recruitedTroops) ? clamp(f.recruitedTroops, 1000000) : 0, objective: { ...f.objective } })) : [];

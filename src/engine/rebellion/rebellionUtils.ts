@@ -9,6 +9,7 @@ export function normalizeRebellion(value?: Partial<ProvincialRebellion>): Provin
     investmentDays: clamp(value?.investmentDays ?? 0, 10000), suppressionDays: clamp(value?.suppressionDays ?? 0, 10000),
     lastActionDay: Number.isFinite(value?.lastActionDay) ? value!.lastActionDay! : -100000,
     lastLogDay: Number.isFinite(value?.lastLogDay) ? value!.lastLogDay! : -100000,
+    notifiedMilestone: clamp(value?.notifiedMilestone ?? 0),
     lastBand: clamp(value?.lastBand ?? 0, 4), factionId: typeof value?.factionId === 'string' ? value.factionId : undefined };
 }
 export function friendlyTroops(p: Province, armies: Army[]): number {
@@ -18,6 +19,5 @@ export function friendlyTroops(p: Province, armies: Army[]): number {
 /** Membership belongs to the faction, even when reconquest clears local progress. */
 export function getProvinceRebellion(province: Province, countries: Country[]): RebellionFaction | undefined {
   const active = countries.flatMap(country => country.rebellions ?? []).filter(f => f.status === 'active');
-  return active.find(f => f.id === province.rebellion?.factionId || f.id === province.owner)
-    ?? active.find(f => f.involvedProvinces.includes(province.id));
+  return active.find(f => !f.cleanupPending && (f.id === province.rebellion?.factionId || f.id === province.owner));
 }

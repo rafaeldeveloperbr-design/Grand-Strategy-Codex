@@ -1,5 +1,6 @@
-import type { AirState } from '../../types/air';
-import { airBaseByProvinceId } from '../../engine/air';
+import type { AirState, AircraftType } from '../../types/air';
+import { ProvinceAirProduction } from './ProvinceAirProduction';
+import { airBaseByProvinceId, airBaseOccupancy } from '../../engine/air';
 import React, { useMemo, useState } from 'react';
 import { ProvinceNavalConstruction } from './ProvinceNavalConstruction';
 import type { NavalState, NavalUnitType, Fleet } from '../../types/naval';
@@ -19,6 +20,8 @@ import type { CountryTechState } from '../../types/technology';
 export interface ProvincePanelProps {
   airState?: AirState;
   onSelectAirWing?: (id: string) => void;
+  onAirBuild?: (provinceId: string, type: AircraftType) => void;
+  onAirBuildCancel?: (id: string) => void;
   navalState?: NavalState;
   onNavalBuild?: (provinceId: string, type: NavalUnitType | 'UPGRADE', targetFleetId?: string) => void;
   onNavalCancel?: (id: string) => void;
@@ -48,7 +51,7 @@ export interface ProvincePanelProps {
 type PanelTab = 'info' | 'buildings' | 'military' | 'port';
 
 export const ProvincePanel: React.FC<ProvincePanelProps> = ({
-  airState, onSelectAirWing, navalState, onNavalBuild, onNavalCancel,
+  airState, onSelectAirWing, onAirBuild, onAirBuildCancel, navalState, onNavalBuild, onNavalCancel,
   fleets = [],
   onSelectFleet,
   logistics,
@@ -171,8 +174,9 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
               />
             )}
 
-            {activeTab === 'military' && airBaseByProvinceId.has(province.id) && <section className="province-air-base"><strong>✈ Air Base · nível {airBaseByProvinceId.get(province.id)!.level}</strong><p>Capacidade: {airState?.wings.filter(w=>w.baseProvinceId===province.id).length ?? 0}/{airBaseByProvinceId.get(province.id)!.capacity} grupos</p>{airState?.wings.filter(w=>w.baseProvinceId===province.id).map(w=><button key={w.id} onClick={()=>onSelectAirWing?.(w.id)}>{w.name} · {w.aircraftCount} aeronaves</button>)}</section>}
+            {activeTab === 'military' && airBaseByProvinceId.has(province.id) && <section className="province-air-base"><strong>✈ Air Base · nível {airBaseByProvinceId.get(province.id)!.level}</strong><p>Capacidade: {airState ? airBaseOccupancy(airState,province.id) : 0}/{airBaseByProvinceId.get(province.id)!.capacity} grupos</p>{airState?.wings.filter(w=>w.baseProvinceId===province.id).map(w=><button key={w.id} onClick={()=>onSelectAirWing?.(w.id)}>{w.name} · {w.aircraftCount} aeronaves</button>)}</section>}
             {activeTab === 'military' && isPlayerOwned && (
+              <>{airState && airBaseByProvinceId.has(province.id) && <ProvinceAirProduction state={airState} province={province} country={playerCountry} actor={playerCountry.tag} onBuild={onAirBuild} onCancel={onAirBuildCancel}/>}
               <ProvinceMilitaryTab
                 logistics={logistics}
                 province={province}
@@ -187,6 +191,7 @@ export const ProvincePanel: React.FC<ProvincePanelProps> = ({
                 onCancelRecruitment={onCancelRecruitment}
                 onRecruit={onRecruit}
               />
+              </>
             )}
 
             {(activeTab === 'buildings' || activeTab === 'military') && !isPlayerOwned && (

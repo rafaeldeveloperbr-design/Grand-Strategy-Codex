@@ -16,6 +16,8 @@
     "generate:naval": "node tools/map/generate_naval.mjs",
     "validate:naval": "node tools/map/generate_naval.mjs --check",
     "smoke:air": "node scripts/smoke-air-browser.mjs",
+    "smoke:air-v11": "node scripts/smoke-air-v11-browser.mjs",
+    "benchmark:air-v11": "node scripts/benchmark-air-v11.mjs",
     "benchmark:air": "node scripts/benchmark-air.mjs",
     "benchmark:naval": "node scripts/benchmark-naval.mjs",
     "benchmark:amphibious": "node scripts/benchmark-amphibious.mjs",

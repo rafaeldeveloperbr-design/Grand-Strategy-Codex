@@ -1,5 +1,8 @@
 # Air Warfare V1
 
+Production and direct-control UX are now extended by [Air Warfare V1.1](air-warfare-v1.1.md).
+The V1 implementation/validation report below is retained as historical context.
+
 ## Architecture and world
 
 Air Warfare is a separate aggregated domain (`AirState`, `AirWing`, `AirBase`,

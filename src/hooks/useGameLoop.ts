@@ -1,4 +1,4 @@
-import { airAITick, airCombatTick, airMissionsTick, cleanupAirState, airCounters } from '../engine/air';
+import { airAITick, airCombatTick, airMissionsTick, cleanupAirState, airCounters, airProductionAI, processAirProductionTick, cleanupAirProduction } from '../engine/air';
 import type { AirState } from '../types/air';
 import { processWarResolutionTick } from '../engine/diplomacy/warResolution';
 import { processPoliticalTick } from '../engine/politics';
@@ -253,6 +253,13 @@ export function useGameLoop(props: Props) {
     naval = navalProduction.naval;
     profiler.recordNavalConstruction(navalProduction.counters);
     profiler.endPhase('navalConstruction');
+    const airProductionDecision = airProductionAI(air, provinces, countries, navalActivation.fullCountryTags, playerCountryTag, wars, currentActiveBattles, relations);
+    air = airProductionDecision.state; provinces = airProductionDecision.provinces; countries = airProductionDecision.countries;
+    const airProduction = processAirProductionTick(air, provinces, countries);
+    air = airProduction.state;
+    profiler.recordAirProduction(airProduction.counters);
+    for (const feedback of airProduction.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'info', 'Aircraft Production');
+    profiler.endPhase('airProduction');
     // War participants already activate every country eligible for a hostile naval engagement.
     const navalAI = navalAITick(naval.fleets, navalActivation.fullCountryTags, playerCountryTag, provinces, relations, wars, new Set(naval.invasions?.map(o => o.fleetId)));
     naval = { ...naval, fleets: navalAI.fleets };
@@ -280,8 +287,10 @@ export function useGameLoop(props: Props) {
     profiler.endPhase('navalCombat');
     air = airCombatTick(air, { provinces, countries, wars, relations });
     profiler.endPhase('airCombat');
+    const rebasing = air.wings.filter(w => w.rebase && w.countryTag === playerCountryTag);
     const airMissions = airMissionsTick(air, { provinces, countries, wars, relations });
     air = airMissions.state; countries = airMissions.countries; provinces = airMissions.provinces;
+    for (const w of rebasing) { const arrived = air.wings.find(next => next.id === w.id); if (arrived && !arrived.rebase && arrived.baseProvinceId === w.rebase!.targetProvinceId) addToast(`Rebase concluído: ${w.name}.`, 'success', 'Air Warfare'); }
     profiler.endPhase('airMissions');
     const landing = amphibiousTick(naval, armies, provinces, wars, engagedThisTick);
     naval = landing.naval; armies = landing.armies; arrivedArmies.push(...landing.arrivals);
@@ -330,7 +339,9 @@ export function useGameLoop(props: Props) {
     const revalidated = amphibiousTick(naval, armies, provinces, wars, new Set(), false);
     naval = revalidated.naval;
     for (const feedback of revalidated.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Transporte naval');
-    air = cleanupAirState(air, { provinces, countries, wars, relations });
+    const productionCleanup = cleanupAirProduction(air, provinces, countries);
+    for (const feedback of productionCleanup.messages) if (feedback.owner === playerCountryTag) addToast(feedback.message, 'warning', 'Aircraft Production');
+    air = cleanupAirState(productionCleanup.state, { provinces, countries, wars, relations });
     profiler.endPhase('cleanup');
 
     setArmies(armies); setProvinces(provinces); setAllCountries(countries); setWars(wars);

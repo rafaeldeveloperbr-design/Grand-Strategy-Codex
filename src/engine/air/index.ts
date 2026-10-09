@@ -4,6 +4,8 @@ import { AIRCRAFT_TYPES, AIR_BALANCE as B } from '../../data/aircraft';
 import { buildNavalHostility } from '../naval';
 import { airBases, airBaseByProvinceId, airZoneById, airZoneByProvinceId, airZones } from './world';
 export * from './world';
+export * from './production';
+export * from './commands';
 export interface AirContext { provinces: readonly Province[]; countries: readonly Country[]; wars: readonly War[]; relations: readonly DiplomaticRelation[]; armies?: readonly Army[] }
 export function canUseAirBase(tag: string, provinceId: string, ctx: AirContext): boolean {
   const p=ctx.provinces.find(p=>p.id===provinceId);
@@ -99,7 +101,7 @@ export function airCombatTick(state: AirState, ctx: AirContext): AirState {
     }
     if(ids.size) engagements.push({zoneId,wingIds:[...ids].sort(),losses:Object.fromEntries([...ids].map(id=>[id,Math.min(ws.find(w=>w.id===id)!.aircraftCount,Math.ceil(losses.get(id)??0))]))});
   }
-  return {wings:state.wings.map(w=> {const lost=Math.min(w.aircraftCount,Math.ceil(losses.get(w.id)??0));return {...w,aircraftCount:w.aircraftCount-lost,strength:Math.max(0,w.strength-lost/w.maxAircraft*100),organization:Math.max(0,w.organization-(engaged.has(w.id)?B.combatOrganizationLoss:0))};}).filter(w=>w.aircraftCount>0),engagements};
+  return {...state,wings:state.wings.map(w=> {const lost=Math.min(w.aircraftCount,Math.ceil(losses.get(w.id)??0));return {...w,aircraftCount:w.aircraftCount-lost,strength:Math.max(0,w.strength-lost/w.maxAircraft*100),organization:Math.max(0,w.organization-(engaged.has(w.id)?B.combatOrganizationLoss:0))};}).filter(w=>w.aircraftCount>0),engagements};
 }
 export function airMissionsTick(state: AirState, ctx: AirContext) {
   const countries=ctx.countries.map(c=>({...c,resources:{...c.resources},economy:{...c.economy}}));

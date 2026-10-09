@@ -22,7 +22,7 @@ import type { AirState, AirMission } from '../../types/air';
 import { AirLayer } from './AirLayer';
 import { AirWingPanel } from '../AirWingPanel';
 import { AirZonePanel } from '../AirZonePanel';
-import { airZoneById } from '../../engine/air';
+import { airZoneById, airZoneByProvinceId, canStartAirTarget, resolveAirTarget, type AirTargetCommand } from '../../engine/air';
 import '../../styles/air.css';
 
 const NO_WARS: War[] = [];
@@ -35,6 +35,7 @@ export interface MapProps {
   onAirMission?: (mission: AirMission, zone: string) => void;
   onAirRebase?: (province: string) => void;
   onAirCancel?: () => void;
+  onAirFeedback?: (message: string, error: boolean) => void;
   onDisembark?: (armyId: string) => void;
   onInvasion?: (armyIds: string[], provinceId: string) => void;
   navalState?: NavalState;
@@ -72,7 +73,7 @@ export interface MapProps {
 }
 
 export const GameMap: React.FC<MapProps> = ({
-  airState, selectedAirWingId, onAirWingSelect, onAirMission, onAirRebase, onAirCancel,
+  airState, selectedAirWingId, onAirWingSelect, onAirMission, onAirRebase, onAirCancel, onAirFeedback,
   onDisembark, onInvasion,
   navalState,
   selectedFleetId = null,
@@ -115,7 +116,10 @@ export const GameMap: React.FC<MapProps> = ({
   const [navalMode, setNavalMode] = useState(false);
   const [airMode, setAirMode] = useState(false);
   const [selectedAirZone, setSelectedAirZone] = useState<string | null>(null);
+  const [airTarget, setAirTarget] = useState<AirTargetCommand | null>(null);
+  const [airFeedback, setAirFeedback] = useState('');
   const airWing = airState?.wings.find(w => w.id === selectedAirWingId);
+  const selectedWingZone=airWing?.assignedAirZoneId ?? airZoneByProvinceId.get(airWing?.baseProvinceId ?? '')?.id ?? null;
   const airContext = { provinces, countries, armies, wars, relations: diplomaticRelations };
   const [invasionSelection, setInvasionSelection] = useState<{fleetId:string;armyIds:string[]}|null>(null);
   const transportIndexes = useMemo(()=>buildTransportIndexes(armies),[armies]);
@@ -129,7 +133,9 @@ export const GameMap: React.FC<MapProps> = ({
   const mapValues = useMemo(() => buildMapValues(provinces, mapMode, networks), [provinces, mapMode, networks]);
   const war = useMemo(() => buildWarPresentation(provinces, countries, wars, diplomaticRelations, activeBattles), [provinces, countries, wars, diplomaticRelations, activeBattles]);
   const closeStack = useCallback(() => setOpenStack(null), []);
-  useEffect(() => { if (selectedAirWingId) { setSelectedNavalBattle(null); setSelectedAirZone(null); setInvasionSelection(null); closeStack(); } }, [selectedAirWingId, closeStack]);
+  const exitAirSelection = useCallback(() => { setAirMode(false); setAirTarget(null); setAirFeedback(''); setSelectedAirZone(null); onAirWingSelect?.(null); }, [onAirWingSelect]);
+  useEffect(() => { setAirTarget(null); setAirFeedback(''); if (selectedAirWingId) { setAirMode(true); setSelectedNavalBattle(null); setSelectedAirZone(selectedWingZone); setInvasionSelection(null); closeStack(); } }, [selectedAirWingId, selectedWingZone, closeStack]); // Selection changes, not simulation ticks, drive map mode.
+  useEffect(() => { if (selectedFleetId || selectedArmy || selectedArmyIds?.length || selectedNavalBattle) { setAirMode(false);setAirTarget(null);setAirFeedback('');setSelectedAirZone(null); } }, [selectedFleetId, selectedArmy, selectedArmyIds, selectedNavalBattle]);
   useEffect(() => { if (selectedFleetId || selectedArmy || selectedProvince) setSelectedAirZone(null); }, [selectedFleetId, selectedArmy, selectedProvince]);
   useEffect(() => { if (!onToggleArmy) closeStack(); }, [selectedProvince, selectedArmy, onToggleArmy, closeStack]);
   const openGroup = openStack ? presentation.groups.find(group => group.key === openStack.key && group.armies.length > 1) : undefined;
@@ -139,10 +145,11 @@ export const GameMap: React.FC<MapProps> = ({
     setTooltip(null);
     setOpenStack({ key: group.key, anchor: { x: rect ? x - rect.left + 12 : 12, y: rect ? y - rect.top + 12 : 70 } });
   }, []);
-  const selectArmy = useCallback((id: string, additive = false) => { closeStack(); if (additive && onToggleArmy) onToggleArmy(id); else onArmyClick(id); }, [closeStack, onToggleArmy, onArmyClick]);
+  const selectArmy = useCallback((id: string, additive = false) => { exitAirSelection(); closeStack(); if (additive && onToggleArmy) onToggleArmy(id); else onArmyClick(id); }, [exitAirSelection, closeStack, onToggleArmy, onArmyClick]);
   const handleStackOpen = useCallback((group: ArmyVisualGroup, x: number, y: number) => {
+    exitAirSelection();
     onToggleStack?.(group.armies.map(army => army.id)); openStackAt(group, x, y);
-  }, [onToggleStack, openStackAt]);
+  }, [exitAirSelection, onToggleStack, openStackAt]);
 
   const {
     viewBox,
@@ -183,7 +190,7 @@ export const GameMap: React.FC<MapProps> = ({
       else if (event.key === '-') handleZoomOut();
       else if (!selectionMode && event.key === 'Home') focusPlayer();
       else if (!selectionMode && event.key.toLowerCase() === 'f') focusSelected();
-      else if (!selectionMode && event.key === 'Escape') { onAirWingSelect?.(null); setSelectedAirZone(null); onFleetSelect?.(null); setSelectedNavalBattle(null); }
+      else if (!selectionMode && event.key === 'Escape') { setAirTarget(null);setAirFeedback(''); onAirWingSelect?.(null); setSelectedAirZone(null); onFleetSelect?.(null); setSelectedNavalBattle(null); }
       else return;
       event.preventDefault();
     };
@@ -225,13 +232,27 @@ export const GameMap: React.FC<MapProps> = ({
     setTooltip(null);
   }, [onProvinceHover, isDragging]);
 
-  const handleClick = useCallback((provinceId: string) => {
+  const dispatchAirTarget = (provinceId: string): boolean => {
+    if (!airTarget) return false;
+    if (!airState) return true;
+    const result = resolveAirTarget(airState, airTarget, provinceId, playerCountryTag ?? '', airContext);
+    const message = result.error ?? result.message ?? '';
+    setAirFeedback(message); onAirFeedback?.(message, !!result.error);
+    if (result.wing && !result.error) {
+      if (airTarget.kind==='MISSION') { onAirMission?.(airTarget.mission, result.wing.assignedAirZoneId!);setSelectedAirZone(result.wing.assignedAirZoneId!); }
+      else onAirRebase?.(provinceId);
+      setAirTarget(null);
+    }
+    return true;
+  };
+  const handleClick = (provinceId: string) => {
+    if (dispatchAirTarget(provinceId)) return;
     closeStack();
     if (invasionSelection && invasionSelection.fleetId === selectedFleetId) { onInvasion?.(invasionSelection.armyIds, provinceId); setInvasionSelection(null); return; }
     onProvinceClick(provinceId);
-  }, [closeStack, onProvinceClick, invasionSelection, selectedFleetId, onInvasion]);
+  };
 
-  const renderAirLayer = (part: 'zones' | 'markers') => !selectionMode && airMode && airState && <AirLayer part={part} viewport={viewBox} state={airState} ctx={airContext} player={playerCountryTag ?? ''} selected={selectedAirWingId} selectedZone={selectedAirZone} scale={unitsPerPixel} onWing={id=>{closeStack();setSelectedNavalBattle(null);setSelectedAirZone(null);onAirWingSelect?.(id);}} onZone={id=>{closeStack();onClearSelection?.();onFleetSelect?.(null);onAirWingSelect?.(null);setSelectedNavalBattle(null);setSelectedAirZone(id);}} onBase={id=>{setSelectedAirZone(null);handleClick(id);}}/>;
+  const renderAirLayer = (part: 'zones' | 'markers') => !selectionMode && (airMode || part==='markers') && airState && <AirLayer part={part} mode={airMode} viewport={viewBox} state={airState} ctx={airContext} player={playerCountryTag ?? ''} selected={selectedAirWingId} selectedZone={selectedAirZone} scale={unitsPerPixel} onWing={id=>{setAirTarget(null);setAirFeedback('');setAirMode(true);closeStack();setSelectedNavalBattle(null);onAirWingSelect?.(id);}} onZone={(id,provinceId,inspect)=>{if(airTarget){dispatchAirTarget(provinceId);return;}if(!inspect){handleClick(provinceId);return;}closeStack();onClearSelection?.();onFleetSelect?.(null);onAirWingSelect?.(null);setSelectedNavalBattle(null);setSelectedAirZone(id);}} onBase={handleClick}/>;
 
   return (
     <div className="map-container" ref={containerRef}>
@@ -250,7 +271,7 @@ export const GameMap: React.FC<MapProps> = ({
         {!selectionMode && <>
           <button className="map__zoom-btn" onClick={focusPlayer} title="Focus Player (Home)" aria-label="Focus Player" disabled={!playerCountryTag}>◎</button>
           <button className="map__zoom-btn" onClick={focusSelected} title="Locate selected AirWing / Fleet / Army / Province (F)" aria-label="Locate selected entity" disabled={!selectedArmy && !selectedProvince && !selectedFleet && !airWing}>⌖</button>
-          {!selectionMode && airState && <button className="map__zoom-btn" aria-label="Air Mode" aria-pressed={airMode} onClick={() => {setAirMode(v=>!v);setSelectedAirZone(null);}}>✈</button>}
+          {!selectionMode && airState && <button className="map__zoom-btn" aria-label="Air Mode" aria-pressed={airMode} onClick={() => {setAirMode(v=>!v);setAirTarget(null);setAirFeedback('');setSelectedAirZone(null);}}>✈</button>}
           {navalState && <button className="map__zoom-btn" aria-label="Naval Mode" aria-pressed={navalMode} onClick={() => setNavalMode(v => !v)}>⚓</button>}
           {!!navalState?.battles.length && <select aria-label="Naval battles" value="" onChange={e => {setSelectedNavalBattle(e.target.value);const b=navalState.battles.find(b=>b.id===e.target.value),node=b?seaNodeById.get(b.seaNodeId):undefined;if(node)focusWorldPoint(node);}}><option value="" disabled>Batalhas navais…</option>{navalState.battles.map(b=><option key={b.id} value={b.id}>{b.seaNodeId} · {b.status}</option>)}</select>}
           <select aria-label="Regional jump" value="" onChange={event => {
@@ -258,7 +279,7 @@ export const GameMap: React.FC<MapProps> = ({
             else if (regionalBounds[event.target.value]) fitBounds(regionalBounds[event.target.value]);
           }}><option value="" disabled>Region…</option>{['Americas', 'Europe', 'Africa', 'Asia', 'Oceania', 'World'].map(name => <option key={name}>{name}</option>)}</select>
           {activeBattles.length > 0 && <select aria-label="Locate battle" value="" onChange={event => {
-            const province = presentation.provinceById.get(event.target.value); if (province) focusProvince(province);
+            exitAirSelection();const province = presentation.provinceById.get(event.target.value); if (province) focusProvince(province);
           }}><option value="" disabled>Battle…</option>{activeBattles.map(battle => <option key={battle.id} value={battle.provinceId}>{presentation.provinceById.get(battle.provinceId)?.name ?? battle.provinceId}</option>)}</select>}
         </>}
       </div>
@@ -272,7 +293,7 @@ export const GameMap: React.FC<MapProps> = ({
       <svg
         ref={svgRef}
         className="map__svg"
-        style={{ background: "#1a3a5c", cursor: isPanning ? 'grabbing' : 'grab', userSelect: 'none' }}
+        style={{ background: "#1a3a5c", cursor: isPanning ? 'grabbing' : airTarget ? 'crosshair' : 'grab', userSelect: 'none' }}
         aria-label={mapMetadata.name}
         viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
         onMouseDown={handleMouseDown}
@@ -285,11 +306,13 @@ export const GameMap: React.FC<MapProps> = ({
         onMouseMove={handleMouseMovePan}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onContextMenuCapture={e=>{if(!airTarget)return;e.preventDefault();e.stopPropagation();const id=(e.target as Element).closest('[data-province-id]')?.getAttribute('data-province-id');if(id)dispatchAirTarget(id);}}
         onContextMenu={(e) => {
           e.preventDefault();
 
           const target = e.target as SVGElement;
           const provinceId = target.closest?.('[data-province-id]')?.getAttribute('data-province-id');
+          if (airTarget) { if (provinceId) dispatchAirTarget(provinceId); return; }
           if (provinceId) { if (selectedFleetId && onFleetReturn) onFleetReturn(provinceId); else if (e.shiftKey) onProvinceRightClick(provinceId, true); else onProvinceRightClick(provinceId); }
         }}
       >
@@ -365,7 +388,7 @@ export const GameMap: React.FC<MapProps> = ({
           hoveredArmyId={hoveredArmyId}
           openStackKey={openGroup?.key ?? null}
           onStackOpen={handleStackOpen}
-          onStackToggleAdditive={onToggleStackAdditive}
+          onStackToggleAdditive={ids=>{exitAirSelection();onToggleStackAdditive?.(ids);}}
           onArmyClick={selectArmy}
           onArmyHover={setHoveredArmyId}
         />
@@ -378,7 +401,7 @@ export const GameMap: React.FC<MapProps> = ({
           provinces={provinces}
         />
         {renderAirLayer('markers')}
-        {!selectionMode && navalState && <NavalLayer fleets={navalState.fleets} battles={navalState.battles} wars={wars} viewport={viewBox} mode={navalMode} selected={selectedFleetId} countries={countryByTag} provinces={provinces} scale={unitsPerPixel} onSelect={id=>{closeStack();setSelectedNavalBattle(null);onFleetSelect?.(id);}} onOrder={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetOrder?.(id);}} onIntercept={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetIntercept?.(id);}} onPort={handleClick} onReturnPort={id=>onFleetReturn?.(id)} onBattle={id=>{onFleetSelect?.(null);setSelectedNavalBattle(id);const b=navalState.battles.find(b=>b.id===id),n=b?seaNodeById.get(b.seaNodeId):undefined;if(n)focusWorldPoint(n);}}/>}
+        {!selectionMode && navalState && <NavalLayer fleets={navalState.fleets} battles={navalState.battles} wars={wars} viewport={viewBox} mode={navalMode} selected={selectedFleetId} countries={countryByTag} provinces={provinces} scale={unitsPerPixel} onSelect={id=>{exitAirSelection();closeStack();setSelectedNavalBattle(null);onFleetSelect?.(id);}} onOrder={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetOrder?.(id);}} onIntercept={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetIntercept?.(id);}} onPort={handleClick} onReturnPort={id=>onFleetReturn?.(id)} onBattle={id=>{exitAirSelection();onFleetSelect?.(null);setSelectedNavalBattle(id);const b=navalState.battles.find(b=>b.id===id),n=b?seaNodeById.get(b.seaNodeId):undefined;if(n)focusWorldPoint(n);}}/>}
 
         {/* === Filtro de Glow para exércitos elevados === */}
         <defs>
@@ -388,8 +411,13 @@ export const GameMap: React.FC<MapProps> = ({
           </filter>
         </defs>
       </svg>
-      {invasionSelection&&invasionSelection.fleetId===selectedFleetId&&<div className="amphibious-target-hint" role="status">Amphibious Invasion: clique numa província costeira inimiga com porto. <button onClick={()=>setInvasionSelection(null)}>Cancelar seleção</button></div>}{!selectionMode && selectedFleet && <FleetPanel key={selectedFleet.id} onSelectArmy={onArmyClick} embarkedArmies={transportIndexes.byFleet.get(selectedFleet.id)??[]} invasion={navalState?.invasions?.find(o=>o.fleetId===selectedFleet.id)} onDisembark={onDisembark} onPlanInvasion={armyIds=>setInvasionSelection({fleetId:selectedFleet.id,armyIds})} reinforcements={navalState?.construction?.builds.filter(b=>b.targetFleetId===selectedFleet.id)} fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
-      {!selectionMode && airWing && airState && <AirWingPanel key={airWing.id} wing={airWing} state={airState} ctx={airContext} owner={airWing.countryTag===playerCountryTag} onMission={(mission,zone)=>onAirMission?.(mission,zone)} onRebase={id=>onAirRebase?.(id)} onCancel={()=>onAirCancel?.()} onLocate={focusSelected} onClose={()=>onAirWingSelect?.(null)}/>}
+      {invasionSelection&&invasionSelection.fleetId===selectedFleetId&&<div className="amphibious-target-hint" role="status">Amphibious Invasion: clique numa província costeira inimiga com porto. <button onClick={()=>setInvasionSelection(null)}>Cancelar seleção</button></div>}{!selectionMode && selectedFleet && <FleetPanel key={selectedFleet.id} onSelectArmy={selectArmy} embarkedArmies={transportIndexes.byFleet.get(selectedFleet.id)??[]} invasion={navalState?.invasions?.find(o=>o.fleetId===selectedFleet.id)} onDisembark={onDisembark} onPlanInvasion={armyIds=>setInvasionSelection({fleetId:selectedFleet.id,armyIds})} reinforcements={navalState?.construction?.builds.filter(b=>b.targetFleetId===selectedFleet.id)} fleet={selectedFleet} country={countryByTag.get(selectedFleet.countryTag)} provinces={provinces} owner={selectedFleet.countryTag===playerCountryTag} onReturn={()=>onFleetReturn?.()} onCancel={()=>onFleetCancel?.()} onLocate={focusSelected} onClose={()=>onFleetSelect?.(null)}/>}
+      {!selectionMode && airWing && airState && <AirWingPanel key={airWing.id} wing={airWing} state={airState} ctx={airContext} owner={airWing.countryTag===playerCountryTag}
+        onTargetMission={mission=>{if(canStartAirTarget(airWing,playerCountryTag??'',mission)){setAirMode(true);setAirFeedback('');setAirTarget({wingId:airWing.id,kind:'MISSION',mission});}}}
+        onTargetRebase={()=>{if(canStartAirTarget(airWing,playerCountryTag??'')){setAirMode(true);setAirFeedback('');setAirTarget({wingId:airWing.id,kind:'REBASE'});}}}
+        onSelectWing={id=>{setAirTarget(null);setAirFeedback('');onAirWingSelect?.(id);}}
+        onMission={(mission,zone)=>{setAirTarget(null);onAirMission?.(mission,zone);}} onRebase={id=>{setAirTarget(null);onAirRebase?.(id);}} onCancel={()=>{setAirTarget(null);setAirFeedback('');onAirCancel?.();}} onLocate={focusSelected} onClose={()=>{setAirTarget(null);setAirFeedback('');onAirWingSelect?.(null);}}/>}
+      {!selectionMode && (airTarget || airFeedback) && <div className="air-target-hint" role="status">{airTarget ? airTarget.kind==='MISSION' ? 'Botão direito em uma província para selecionar a região aérea.' : 'Botão direito em uma província com AirBase para rebase.' : ''} {airFeedback} {airTarget && <button onClick={()=>{setAirTarget(null);setAirFeedback('');}}>Cancelar seleção aérea</button>}</div>}
       {!selectionMode && airMode && selectedAirZone && !airWing && <AirZonePanel id={selectedAirZone} state={airState ?? {wings:[],engagements:[]}} ctx={airContext} player={playerCountryTag ?? ''} battles={activeBattles} onClose={()=>setSelectedAirZone(null)} onLocate={()=>{const z=airZoneById.get(selectedAirZone);if(z)focusWorldPoint(z.center);}}/>}
       {!selectionMode && navalBattle && navalState && <NavalBattlePanel armies={armies} battle={navalBattle} fleets={navalState.fleets} onLocate={()=>{const n=seaNodeById.get(navalBattle.seaNodeId);if(n)focusWorldPoint(n);}} onClose={()=>setSelectedNavalBattle(null)}/>}
 
@@ -399,7 +427,7 @@ export const GameMap: React.FC<MapProps> = ({
         onSelect={(id, additive) => {
           if (additive) {
             if (onToggleArmy) {
-              onToggleArmy(id);
+              exitAirSelection();onToggleArmy(id);
             } else {
               selectArmy(id);
             }

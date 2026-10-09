@@ -1,5 +1,5 @@
-import type { AirState, AirWing, AircraftType, AirMission } from '../../types/air';
-import { AIRCRAFT_TYPES } from '../../data/aircraft';
+import type { AirState, AirWing, AircraftType, AirMission, AirProductionState } from '../../types/air';
+import { AIRCRAFT_TYPES, AIR_PRODUCTION_CONFIG, AIR_QUEUE_LIMIT } from '../../data/aircraft';
 import { airBaseByProvinceId, airZoneById } from './world';
 import { canUseAirBase, type AirContext } from './index';
 const record = (v: unknown): v is Record<string,unknown> => !!v && typeof v==='object' && !Array.isArray(v);
@@ -30,5 +30,28 @@ export function readAirSave(raw: unknown, ctx: AirContext): AirState {
   for(const w of wings) for(const id of [w.baseProvinceId,...(w.rebase?[w.rebase.targetProvinceId]:[])]) occupancy.set(id,(occupancy.get(id)??0)+1);
   for(const [id,count] of occupancy) if(count>(airBaseByProvinceId.get(id)?.capacity ?? 0)) throw new Error(`Air save: overloaded base ${id}`);
   // Engagements are daily feedback, not simulation state; rebuild next tick.
-  return {wings,engagements:[]};
+  let production: AirProductionState | undefined;
+  if (raw.production !== undefined) {
+    const p = raw.production;
+    const fail = (): never => { throw new Error('Air save: invalid production queue/counter'); };
+    if (!record(p) || !record(p.queues) || !Number.isSafeInteger(p.nextId) || (p.nextId as number) < 1) return fail();
+    production = { queues: {}, nextId: p.nextId as number };
+    let largestId = 0;
+    for (const wing of wings) { const match = /^wing-air-build-(\d+)$/.exec(wing.id); if (match) largestId = Math.max(largestId, Number(match[1])); }
+    for (const [base, values] of Object.entries(p.queues)) {
+      if (!airBaseByProvinceId.has(base) || !Array.isArray(values) || !values.length || values.length > AIR_QUEUE_LIMIT) return fail();
+      production.queues[base] = values.map(value => {
+        if (!record(value)) return fail();
+        const { id, countryTag, provinceId, type, progress, requiredProgress } = value;
+        const match = typeof id === 'string' ? /^air-build-([1-9]\d*)$/.exec(id) : null;
+        if (!match || ids.has(id as string) || ids.has(`wing-${id}`) || provinceId !== base || typeof countryTag !== 'string' || !ctx.countries.some(c => c.tag === countryTag && !c.isAnnexed) || ctx.provinces.find(p => p.id === base)?.owner !== countryTag || typeof type !== 'string' || !Object.prototype.hasOwnProperty.call(AIR_PRODUCTION_CONFIG, type)) return fail();
+        if (!Number.isSafeInteger(progress) || (progress as number) < 0 || requiredProgress !== AIR_PRODUCTION_CONFIG[type as AircraftType].days || (progress as number) > (requiredProgress as number)) return fail();
+        const serial = Number(match[1]); if (!Number.isSafeInteger(serial)) return fail();
+        ids.add(id as string); largestId = Math.max(largestId, serial);
+        return { id: id as string, countryTag, provinceId: base, type: type as AircraftType, progress: progress as number, requiredProgress: requiredProgress as number };
+      });
+    }
+    if (production.nextId <= largestId) return fail();
+  }
+  return {wings,engagements:[],...(production ? {production} : {})};
 }

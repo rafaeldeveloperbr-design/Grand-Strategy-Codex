@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const chromePath=process.env.AIR_CHROME_PATH??'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const profile=await mkdtemp(join(tmpdir(),'air-smoke-'));
+const profile=await mkdtemp(join(tmpdir(),'air-v11-smoke-'));
 const server=await createServer({server:{host:'127.0.0.1',port:3013,strictPort:true,hmr:false},logLevel:'error'});
 let chrome,ws,inspect;let sequence=0;const pending=new Map(),errors=[];
 try {
@@ -31,13 +31,23 @@ try {
   const report={browser:'Chrome headless CDP',checks:[],errors,performance:{}};
   const choose=async(selector,value)=>{await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(!el)throw new Error('Missing select');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('change',{bubbles:true}));})()`);await delay(100);};
   const button=async(label)=>{await evaluate(`(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent===${JSON.stringify(label)});if(!b)throw new Error('Missing button '+${JSON.stringify(label)});b.click();})()`);await delay(150);};
+  const right=async id=>{await evaluate(`document.querySelector('[data-province-id="${id}"]').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,button:2}))`);await delay(150);};
   const current=()=>evaluate(`(()=>{let f=document.querySelector('.game')?.[Object.keys(document.querySelector('.game')??{}).find(k=>k.startsWith('__reactFiber'))];while(f?.return)f=f.return;const queue=[f?.stateNode?.current??f];f=undefined;while(queue.length){const candidate=queue.pop();if(candidate?.type?.name==='GameApp'){f=candidate;break;}if(candidate?.sibling)queue.push(candidate.sibling);if(candidate?.child)queue.push(candidate.child);}const hooks=[];let h=f?.memoizedState;while(h){hooks.push(h.memoizedState);h=h.next;}return {air:hooks.find(v=>v?.wings&&v?.engagements),battles:hooks.find(v=>Array.isArray(v)&&v[0]?.participantArmyIds),wars:hooks.find(v=>Array.isArray(v)&&v[0]?.attacker),date:document.querySelector('.top-bar__date')?.textContent};})()`);
   await call('Runtime.enable');await call('Page.enable');await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
   await call('Page.navigate',{url:'http://127.0.0.1:3013/?newgame=1'});
   await waitFor(`document.querySelector('.country-selection__list button')`);
   await button('Brasil');await click('.country-selection__play');await waitFor(`document.querySelector('[aria-label="Air Mode"]')`);
   report.checks.push('New Game BRA and Country Selection');
-  await click('[aria-label="Reset View"]');await click('[aria-label="Air Mode"]');assert(await evaluate(`document.querySelectorAll('[aria-label^="AirBase "]').length===${airBases.length}`),'Missing bases');
+  await click('[aria-label="Reset View"]');
+  assert(await evaluate(`document.querySelector('[aria-label="Air Mode"]').getAttribute('aria-pressed')==='false' && document.querySelectorAll('[aria-label^="AirWing "]').length===${initial.wings.length} && !document.querySelector('.air-zone')`),'Always-visible Wing markers failed');
+  const hit=await evaluate(`(()=>{const rect=document.querySelector('[data-air-wing-id="${fighter.id}"] rect[pointer-events="all"]').getBoundingClientRect();return {x:rect.x+rect.width/2,y:rect.y+rect.height/2};})()`);
+  await call('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...hit});await call('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...hit});await delay(200);
+  assert(await evaluate(`document.querySelector('[aria-label="Air Mode"]').getAttribute('aria-pressed')==='true' && !!document.querySelector('[aria-label="AirWing panel"]')`),'Wing click did not enable Air Mode');
+  await button('Air Superiority');await right(fighter.baseProvinceId);
+  assert((await current()).air.wings.find(w=>w.id===fighter.id).assignedAirZoneId===zone.id,'Direct mission failed');
+  report.checks.push('Air Mode OFF has all Wing markers; marker click enables Air Mode; right-click derives AirZone');
+  await click('[aria-label="Close AirWing"]');
+  assert(await evaluate(`document.querySelectorAll('[aria-label^="AirBase "]').length===${airBases.length}`),'Missing bases');
   await click(`[aria-label="AirBase ${provincesData.find(p=>p.id===fighter.baseProvinceId).name}"]`);
   assert(await evaluate(`!!document.querySelector('.province-panel')`),'Base province panel missing');
   await evaluate(`([...document.querySelectorAll('.province-panel button')].find(b=>b.textContent.includes('Militar'))).click()`);await delay(100);
@@ -47,6 +57,26 @@ try {
   const before=await evaluate(`document.querySelector('.map__svg').getAttribute('viewBox')`);
   await button('Localizar (F)');assert((await evaluate(`document.querySelector('.map__svg').getAttribute('viewBox')`))!==before,'Locate failed');
   await click('[aria-label="Reset View"]');await evaluate(`window.dispatchEvent(new KeyboardEvent('keydown',{key:'f',bubbles:true}))`);report.checks.push('Locate and F');
+  await click('[aria-label="Reset View"]');
+  for(const [type,label,mission] of [['CAS','Close Air Support','CLOSE_AIR_SUPPORT'],['BOMBER','Bombing','BOMBING'],['FIGHTER','Interception','INTERCEPTION']]) {
+    const wing=initial.wings.find(w=>w.countryTag==='BRA'&&w.type===type);
+    await click(`[aria-label="AirWing ${wing.name}"]`);await button(label);await right(wing.baseProvinceId);
+    assert((await current()).air.wings.find(w=>w.id===wing.id).mission===mission,`Direct ${label} failed`);
+  }
+  await button('Air Superiority');
+  const {airZones,isAirZoneInRange}=await server.ssrLoadModule('/src/engine/air/index.ts');
+  const far=airZones.find(z=>!isAirZoneInRange(fighter,z.id,provincesData));await right(far.provinceIds[0]);
+  assert(await evaluate(`document.querySelector('.air-target-hint').textContent.includes('AirZone fora do alcance desta AirWing.')`),'Missing specific range feedback');
+  await evaluate(`window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
+  assert(await evaluate(`!document.querySelector('.air-target-hint') && !document.querySelector('[aria-label="AirWing panel"]')`),'Escape left ghost target');
+  await click(`[aria-label="AirWing ${fighter.name}"]`);await button('Air Superiority');
+  await click('.army-marker[role="button"]');
+  assert(await evaluate(`document.querySelector('[aria-label="Air Mode"]').getAttribute('aria-pressed')==='false' && !document.querySelector('.air-target-hint')`),'Army mode exit failed');
+  await click(`[aria-label="AirWing ${fighter.name}"]`);await button('Air Superiority');
+  await click('[data-fleet-id]');
+  assert(await evaluate(`document.querySelector('[aria-label="Air Mode"]').getAttribute('aria-pressed')==='false' && !document.querySelector('.air-target-hint')`),'Fleet mode exit failed');
+  await click(`[aria-label="AirWing ${fighter.name}"]`);
+  report.checks.push('Direct CAS, Bombing, Interception; specific out-of-range feedback; Escape; Army/Fleet exit and cancel pending target');
   await choose('[aria-label="Assign Mission"]','AIR_SUPERIORITY');await choose('[aria-label="Select AirZone"]',zone.id);await button('Atribuir missão');
   assert((await current()).air.wings.find(w=>w.id===fighter.id).mission==='AIR_SUPERIORITY','Mission command failed');report.checks.push('Assign Air Superiority in range');
   await click('[aria-label="Close AirWing"]');await click('[data-province-id="sa_arg_buenos_aires"]');await waitFor(`document.querySelector('.diplomacy-panel')`);
@@ -62,7 +92,7 @@ try {
   const province=saved.world.provinces.find(p=>p.id==='sa_bra_brasilia');
   const ownArmy=saved.military.armies.find(a=>a.owner==='BRA'),enemyArmy=saved.military.armies.find(a=>a.owner==='ARG');
   for(const a of [ownArmy,enemyArmy]) {a.location=province.id;a.destination=null;a.targetDestination=null;a.path=[];a.movementProgress=0;a.inCombat=true;}
-  saved.military.activeBattles=[startContinuousBattle([ownArmy],[enemyArmy],province,saved.date,'air-smoke-land')];
+  saved.military.activeBattles=[startContinuousBattle([ownArmy],[enemyArmy],province,saved.date,'air-v11-smoke-land')];
   await evaluate(`localStorage.setItem(${JSON.stringify(keys[0])},${JSON.stringify(JSON.stringify(saved))})`);
   await click('.settings-modal__btn--small');await click('[title="Velocidade 1"]');
   await waitFor(`document.querySelector('.top-bar__date')?.textContent!==${JSON.stringify((await current()).date)}`);
@@ -77,7 +107,7 @@ try {
   assert(await evaluate(`document.querySelector('[aria-label="AirZone panel"]')?.textContent.includes('CAS +')`),'Battle support feedback missing');
   report.checks.push('CAS and bombing missions continue with land battle');
   await click(`[aria-label="AirWing ${fighter.name}"]`);const rebaseTarget=airBases.find(b=>b.provinceId!==fighter.baseProvinceId&&provincesData.find(p=>p.id===b.provinceId)?.owner==='BRA');
-  await choose('[aria-label="Rebase target"]',rebaseTarget.provinceId);await button('Rebase');assert((await current()).air.wings.find(w=>w.id===fighter.id).status==='REBASING','Rebase command failed');
+  await button('Rebase no mapa');await right(rebaseTarget.provinceId);assert((await current()).air.wings.find(w=>w.id===fighter.id).status==='REBASING','Direct Rebase command failed');
   // Full-world saves share the existing browser quota. Keep one slot in this disposable profile.
   await evaluate(`localStorage.removeItem(${JSON.stringify(keys[0])})`);
   await click('[title="Configurações"]');await click('.settings-modal__btn--primary');const rebaseKeys=await evaluate(`Object.keys(localStorage).filter(k=>k.startsWith('imperium_save_')&&k!=='imperium_save_autosave')`);
@@ -85,6 +115,31 @@ try {
   assert(moving.air.wings.find(w=>w.id===fighter.id).rebase,'Rebase progress absent from save');
   await evaluate(`(()=>{const rows=[...document.querySelectorAll('.settings-modal__save-item')];const buttons=[...document.querySelectorAll('.settings-modal__btn--small:not(.settings-modal__btn--danger)')];buttons[0].click();void rows;})()`);await delay(150);
   assert((await current()).air.wings.find(w=>w.id===fighter.id).status==='REBASING','Rebase load failed');report.checks.push('Timed Rebase, manual Save V3 and load restores exact progress without duplication');
+  // Resource/progress fixtures go through the public Save V3 loader, never live React mutation.
+  const resources=structuredClone(moving), depot=resources.world.provinces.find(p=>p.id===fighter.baseProvinceId);
+  depot.market.goods.iron.stock=1000;depot.market.goods.tools.stock=1000;resources.world.countries.find(c=>c.tag==='BRA').resources.gold=10000;
+  await evaluate(`localStorage.setItem(${JSON.stringify(rebaseKey)},${JSON.stringify(JSON.stringify(resources))})`);
+  await click('[title="Configurações"]');await click('.settings-modal__btn--small');
+  await click(`[aria-label="AirBase ${depot.name}"]`);
+  await evaluate(`([...document.querySelectorAll('.province-panel button')].find(b=>b.textContent.includes('Militar'))).click()`);await delay(100);
+  await button('Build Fighter Wing');
+  const building=(await current()).air.production.queues[depot.id][0];assert(building.progress===0,'Production did not start at zero');
+  await evaluate(`localStorage.removeItem(${JSON.stringify(rebaseKey)})`);
+  await click('[title="Configurações"]');await click('.settings-modal__btn--primary');
+  const productionKeys=await evaluate(`Object.keys(localStorage).filter(k=>k.startsWith('imperium_save_')&&k!=='imperium_save_autosave')`), productionKey=productionKeys[0];
+  const productionSave=await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(productionKey)}))`);
+  assert(productionSave.air.production.queues[depot.id][0].progress===0,'Queue not saved');
+  await click('.settings-modal__btn--small');assert((await current()).air.production.queues[depot.id][0].progress===0,'Queue progress changed on load');
+  await click('[title="Velocidade 3"]');await waitFor(`(()=>{let f=document.querySelector('.province-panel [role="progressbar"]')??document.querySelector('.province-panel progress');return Number(f?.value)>0})()`);await click('[title="Pausar"]');
+  const advanced=(await current()).air.production.queues[depot.id][0].progress;assert(advanced>0,'Paid production did not advance');
+  productionSave.air.production.queues[depot.id][0].progress=119;
+  await evaluate(`localStorage.setItem(${JSON.stringify(productionKey)},${JSON.stringify(JSON.stringify(productionSave))})`);
+  await click('[title="Configurações"]');await click('.settings-modal__btn--small');
+  await click('[title="Velocidade 3"]');await waitFor(`document.querySelector('[data-air-wing-id="wing-${building.id}"]')`);await click('[title="Pausar"]');
+  const produced=(await current()).air.wings.filter(w=>w.id===`wing-${building.id}`);assert(produced.length===1&&produced[0].baseProvinceId===depot.id&&produced[0].aircraftCount===24,'Wing delivery failed');
+  await click('[aria-label="Air Mode"]');assert(await evaluate(`!!document.querySelector('[data-air-wing-id="wing-${building.id}"]')`),'Produced Wing hidden in normal mode');
+  await click(`[aria-label="AirWing ${fighter.name}"]`);
+  report.checks.push('Build Fighter UI; Save/load exact paid queue; real x3 progress; completion fixture delivers once; new Wing visible with Air Mode OFF');
   const measure=()=>evaluate(`new Promise(resolve=>{const gaps=[];let previous=performance.now(),start=previous;function frame(now){gaps.push(now-previous);previous=now;window.dispatchEvent(new KeyboardEvent('keydown',{key:gaps.length%2?'ArrowLeft':'ArrowRight',bubbles:true}));if(now-start<1800)requestAnimationFrame(frame);else resolve({frames:gaps.length,maxFrameGapMs:Math.max(...gaps),over50ms:gaps.filter(x=>x>50).length,overlayPaths:document.querySelectorAll('.air-zone').length});}requestAnimationFrame(frame);})`);
   const samples={airMode:[],normalMode:[]};
   // Restore the same saved front and camera before each sample; alternate order.
@@ -99,7 +154,7 @@ try {
   report.checks.push('Rebase completes, x3 with zoom/pan and air overlay');
   if(await evaluate(`document.querySelector('[aria-label="Air Mode"]').getAttribute('aria-pressed')!=='true'`))await click('[aria-label="Air Mode"]');
   await button('Localizar (F)');await click(`[aria-label="AirWing ${fighter.name}"]`);
-  const screenshot=await call('Page.captureScreenshot',{format:'png'});await writeFile('artifacts/air-warfare-v1-browser.png',Buffer.from(screenshot.data,'base64'));
-  assert(errors.length===0,'Browser exceptions');await writeFile('artifacts/air-warfare-v1-browser.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
+  const screenshot=await call('Page.captureScreenshot',{format:'png'});await writeFile('artifacts/air-warfare-v1.1-browser.png',Buffer.from(screenshot.data,'base64'));
+  assert(errors.length===0,'Browser exceptions');await writeFile('artifacts/air-warfare-v1.1-browser.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
 }catch(error){if(inspect)console.log('Browser diagnostic',await inspect(`({panel:document.querySelector('.air-panel')?.textContent,settings:document.querySelector('.settings-modal')?.textContent,toasts:[...document.querySelectorAll('.toast-message')].map(e=>e.textContent),errors:${JSON.stringify(errors)}})`));throw error;}
 finally{ws?.close();chrome?.kill();await server.close();}

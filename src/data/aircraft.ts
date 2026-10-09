@@ -15,3 +15,16 @@ export const AIR_BALANCE = {
   bombingGoldPerAircraft: .03, bombingMaxGoldPerCountry: 5,
   wingSize: 24,
 } as const;
+
+/** Local material scale follows Naval Construction (initial stocks: 20 iron/15 tools). */
+export const AIR_PRODUCTION_CONFIG: Record<AircraftType, { gold: number; iron: number; tools: number; days: number }> = {
+  FIGHTER: { gold: 240, iron: 24, tools: 12, days: 120 },
+  CAS: { gold: 300, iron: 30, tools: 15, days: 150 },
+  BOMBER: { gold: 480, iron: 48, tools: 24, days: 240 },
+  TRANSPORT_PLANE: { gold: 360, iron: 36, tools: 18, days: 180 },
+};
+export const AIR_QUEUE_LIMIT = 5;
+export const AIR_PRODUCTION_AI = {
+  reserve: 1000, dailyGoldFraction: .1, peaceCap: 6, warCap: 12,
+  incomePerWing: 5, bomberCap: 2,
+} as const;

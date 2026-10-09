@@ -14,7 +14,13 @@ export interface AirWing {
 export interface AirBase { provinceId: string; level: 1 | 2 | 3; capacity: number }
 export interface AirZone { id: string; name: string; provinceIds: string[]; center: { x: number; y: number }; neighbors: string[] }
 export interface AirEngagement { zoneId: string; wingIds: string[]; losses: Record<string, number> }
-export interface AirState { wings: AirWing[]; engagements: AirEngagement[] }
+export interface AirProductionOrder {
+  id: string; countryTag: string; provinceId: string; type: AircraftType;
+  progress: number; requiredProgress: number;
+}
+/** Every queued order is already paid. Absence is the V1 save contract. */
+export interface AirProductionState { queues: Record<string, AirProductionOrder[]>; nextId: number }
+export interface AirState { wings: AirWing[]; engagements: AirEngagement[]; production?: AirProductionState }
 export interface AirCounters {
   airWings: number; activeAirMissions: number; airAIBots: number; airEngagements: number;
   aircraftLost: number; casMissions: number; bombingMissions: number;

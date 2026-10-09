@@ -1,0 +1,91 @@
+{
+  "checks": [
+    "BRA / São Paulo: Destroyer + Guarnição + Serraria started through UI and aggregated",
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "layout": {
+        "panel": {
+          "top": 98,
+          "bottom": 864
+        },
+        "tabs": {
+          "top": 187.5,
+          "bottom": 244.5
+        },
+        "contentHeight": 575,
+        "sidebarHeight": 632,
+        "contentScroll": "auto",
+        "sidebarScroll": "auto",
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "viewport": [
+        1280,
+        720
+      ],
+      "layout": {
+        "panel": {
+          "top": 163.5,
+          "bottom": 684
+        },
+        "tabs": {
+          "top": 253,
+          "bottom": 310
+        },
+        "contentHeight": 329,
+        "sidebarHeight": 386,
+        "contentScroll": "auto",
+        "sidebarScroll": "auto",
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "viewport": [
+        1024,
+        768
+      ],
+      "layout": {
+        "panel": {
+          "top": 321,
+          "bottom": 732
+        },
+        "tabs": {
+          "top": 410.5,
+          "bottom": 467.5
+        },
+        "contentHeight": 123,
+        "sidebarHeight": 96,
+        "contentScroll": "auto",
+        "sidebarScroll": "auto",
+        "horizontalOverflow": false
+      }
+    },
+    {
+      "viewport": [
+        768,
+        720
+      ],
+      "layout": {
+        "panel": {
+          "top": 206.5,
+          "bottom": 684
+        },
+        "tabs": {
+          "top": 296,
+          "bottom": 353
+        },
+        "contentHeight": 166,
+        "sidebarHeight": 119,
+        "contentScroll": "auto",
+        "sidebarScroll": "auto",
+        "horizontalOverflow": false
+      }
+    },
+    "Inland selection hides Porto, falls back to Info; return to São Paulo restores four tabs"
+  ],
+  "errors": []
+}

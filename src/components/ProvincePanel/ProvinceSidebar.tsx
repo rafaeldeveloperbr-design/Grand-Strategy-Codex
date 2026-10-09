@@ -2,10 +2,14 @@ import React from 'react';
 import { BuildingConstruction, Recruitment } from '../../types';
 import { BUILDING_DEFINITIONS } from '../../data/buildings';
 import { UNIT_DEFINITIONS } from '../../data/units';
+import type { NavalBuildOrder, NavalShipyardUpgrade } from '../../types/naval';
+import { NAVAL_BUILD_CONFIG } from '../../data/navalConstruction';
 
 interface ProvinceSidebarProps {
   provinceConstructions: BuildingConstruction[];
   recruitmentsHere: Recruitment[];
+  navalBuilds?: readonly NavalBuildOrder[];
+  navalUpgrade?: NavalShipyardUpgrade;
   onCancelBuilding: (constructionId: string) => void;
   onCancelRecruitment: (recruitmentId: string) => void;
 }
@@ -13,10 +17,12 @@ interface ProvinceSidebarProps {
 export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
   provinceConstructions,
   recruitmentsHere,
+  navalBuilds = [],
+  navalUpgrade,
   onCancelBuilding,
   onCancelRecruitment,
 }) => {
-  const hasActivities = provinceConstructions.length > 0 || recruitmentsHere.length > 0;
+  const hasActivities = provinceConstructions.length > 0 || recruitmentsHere.length > 0 || navalBuilds.length > 0 || !!navalUpgrade;
 
   return (
     <div className="province-panel__sidebar">
@@ -25,14 +31,14 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
 
         {!hasActivities && (
           <p className="province-panel__sidebar-empty">
-            Nenhuma obra ou recrutamento em andamento.
+            Nenhuma atividade em andamento.
           </p>
         )}
 
         {/* Construções em Andamento */}
         {provinceConstructions.length > 0 && (
           <div className="province-panel__sidebar-section">
-            <h4 className="province-panel__sidebar-subtitle">🔨 Construções</h4>
+            <h4 className="province-panel__sidebar-subtitle">🔨 Obras</h4>
             {provinceConstructions.map((item, idx) => {
               const def = BUILDING_DEFINITIONS[item.buildingType];
               const progress = Math.max(
@@ -65,7 +71,7 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
                     <span className="province-panel__construction-days">
                       {isActive
                         ? `${Math.ceil(item.daysRemaining)}d`
-                        : `${Math.ceil(item.totalDays)}d`}
+                        : `${Math.ceil(item.totalDays)}d`} · {isActive ? Math.round(progress) : 0}%
                     </span>
                   </div>
                   <div className="province-panel__construction-bar">
@@ -86,7 +92,7 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
         {/* Recrutamentos em Andamento */}
         {recruitmentsHere.length > 0 && (
           <div className="province-panel__sidebar-section">
-            <h4 className="province-panel__sidebar-subtitle">⚔️ Recrutando</h4>
+            <h4 className="province-panel__sidebar-subtitle">⚔️ Recrutamento</h4>
             {recruitmentsHere.map((rec) => {
               const def = UNIT_DEFINITIONS[rec.unitType];
               const totalTime = rec.totalDays ?? def.trainingTime;
@@ -102,7 +108,7 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
                 <div key={rec.id} className="province-panel__sidebar-item">
                   <div className="province-panel__sidebar-item-header">
                     <span>
-                      {def.icon} {rec.count > 1 ? `${rec.count}x ` : ''}{def.name}
+                      {def.icon} {rec.count}× {def.name}
                     </span>
                     <button
                       className="province-panel__construction-cancel"
@@ -114,7 +120,7 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
                   </div>
                   <div className="province-panel__sidebar-item-info">
                     <span className="province-panel__construction-days">
-                      {Math.ceil(rec.daysRemaining)}d
+                      {Math.ceil(rec.daysRemaining)} dias restantes · {Math.round(progress)}%
                     </span>
                   </div>
                   <div className="province-panel__construction-bar">
@@ -128,7 +134,26 @@ export const ProvinceSidebar: React.FC<ProvinceSidebarProps> = ({
             })}
           </div>
         )}
+        {(navalBuilds.length > 0 || navalUpgrade) && <div className="province-panel__sidebar-section">
+          <h4 className="province-panel__sidebar-subtitle">⚓ Naval</h4>
+          {navalBuilds.map((build, index) => <NavalActivity key={build.id}
+            label={NAVAL_BUILD_CONFIG[build.unitType].label} progress={build.progress} requiredProgress={build.requiredProgress}
+            status={navalUpgrade ? 'Pausado' : index ? 'Na fila' : 'Ativo'} />)}
+          {navalUpgrade && <NavalActivity label={`Upgrade Shipyard ${navalUpgrade.targetLevel - 1} → ${navalUpgrade.targetLevel}`}
+            progress={navalUpgrade.progress} requiredProgress={navalUpgrade.requiredProgress} status="Ativo" />}
+        </div>}
       </div>
     </div>
   );
 };
+
+function NavalActivity({ label, progress, requiredProgress, status }: {
+  label: string; progress: number; requiredProgress: number; status: string;
+}) {
+  const percent = Math.max(0, Math.min(100, requiredProgress > 0 ? progress / requiredProgress * 100 : 0));
+  return <div className="province-panel__sidebar-item">
+    <div className="province-panel__sidebar-item-header"><span>{label}</span></div>
+    <div className="province-panel__sidebar-item-info"><span className="province-panel__construction-days">{progress} / {requiredProgress} dias · {Math.floor(percent)}% · {status}</span></div>
+    <div className="province-panel__construction-bar"><div className="province-panel__construction-fill" style={{ width: `${percent}%` }} /></div>
+  </div>;
+}

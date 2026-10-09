@@ -16,19 +16,25 @@
 
 /* Layout de Duas Colunas */
 .province-panel__layout{
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
 .province-panel__main{
+  min-height: 0;
+  min-width: 0;
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .province-panel__sidebar{
+  min-height: 0;
+  overflow: hidden;
   width: 240px;
   min-width: 240px;
   border-left: 2px solid var(--border-color);
@@ -41,6 +47,8 @@
 }
 
 .province-panel__sidebar-content{
+  min-height: 0;
+  overflow-wrap: anywhere;
   padding: 12px;
   overflow-y: auto;
   flex: 1;
@@ -100,6 +108,7 @@
 }
 
 .province-panel__header{
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -241,6 +250,7 @@
 
 /* === Footer do Painel === */
 .province-panel__footer{
+  flex-shrink: 0;
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -267,6 +277,8 @@
  * PROVINCE PANEL - ABAS (Módulo 2)
  * ============================================================ */
 .province-panel__tabs{
+  flex-shrink: 0;
+  flex-wrap: wrap;
   display: flex;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
@@ -301,6 +313,8 @@
 }
 
 .province-panel__content{
+  min-height: 0;
+  overflow-wrap: anywhere;
   flex: 1;
   overflow-y: auto;
   padding: 0;

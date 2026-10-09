@@ -8,6 +8,7 @@ import { createInitialArmies } from '../../data/map/initialState';
 import { saveGame, loadGame, getSaveCompatibilityError, CURRENT_VERSION } from '../saveSystem';
 import { createInitialTechState } from '../technology';
 import { date } from './helpers/southAmericaAudit';
+import { buildSimulationActivation } from '../simulationActivation';
 
 afterEach(()=>{cleanup();localStorage.clear();vi.unstubAllGlobals();});
 function props() { return {provinces:provincesData,countries,armies:[],recruitments:[],buildingConstructions:[],activeBattles:[],selectedProvince:null,hoveredProvince:null,selectedArmy:null,onProvinceHover:vi.fn(),onProvinceClick:vi.fn(),onArmyClick:vi.fn(),onProvinceRightClick:vi.fn()}; }
@@ -15,6 +16,18 @@ function saveWorld() {
   return saveGame({provincesRef:{current:provincesData},countriesRef:{current:countries},armiesRef:{current:createInitialArmies(countries)},dateRef:{current:date},warsRef:{current:[]},activeBattlesRef:{current:[]},diplomaticRelationsRef:{current:[]},recruitmentsRef:{current:[]},buildingConstructionsRef:{current:[]},playerTechStateRef:{current:createInitialTechState('BRA')},botTechStatesRef:{current:new Map()}},'world');
 }
 describe('World Map V1 rendering and interaction', () => {
+  it('renders all FULL and PASSIVE countries identically after deriving activation', () => {
+    const world = { countries: structuredClone(countries), provinces: structuredClone(provincesData) };
+    const before = structuredClone(world);
+    const activation = buildSimulationActivation({ ...world, armies: [], wars: [], relations: [], playerCountryTag: 'AND' });
+    expect(activation.summary.passiveCountries).toBeGreaterThan(0);
+    const view = render(<GameMap {...props()} {...world} playerCountryTag="AND"/>);
+    const nodes = [...view.container.querySelectorAll('[data-province-id]')];
+    expect(nodes).toHaveLength(494);
+    const renderedOwners = new Set(nodes.map(n => world.provinces.find(p => p.id === n.getAttribute('data-province-id'))!.owner));
+    expect(renderedOwners.size).toBe(201); expect(world).toEqual(before);
+    expect(view.container.textContent).not.toMatch(/FULL|PASSIVE/);
+  });
   it('renders all six regions simultaneously with one selectable shape per province', () => { const view=render(<GameMap {...props()}/>); const nodes=[...view.container.querySelectorAll('[data-province-id]')]; expect(nodes).toHaveLength(494); expect(new Set(nodes.map(n=>n.getAttribute('data-province-id'))).size).toBe(494); expect(view.container.querySelectorAll('[data-province-id^="na_"]')).toHaveLength(86); expect(view.container.querySelectorAll('[data-province-id^="sa_"]')).toHaveLength(64); expect(view.container.querySelectorAll('[data-province-id^="eu_"]')).toHaveLength(95); expect(view.container.querySelectorAll('[data-province-id^="af_"]')).toHaveLength(80); expect(view.container.querySelectorAll('[data-province-id^="as_"]')).toHaveLength(127); expect(view.container.querySelectorAll('[data-province-id^="oc_"]')).toHaveLength(42); });
   it('selects and hovers a North American province through its real path', () => { const p=props(),view=render(<GameMap {...p}/>); const node=view.container.querySelector('[data-province-id="na_usa_texas"]')!; fireEvent.click(node); expect(p.onProvinceClick).toHaveBeenCalledWith('na_usa_texas'); fireEvent.mouseEnter(node,{clientX:100,clientY:100}); expect(p.onProvinceHover).toHaveBeenCalledWith('na_usa_texas'); expect(view.getByRole('tooltip').textContent).toContain('Texas'); expect(view.getByRole('tooltip').textContent).toContain('Estados Unidos'); fireEvent.mouseLeave(node); expect(view.queryByRole('tooltip')).toBeNull(); });
   it('shows friendly island/capital names without exposing IDs or tags', () => { const view=render(<GameMap {...props()}/>); fireEvent.mouseEnter(view.container.querySelector('[data-province-id="na_cub_cuba"]')!,{clientX:100,clientY:100}); const tooltip=view.getByRole('tooltip'); expect(tooltip.textContent).toContain('Havana'); expect(tooltip.textContent).toContain('Cuba'); expect(tooltip.textContent).not.toMatch(/na_|sa_|\bCUB\b/); expect(view.container.querySelector('svg')?.textContent).not.toMatch(/na_|sa_/); });

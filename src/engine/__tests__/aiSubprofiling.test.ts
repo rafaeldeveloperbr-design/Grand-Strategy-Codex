@@ -20,7 +20,7 @@ describe('AI subprofiler', () => {
     }
     time += 5; profiler.finish();
     const breakdown = profiler.last!.phases;
-    expect(breakdown.overhead).toBe(5); expect(breakdown.TOTAL).toBe(23);
+    expect(breakdown.overhead).toBe(5); expect(breakdown.TOTAL).toBe(5 + 2 * (AI_PHASES.length - 2));
     expect(AI_PHASES.filter(p => p !== 'TOTAL').reduce((sum, p) => sum + breakdown[p], 0)).toBe(breakdown.TOTAL);
     for (const phase of AI_PHASES.filter(p => p !== 'TOTAL' && p !== 'overhead')) expect(breakdown[phase]).toBe(2);
   });

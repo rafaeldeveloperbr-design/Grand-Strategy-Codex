@@ -1,5 +1,6 @@
 import { processWarResolutionTick } from '../engine/diplomacy/warResolution';
 import { processPoliticalTick } from '../engine/politics';
+import { buildSimulationActivation } from '../engine/simulationActivation';
 import { cleanupDiplomacy } from '../engine/diplomacy';
 import {
   useCallback,
@@ -207,7 +208,8 @@ export function useGameLoop(props: Props) {
 
     profiler.endPhase('economy');
 
-    const political = processPoliticalTick(countries,{provinces,armies,wars,date:snapshot.date},playerCountryTag,false);
+    const politicalActivation = profiler.measureSimulationActivation(() => buildSimulationActivation({countries,provinces,armies,wars,relations,playerCountryTag,date:snapshot.date}));
+    const political = processPoliticalTick(countries,{provinces,armies,wars,date:snapshot.date},playerCountryTag,false,politicalActivation.fullCountryTags);
     countries = political.countries;
     political.messages.forEach(message => {addLog(message);addAILog('Governo','government',message,formatGameDate(snapshot.date));});
 

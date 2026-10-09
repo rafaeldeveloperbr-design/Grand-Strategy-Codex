@@ -1,0 +1,515 @@
+{
+  "environment": {
+    "node": "v26.8.2",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13500T",
+    "samples": 9,
+    "warmups": 3,
+    "measurement": "Node/Vite SSR, independent cloned one-day states; dev profiler enabled, phases inclusive. Not a browser scheduler benchmark."
+  },
+  "scenarios": {
+    "USA": {
+      "playerCountryTag": "USA",
+      "totalCountries": 201,
+      "fullCountries": 25,
+      "passiveCountries": 176,
+      "player": 1,
+      "strategicPowers": 24,
+      "warCountries": 0,
+      "neighborCountries": 2,
+      "relationCountries": 0,
+      "rebellionCountries": 0,
+      "activationMilliseconds": [
+        0.4057999999999993,
+        0.39799999999991087,
+        0.40449999999987085,
+        0.3996999999999389,
+        0.41170000000010987,
+        0.4794000000001688,
+        0.962400000000116,
+        0.42420000000015534,
+        0.41610000000014224
+      ],
+      "normal": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 25,
+          "passiveCountries": 176,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 0,
+          "neighborCountries": 2,
+          "relationCountries": 0,
+          "rebellionCountries": 0,
+          "duration": 1.644600000000537
+        },
+        "before": {
+          "elapsed": 236.83539999999994,
+          "botEconomicDecisions": 175.18190000000232,
+          "botMilitaryAI": 10.415600000002996,
+          "diplomacyAI": 0.3693999999995867,
+          "buildLogisticsNetworks": 42.641599999999926,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 99.57400000000007,
+          "botEconomicDecisions": 74.7194999999997,
+          "botMilitaryAI": 2.095000000001164,
+          "diplomacyAI": 0.3044999999992797,
+          "buildLogisticsNetworks": 10.28630000000021,
+          "simulationActivation": 1.660200000000259
+        }
+      },
+      "diplomacyCycle": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 26,
+          "passiveCountries": 175,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 0,
+          "neighborCountries": 2,
+          "relationCountries": 3,
+          "rebellionCountries": 0,
+          "duration": 2.089299999999639
+        },
+        "before": {
+          "elapsed": 719.2127999999993,
+          "botEconomicDecisions": 177.25549999999748,
+          "botMilitaryAI": 12.00829999999769,
+          "diplomacyAI": 476.5033000000003,
+          "buildLogisticsNetworks": 40.420500000000175,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 261.41989999999896,
+          "botEconomicDecisions": 80.58670000000166,
+          "botMilitaryAI": 2.9545000000034634,
+          "diplomacyAI": 160.2403000000013,
+          "buildLogisticsNetworks": 7.694800000001123,
+          "simulationActivation": 2.356499999999869
+        }
+      },
+      "activationMedian": 0.41170000000010987
+    },
+    "BRA": {
+      "playerCountryTag": "BRA",
+      "totalCountries": 201,
+      "fullCountries": 31,
+      "passiveCountries": 170,
+      "player": 1,
+      "strategicPowers": 24,
+      "warCountries": 0,
+      "neighborCountries": 10,
+      "relationCountries": 0,
+      "rebellionCountries": 0,
+      "activationMilliseconds": [
+        1.8602000000028056,
+        1.227999999999156,
+        1.2160000000003492,
+        1.1993000000002212,
+        1.3633999999983644,
+        1.1585000000013679,
+        1.2206000000005588,
+        1.167699999998149,
+        1.2101000000002387
+      ],
+      "normal": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 31,
+          "passiveCountries": 170,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 0,
+          "neighborCountries": 10,
+          "relationCountries": 0,
+          "rebellionCountries": 0,
+          "duration": 2.08100000000195
+        },
+        "before": {
+          "elapsed": 241.6118000000024,
+          "botEconomicDecisions": 175.64059999999517,
+          "botMilitaryAI": 11.734799999991083,
+          "diplomacyAI": 0.34830000000147265,
+          "buildLogisticsNetworks": 43.85689999999886,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 106.06410000000324,
+          "botEconomicDecisions": 80.69209999997838,
+          "botMilitaryAI": 2.7769999999909487,
+          "diplomacyAI": 0.3033000000032189,
+          "buildLogisticsNetworks": 11.59939999999915,
+          "simulationActivation": 2.2251999999971304
+        }
+      },
+      "diplomacyCycle": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 31,
+          "passiveCountries": 170,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 0,
+          "neighborCountries": 10,
+          "relationCountries": 3,
+          "rebellionCountries": 0,
+          "duration": 2.040500000002794
+        },
+        "before": {
+          "elapsed": 674.3539999999994,
+          "botEconomicDecisions": 174.01210000005085,
+          "botMilitaryAI": 11.179800000008981,
+          "diplomacyAI": 437.27319999999963,
+          "buildLogisticsNetworks": 39.690199999997276,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 245.17379999999685,
+          "botEconomicDecisions": 78.99640000000363,
+          "botMilitaryAI": 2.9585999999872,
+          "diplomacyAI": 144.96800000000076,
+          "buildLogisticsNetworks": 8.313300000001618,
+          "simulationActivation": 1.9983000000029278
+        }
+      },
+      "activationMedian": 1.2160000000003492
+    },
+    "AND": {
+      "playerCountryTag": "AND",
+      "totalCountries": 201,
+      "fullCountries": 25,
+      "passiveCountries": 176,
+      "player": 1,
+      "strategicPowers": 24,
+      "warCountries": 0,
+      "neighborCountries": 2,
+      "relationCountries": 0,
+      "rebellionCountries": 0,
+      "activationMilliseconds": [
+        1.2392000000036205,
+        0.8214000000007218,
+        0.8307999999960884,
+        0.8110000000015134,
+        0.8215000000054715,
+        0.827900000003865,
+        0.856500000001688,
+        0.8369999999995343,
+        0.7949999999982538
+      ],
+      "normal": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 25,
+          "passiveCountries": 176,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 0,
+          "neighborCountries": 2,
+          "relationCountries": 0,
+          "rebellionCountries": 0,
+          "duration": 2.0935000000026776
+        },
+        "before": {
+          "elapsed": 249.6926999999996,
+          "botEconomicDecisions": 181.90599999998085,
+          "botMilitaryAI": 11.568700000025274,
+          "diplomacyAI": 0.3396000000066124,
+          "buildLogisticsNetworks": 44.76109999999608,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 104.27949999999691,
+          "botEconomicDecisions": 79.67930000000342,
+          "botMilitaryAI": 2.788700000011886,
+          "diplomacyAI": 0.28929999999672873,
+          "buildLogisticsNetworks": 11.775900000000547,
+          "simulationActivation": 2.0935000000026776
+        }
+      },
+      "diplomacyCycle": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 26,
+          "passiveCountries": 175,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 0,
+          "neighborCountries": 2,
+          "relationCountries": 6,
+          "rebellionCountries": 0,
+          "duration": 1.9971999999979744
+        },
+        "before": {
+          "elapsed": 680.1566000000021,
+          "botEconomicDecisions": 177.74919999998383,
+          "botMilitaryAI": 11.398900000007416,
+          "diplomacyAI": 444.81119999999646,
+          "buildLogisticsNetworks": 38.37109999999666,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 249.6345999999976,
+          "botEconomicDecisions": 80.89310000000842,
+          "botMilitaryAI": 3.155899999990652,
+          "diplomacyAI": 147.74339999999938,
+          "buildLogisticsNetworks": 7.395600000003469,
+          "simulationActivation": 2.009300000005169
+        }
+      },
+      "activationMedian": 0.827900000003865
+    },
+    "TUV": {
+      "playerCountryTag": "TUV",
+      "totalCountries": 201,
+      "fullCountries": 25,
+      "passiveCountries": 176,
+      "player": 1,
+      "strategicPowers": 24,
+      "warCountries": 0,
+      "neighborCountries": 0,
+      "relationCountries": 0,
+      "rebellionCountries": 0,
+      "activationMilliseconds": [
+        0.682200000002922,
+        0.6900999999998021,
+        0.7040999999953783,
+        1.790899999999965,
+        0.702000000004773,
+        0.7047000000020489,
+        0.6809999999968568,
+        0.6837999999988824,
+        0.690999999998894
+      ],
+      "normal": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 25,
+          "passiveCountries": 176,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 0,
+          "neighborCountries": 0,
+          "relationCountries": 0,
+          "rebellionCountries": 0,
+          "duration": 2.1159000000043306
+        },
+        "before": {
+          "elapsed": 248.57190000000264,
+          "botEconomicDecisions": 179.51959999998508,
+          "botMilitaryAI": 11.82199999999284,
+          "diplomacyAI": 0.3381999999983236,
+          "buildLogisticsNetworks": 44.6359999999986,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 106.0590000000011,
+          "botEconomicDecisions": 81.38169999999809,
+          "botMilitaryAI": 2.7303999999712687,
+          "diplomacyAI": 0.2845999999990454,
+          "buildLogisticsNetworks": 12.120900000001711,
+          "simulationActivation": 2.0868000000045868
+        }
+      },
+      "diplomacyCycle": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 26,
+          "passiveCountries": 175,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 0,
+          "neighborCountries": 0,
+          "relationCountries": 3,
+          "rebellionCountries": 0,
+          "duration": 2.048900000008871
+        },
+        "before": {
+          "elapsed": 674.142200000002,
+          "botEconomicDecisions": 177.42519999988144,
+          "botMilitaryAI": 11.431100000052538,
+          "diplomacyAI": 438.5463000000018,
+          "buildLogisticsNetworks": 39.02649999999994,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 250.02440000000206,
+          "botEconomicDecisions": 81.04949999999371,
+          "botMilitaryAI": 3.2690999999904307,
+          "diplomacyAI": 148.03489999999874,
+          "buildLogisticsNetworks": 7.6085000000020955,
+          "simulationActivation": 2.0274000000063097
+        }
+      },
+      "activationMedian": 0.690999999998894
+    },
+    "wars": {
+      "playerCountryTag": "AND",
+      "totalCountries": 201,
+      "fullCountries": 34,
+      "passiveCountries": 167,
+      "player": 1,
+      "strategicPowers": 24,
+      "warCountries": 10,
+      "neighborCountries": 2,
+      "relationCountries": 0,
+      "rebellionCountries": 0,
+      "activationMilliseconds": [
+        1.1521000000066124,
+        0.9535000000032596,
+        0.922099999996135,
+        0.9577999999892199,
+        1.0204999999987194,
+        1.786999999996624,
+        0.912400000001071,
+        0.9170000000012806,
+        0.8916999999928521
+      ],
+      "normal": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 34,
+          "passiveCountries": 167,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 10,
+          "neighborCountries": 2,
+          "relationCountries": 0,
+          "rebellionCountries": 0,
+          "duration": 2.101699999999255
+        },
+        "before": {
+          "elapsed": 269.48349999998754,
+          "botEconomicDecisions": 187.79659999995783,
+          "botMilitaryAI": 14.801000000166823,
+          "diplomacyAI": 0.37889999999606516,
+          "buildLogisticsNetworks": 50.05590000000666,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 115.05989999999292,
+          "botEconomicDecisions": 86.5226999999577,
+          "botMilitaryAI": 4.53880000000936,
+          "diplomacyAI": 0.280399999988731,
+          "buildLogisticsNetworks": 13.624400000000605,
+          "simulationActivation": 2.468699999997625
+        }
+      },
+      "diplomacyCycle": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 35,
+          "passiveCountries": 166,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 10,
+          "neighborCountries": 2,
+          "relationCountries": 6,
+          "rebellionCountries": 0,
+          "duration": 2.018400000000838
+        },
+        "before": {
+          "elapsed": 691.452099999995,
+          "botEconomicDecisions": 180.50790000004054,
+          "botMilitaryAI": 13.762099999847123,
+          "diplomacyAI": 448.4103000000032,
+          "buildLogisticsNetworks": 39.208800000007614,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 260.03020000000834,
+          "botEconomicDecisions": 84.65699999996286,
+          "botMilitaryAI": 4.505500000013853,
+          "diplomacyAI": 152.2543000000005,
+          "buildLogisticsNetworks": 9.648100000005797,
+          "simulationActivation": 2.1206999999994878
+        }
+      },
+      "activationMedian": 0.9535000000032596
+    },
+    "expansion": {
+      "playerCountryTag": "AND",
+      "totalCountries": 201,
+      "fullCountries": 27,
+      "passiveCountries": 174,
+      "player": 1,
+      "strategicPowers": 24,
+      "warCountries": 0,
+      "neighborCountries": 6,
+      "relationCountries": 0,
+      "rebellionCountries": 0,
+      "activationMilliseconds": [
+        1.7403999999951338,
+        1.132999999987078,
+        1.0615999999863561,
+        1.0354000000079395,
+        1.0587999999988824,
+        1.0868999999947846,
+        1.022899999996298,
+        1.0863000000099419,
+        1.0283999999955995
+      ],
+      "normal": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 27,
+          "passiveCountries": 174,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 0,
+          "neighborCountries": 6,
+          "relationCountries": 0,
+          "rebellionCountries": 0,
+          "duration": 5.2075000000040745
+        },
+        "before": {
+          "elapsed": 255.96370000000752,
+          "botEconomicDecisions": 189.96330000000307,
+          "botMilitaryAI": 12.007799999890267,
+          "diplomacyAI": 0.357800000012503,
+          "buildLogisticsNetworks": 45.194799999997485,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 107.70019999999204,
+          "botEconomicDecisions": 83.67799999998533,
+          "botMilitaryAI": 2.7175000000279397,
+          "diplomacyAI": 0.28220000000146683,
+          "buildLogisticsNetworks": 10.674399999988964,
+          "simulationActivation": 2.2894999999989523
+        }
+      },
+      "diplomacyCycle": {
+        "activation": {
+          "totalCountries": 201,
+          "fullCountries": 28,
+          "passiveCountries": 173,
+          "player": 1,
+          "strategicPowers": 24,
+          "warCountries": 0,
+          "neighborCountries": 6,
+          "relationCountries": 6,
+          "rebellionCountries": 0,
+          "duration": 2.123300000006566
+        },
+        "before": {
+          "elapsed": 707.1168999999936,
+          "botEconomicDecisions": 181.68239999991783,
+          "botMilitaryAI": 11.47350000005099,
+          "diplomacyAI": 468.0356000000029,
+          "buildLogisticsNetworks": 40.187100000010105,
+          "simulationActivation": 0
+        },
+        "after": {
+          "elapsed": 259.20130000000063,
+          "botEconomicDecisions": 83.08580000000075,
+          "botMilitaryAI": 3.287499999962165,
+          "diplomacyAI": 156.65649999999732,
+          "buildLogisticsNetworks": 8.26030000000901,
+          "simulationActivation": 2.191500000000815
+        }
+      },
+      "activationMedian": 1.0615999999863561
+    }
+  }
+}

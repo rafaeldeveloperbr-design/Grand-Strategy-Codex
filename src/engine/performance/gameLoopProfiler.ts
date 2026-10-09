@@ -1,6 +1,6 @@
 import type { DiplomacyAIProfile } from './diplomacyAIProfiler';
 import type { MilitaryAIProfile } from './militaryAIProfiler';
-import { AI_PHASES, createAITickProfiler, profilerNow, type AIPhase, type SlowestBot } from './aiTickProfiler';
+import { AI_PHASES, createAITickProfiler, profilerNow, type AIPhase, type SlowestBot, type AITickProfile } from './aiTickProfiler';
 
 export const GAME_LOOP_PHASES = ['economy', 'politics', 'unrest', 'diplomacyTechnology', 'AI',
   'movement', 'battleArrival', 'battleContinuous', 'warResolution', 'rebellion', 'cleanup',
@@ -9,6 +9,9 @@ type Phase = typeof GAME_LOOP_PHASES[number];
 export type PhaseStats = { count: number; total: number; average: number; max: number; last: number };
 
 export type AIBreakdown = {
+  simulationActivation?: AITickProfile['simulationActivation'];
+  activeBotsProcessed?: number;
+  passiveBotsSkipped?: number;
   diplomacyAI?: DiplomacyAIProfile;
   diplomacyAIMax?: DiplomacyAIProfile;
   militaryAI?: MilitaryAIProfile;
@@ -29,6 +32,7 @@ export function createGameLoopProfiler(enabled: boolean, options: {
   let speedCounts: Record<number, number> = {};
   let ticks = 0, slowTicks = 0;
   let started = 0, phaseStarted = 0;
+  let politicalActivationDuration = 0;
   const record = (phase: Phase, duration: number) => {
     const stat = phases[phase] ?? { count: 0, total: 0, average: 0, max: 0, last: 0 };
     stat.count++; stat.total += duration; stat.average = stat.total / stat.count;
@@ -37,7 +41,12 @@ export function createGameLoopProfiler(enabled: boolean, options: {
   };
   return {
     phases, aiProfiler,
-    begin() { if (enabled) started = phaseStarted = clock(); },
+    begin() { if (enabled) { started = phaseStarted = clock(); politicalActivationDuration = 0; } },
+    measureSimulationActivation<T>(run: () => T): T {
+      if (!enabled) return run();
+      const start = clock();
+      try { return run(); } finally { politicalActivationDuration += clock() - start; }
+    },
     endPhase(phase: Exclude<Phase, 'TOTAL'>) {
       if (!enabled) return;
       const time = clock(); record(phase, time - phaseStarted); phaseStarted = time;
@@ -49,6 +58,10 @@ export function createGameLoopProfiler(enabled: boolean, options: {
       speedCounts[speed] = (speedCounts[speed] ?? 0) + 1;
       const ai = aiProfiler.last;
       if (ai) {
+        aiBreakdown.simulationActivation = ai.simulationActivation
+          ? { ...ai.simulationActivation, duration: ai.simulationActivation.duration + politicalActivationDuration } : undefined;
+        aiBreakdown.activeBotsProcessed = ai.activeBotsProcessed;
+        aiBreakdown.passiveBotsSkipped = ai.passiveBotsSkipped;
         const military = aiProfiler.militaryProfiler.last;
         if (military) {
           const aggregate = aiBreakdown.militaryAI ?? structuredClone(military);

@@ -133,7 +133,7 @@ export function choosePoliticalPolicy(country:Country,ctx:PoliticsContext): stri
   const legacy=chooseAILaw(country,ctx.provinces,{atWar:i.atWar});
   return legacy && validatePolicyChange(country,legacy,ctx.date,i.atWar).allowed ? legacy : null;
 }
-export function processPoliticalTick(countries:Country[],ctx:PoliticsContext,playerTag?:string,emitFeedback=true) {
+export function processPoliticalTick(countries:Country[],ctx:PoliticsContext,playerTag?:string,emitFeedback=true,fullCountryTags?:ReadonlySet<string>) {
   const messages:string[]=[],day=politicsDay(ctx.date);
   const result=countries.map(original => {
     if(original.isAnnexed || original.tag.startsWith('rebel_') || !ctx.provinces.some(p => p.owner===original.tag)) return original;
@@ -148,7 +148,7 @@ export function processPoliticalTick(countries:Country[],ctx:PoliticsContext,pla
     const stabilityTarget=clampPolitics(i.satisfaction*B.stabilityWeights.satisfaction+p.legitimacy*B.stabilityWeights.legitimacy+support*B.stabilityWeights.support+g.stabilityModifier);
     p={...country.politics!,legitimacy:drift(p.legitimacy,legitimacyTarget,B.legitimacyDrift),politicalCapital:clampPolitics(p.politicalCapital+B.politicalCapitalGain*(p.legitimacy+country.resources.stability+support)/300),lastTickDay:day};
     country={...country,politics:p,resources:{...country.resources,stability:drift(country.resources.stability,stabilityTarget,B.stabilityDrift)}};
-    if(playerTag && country.tag!==playerTag) {
+    if(playerTag && country.tag!==playerTag && (!fullCountryTags || fullCountryTags.has(country.tag))) {
       const law=choosePoliticalPolicy(country,ctx);if(law) {const changed=changeGovernmentPolicy(country,law,ctx.date,i.atWar,emitFeedback);country=changed.country;if(emitFeedback) messages.push(changed.message);}
     }
     return country;

@@ -11,7 +11,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "benchmark:diplomacy-ai": "node scripts/benchmark-diplomacy-ai.mjs",
-    "benchmark:military-ai": "node scripts/benchmark-military-ai.mjs"
+    "benchmark:military-ai": "node scripts/benchmark-military-ai.mjs",
+    "benchmark:simulation-activation": "node scripts/benchmark-simulation-activation.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",

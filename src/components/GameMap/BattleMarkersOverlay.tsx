@@ -8,12 +8,12 @@ interface BattleMarkersOverlayProps {
   provinces: Province[];
 }
 
-export const BattleMarkersOverlay: React.FC<BattleMarkersOverlayProps> = ({
+export const BattleMarkersOverlay: React.FC<BattleMarkersOverlayProps> = React.memo(function BattleMarkersOverlay({
   activeBattles,
   armies,
   countries,
   provinces,
-}) => {
+}: BattleMarkersOverlayProps) {
   return (
     <g className="battle-markers-layer">
       {activeBattles.map((battle) => {
@@ -111,4 +111,4 @@ export const BattleMarkersOverlay: React.FC<BattleMarkersOverlayProps> = ({
       })}
     </g>
   );
-};
+});

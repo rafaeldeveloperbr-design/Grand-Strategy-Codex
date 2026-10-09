@@ -1,7 +1,8 @@
 import type { Province } from '../../types';
+import { memo } from 'react';
 import type { WarPresentation } from './mapPresentation';
 
-export function OperationalOverlay({ provinces, war, selectedArmyLocation }: { provinces: Province[]; war: WarPresentation; selectedArmyLocation?: string | null }) {
+export const OperationalOverlay = memo(function OperationalOverlay({ provinces, war, selectedArmyLocation }: { provinces: Province[]; war: WarPresentation; selectedArmyLocation?: string | null }) {
   return <g className="operational-overlay" pointerEvents="none">
     <defs><pattern id="occupied-hatch" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M-3 3L3-3M0 12L12 0M9 15L15 9" stroke="var(--gold)" strokeWidth="1.2" opacity=".35" /></pattern></defs>
     {provinces.map(province => {
@@ -13,4 +14,4 @@ export function OperationalOverlay({ provinces, war, selectedArmyLocation }: { p
       </g>;
     })}
   </g>;
-}
+});

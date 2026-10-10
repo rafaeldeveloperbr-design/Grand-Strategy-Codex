@@ -22,7 +22,7 @@ describe('South America rendering and map controls', () => {
     const initial = `${x} ${y} ${w} ${h}`;
     expect(svg.getAttribute('viewBox')).toBe(initial);
     expect(container.querySelectorAll('[data-province-id]')).toHaveLength(494);
-    expect(container.querySelectorAll('.map__province-label')).toHaveLength(494);
+    expect(container.querySelectorAll('.map__province-label')).toHaveLength(0);
     expect(container.querySelectorAll('[data-province-id^="sa_"]')).toHaveLength(64);
     expect(container.querySelectorAll('[data-province-id^="na_"]')).toHaveLength(86);
     expect([...container.querySelectorAll('text')].filter(text => text.textContent === '★')).toHaveLength(201);

@@ -8,6 +8,7 @@ import { numericMapColor, buildMapValues, type MapMode } from './mapPresentation
 import { logisticsCategory } from '../../engine/logistics';
 
 interface ProvinceLayerProps {
+  showProvinceLabels?: boolean;
   labelSize?: number;
   provinces: Province[];
   countries: Country[];
@@ -25,6 +26,7 @@ interface ProvinceLayerProps {
 }
 
 export const ProvinceLayer: React.FC<ProvinceLayerProps> = React.memo(function ProvinceLayer({
+  showProvinceLabels = true,
   labelSize = 8,
   provinces,
   countries,
@@ -144,7 +146,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = React.memo(function P
               }}
             />
             {/* Nome da província */}
-            <text
+            {showProvinceLabels && <text
               x={province.center.x}
               y={province.center.y}
               textAnchor="middle"
@@ -156,7 +158,7 @@ export const ProvinceLayer: React.FC<ProvinceLayerProps> = React.memo(function P
               pointerEvents="none"
             >
               {province.name}
-            </text>
+            </text>}
 
             {/* Indicadores de atividades */}
             {hasActivities && (

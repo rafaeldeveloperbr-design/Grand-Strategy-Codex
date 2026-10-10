@@ -3,6 +3,9 @@ import { calculateArmySize, calculateArmyOrganization, calculateArmyMorale, calc
 import { getProvinceLogistics, type LogisticsInfo, type LogisticsSnapshot } from '../../engine/logistics';
 import { armyStatus } from '../militaryPresentation';
 
+export const COUNTRY_LABEL_MIN_ZOOM = 3;
+export const PROVINCE_LABEL_MIN_ZOOM = 8;
+
 export type MapMode = 'political' | 'development' | 'population' | 'unrest' | 'supply' | 'terrain' | 'logistics';
 export const MAP_MODES: { id: MapMode; label: string; description: string }[] = [
   { id: 'political', label: 'Político', description: 'Controle atual por país' },

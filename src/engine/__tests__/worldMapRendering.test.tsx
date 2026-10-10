@@ -55,7 +55,7 @@ describe('World Map V1 rendering and interaction', () => {
     fireEvent.mouseLeave(node); expect(view.queryByRole('tooltip')).toBeNull();
   });
   it('renders friendly labels and army markers for every new capital', () => {
-    const armies = createInitialArmies(countries), p = props(), view = render(<GameMap {...p} armies={armies} initialViewBox={{...mapMetadata.initialViewBox,w:mapMetadata.initialViewBox.w/7}}/>);
+    const armies = createInitialArmies(countries), p = props(), view = render(<GameMap {...p} armies={armies} initialViewBox={{...mapMetadata.initialViewBox,w:mapMetadata.initialViewBox.w/8}}/>);
     const labels = [...view.container.querySelectorAll('.map__province-label')].map(n => n.textContent);
     expect(labels).toContain('Paris'); expect(labels).toContain('Cairo'); expect(labels).toContain('Brasília'); expect(labels).toContain('Texas');
     expect(view.container.querySelector('svg')?.textContent).not.toMatch(/(?:eu|af|na|sa|as|oc)_[a-z_]+/);

@@ -8,10 +8,11 @@ import { Province, Country, Army, Recruitment, BuildingConstruction, ActiveBattl
 import { useMapControls } from './useMapControls';
 import { blocksMapKeyboard, regionalBounds } from './camera';
 import { ProvinceLayer } from './ProvinceLayer';
+import { CountryLabelsLayer } from './CountryLabelsLayer';
 import { ArmyMovementLayer } from './ArmyMovementLayer';
 import { BattleMarkersOverlay } from './BattleMarkersOverlay';
 import { GameMapTooltip } from './GameMapTooltip';
-import { buildArmyPresentation, buildMapValues, buildWarPresentation, type MapMode, type ArmyVisualGroup } from './mapPresentation';
+import { COUNTRY_LABEL_MIN_ZOOM, PROVINCE_LABEL_MIN_ZOOM, buildArmyPresentation, buildMapValues, buildWarPresentation, type MapMode, type ArmyVisualGroup } from './mapPresentation';
 import { MapModeBar } from './MapModeBar';
 import { ArmyStackPopover } from '../ArmyStackPopover';
 import { OperationalOverlay } from './OperationalOverlay';
@@ -355,6 +356,7 @@ export const GameMap: React.FC<MapProps> = ({
 
         {/* === Províncias === */}
         <ProvinceLayer
+          showProvinceLabels={mapZoom >= PROVINCE_LABEL_MIN_ZOOM}
           provinces={provinces}
           countries={countries}
           buildingConstructions={buildingConstructions}
@@ -370,6 +372,7 @@ export const GameMap: React.FC<MapProps> = ({
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         />
+        {mapZoom >= COUNTRY_LABEL_MIN_ZOOM && mapZoom < PROVINCE_LABEL_MIN_ZOOM && <CountryLabelsLayer countries={countries} provinces={provinces} />}
         <OperationalOverlay provinces={provinces} war={war} selectedArmyLocation={selectedArmy ? presentation.armyById.get(selectedArmy)?.location : null} />
         {mapMode === 'logistics' && logisticsOrigins.map(p => <g key={`logistics-${p.id}`} aria-label={`Origem logística: ${p.name}`} pointerEvents="none">
           <circle cx={p.center.x} cy={p.center.y - 15} r="10" fill="none" stroke="#ffe088" strokeWidth="2" />

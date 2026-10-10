@@ -9,7 +9,8 @@ export const AIRCRAFT_TYPES: Record<AircraftType, AircraftTypeConfig> = {
 export const AIR_BALANCE = {
   minOrganization: 20, minStrength: 20, minimumEfficiency: .1,
   combatLossRate: .025, combatOrganizationLoss: 8, missionOrganizationLoss: 2,
-  organizationRecovery: 4, strengthRecovery: 2, replacementPerLevel: 1,
+  organizationRecovery: 4, strengthRecovery: 2, replacementPerLevel: .5,
+  operationalReplacementMultiplier: .25,
   replacementGold: 4, replacementIron: 2, replacementTools: 1,
   superiorityModifier: .03, casMaxBonus: .05, casAircraftForMax: 60,
   bombingGoldPerAircraft: .03, bombingMaxGoldPerCountry: 5,

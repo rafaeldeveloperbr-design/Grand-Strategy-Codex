@@ -27,15 +27,15 @@ export function airMissionEfficiency(w: AirWing, ctx: AirContext): number {
 }
 export function assignAirMission(w: AirWing, mission: AirMission, zoneId: string, ctx: AirContext): AirWing | null {
   if (w.status==='REBASING' || !AIRCRAFT_TYPES[w.type].missions.includes(mission) || !canUseAirBase(w.countryTag,w.baseProvinceId,ctx) || !isAirZoneInRange(w,zoneId,ctx.provinces)) return null;
-  return {...w,mission,assignedAirZoneId:zoneId,status:'MISSION'};
+  return {...w,mission,assignedAirZoneId:zoneId,status:'MISSION',recovery:undefined};
 }
-export function cancelAirMission(w: AirWing): AirWing { return w.status==='REBASING' ? w : {...w,mission:undefined,assignedAirZoneId:undefined,status:'READY'}; }
+export function cancelAirMission(w: AirWing): AirWing { return w.status==='REBASING' ? w : {...w,mission:undefined,assignedAirZoneId:undefined,status:'READY',recovery:undefined}; }
 export function rebaseAirWing(w: AirWing, targetProvinceId: string, state: AirState, ctx: AirContext): AirWing | null {
   const target=ctx.provinces.find(p=>p.id===targetProvinceId), base=ctx.provinces.find(p=>p.id===w.baseProvinceId), capacity=airBaseByProvinceId.get(targetProvinceId)?.capacity ?? 0;
   const occupancy=state.wings.filter(other=>other.id!==w.id && (other.baseProvinceId===targetProvinceId || other.rebase?.targetProvinceId===targetProvinceId)).length;
   if (!target || !base || w.status==='REBASING' || targetProvinceId===w.baseProvinceId || !canUseAirBase(w.countryTag,targetProvinceId,ctx) || occupancy>=capacity) return null;
   const days=Math.max(1,Math.ceil(airDistance(base.center,target.center)/AIRCRAFT_TYPES[w.type].speed));
-  return {...w,status:'REBASING',mission:undefined,assignedAirZoneId:undefined,rebase:{targetProvinceId,daysRemaining:days,totalDays:days}};
+  return {...w,status:'REBASING',recovery:undefined,mission:undefined,assignedAirZoneId:undefined,rebase:{targetProvinceId,daysRemaining:days,totalDays:days}};
 }
 export function getAirZoneControl(state: AirState, zoneId: string, countryTag: string, ctx: AirContext) {
   const enemies=buildNavalHostility(ctx.wars).get(countryTag) ?? new Set<string>();
@@ -59,13 +59,20 @@ export function getAirSupportForBattle(state: AirState, battle: ActiveBattle, ta
   const power=state.wings.filter(w=>supporters.has(w.countryTag) && w.assignedAirZoneId===zone && w.mission==='CLOSE_AIR_SUPPORT').reduce((s,w)=> { const e=airMissionEfficiency(w,ctx)*efficiency; return s+(e>=B.minimumEfficiency ? w.aircraftCount*e : 0); },0);
   return Math.min(B.casMaxBonus,power/B.casAircraftForMax*B.casMaxBonus);
 }
+/** Universal withdrawal, independent of player ownership or AI activation. */
+function enterAirRecovery(w: AirWing): AirWing {
+  if (w.status !== 'MISSION' || !w.mission || !w.assignedAirZoneId ||
+      !(w.strength < 40 || w.organization < 40 || w.aircraftCount < w.maxAircraft / 2)) return w;
+  return {...w, status:'RECOVERING', recovery:{mission:w.mission, airZoneId:w.assignedAirZoneId},
+    mission:undefined, assignedAirZoneId:undefined};
+}
 export function airAITick(state: AirState, full: ReadonlySet<string>, player: string, ctx: AirContext, battles: readonly ActiveBattle[]) {
   const bots=new Set<string>();
   const hostility=buildNavalHostility(ctx.wars);
-  const wings=state.wings.map(w=> {
-    if (w.countryTag===player || !full.has(w.countryTag) || w.status==='REBASING') return w;
+  const wings=state.wings.map(original=> {
+    const w = enterAirRecovery(original);
+    if (w.countryTag===player || !full.has(w.countryTag) || w.status==='REBASING' || w.status==='RECOVERING') return w;
     bots.add(w.countryTag);
-    if (w.strength<40 || w.organization<40 || w.aircraftCount<w.maxAircraft/2) return cancelAirMission(w);
     const home=airZoneByProvinceId.get(w.baseProvinceId);
     const enemies=hostility.get(w.countryTag) ?? new Set<string>();
     const battleZones=battles.filter(b=>b.attackerCountryId===w.countryTag || b.defenderCountryId===w.countryTag).map(b=>airZoneByProvinceId.get(b.provinceId)?.id);
@@ -80,33 +87,82 @@ export function airAITick(state: AirState, full: ReadonlySet<string>, player: st
   });
   return {state:{...state,wings},bots:bots.size};
 }
-/** One snapshot per zone; fighters distribute a bounded daily budget across hostile targets. */
+/** Country fighter budgets use the same pre-combat snapshot in both directions. */
 export function airCombatTick(state: AirState, ctx: AirContext, day: number, onEnded?: (report: AirCombatReport) => void): AirState {
   const hostility=buildNavalHostility(ctx.wars), losses=new Map<string,number>(), engaged=new Set<string>();
   const zones=new Map<string,AirWing[]>();
   for (const w of [...state.wings].sort((a,b)=>a.id.localeCompare(b.id))) if (w.assignedAirZoneId && airMissionEfficiency(w,ctx)>0) {const bucket=zones.get(w.assignedAirZoneId)??[];bucket.push(w);zones.set(w.assignedAirZoneId,bucket);}
+  const fighterLossRemainders = {...state.fighterLossRemainders};
   const engagements: AirState['engagements']=[];
-  for (const [zoneId,ws] of zones) {
+  for (const [zoneId,ws] of [...zones].sort(([a], [b]) => a.localeCompare(b))) {
     const ids=new Set<string>();
+    const groups = new Map<string, AirWing[]>();
+    for (const w of ws.filter(w => w.type === 'FIGHTER')) {
+      const group = groups.get(w.countryTag) ?? [];
+      group.push(w);
+      groups.set(w.countryTag, group);
+    }
+    const effective = new Map([...groups].map(([tag, wings]) => [tag,
+      wings.reduce((sum, w) => sum + w.aircraftCount * airMissionEfficiency(w, ctx), 0)]));
+    const countryLosses = new Map<string, number>();
+    const tags = [...groups.keys()].sort();
+    const power = new Map(tags.map(tag => [tag, effective.get(tag)! * AIRCRAFT_TYPES.FIGHTER.airAttack]));
+    for (const attacker of tags) {
+      const targets = tags.filter(tag => hostility.get(attacker)?.has(tag));
+      const totalHostilePower = targets.reduce((sum, tag) => sum + power.get(tag)!, 0);
+      for (const defender of targets) {
+        for (const w of [...groups.get(attacker)!, ...groups.get(defender)!]) {
+          ids.add(w.id); engaged.add(w.id);
+        }
+        // Each country spends its offensive budget once across operational enemies.
+        const defenderPower = power.get(defender)!;
+        const targetShare = defenderPower / totalHostilePower;
+        const allocatedEffectiveFighters = effective.get(attacker)! * targetShare;
+        const allocatedAttackerPower = power.get(attacker)! * targetShare;
+        const ratio = Math.min(2, Math.max(.5, Math.sqrt(
+          allocatedAttackerPower / Math.max(1, defenderPower))));
+        const key = JSON.stringify([zoneId, attacker, defender]);
+        const budget = allocatedEffectiveFighters * B.combatLossRate * ratio + (fighterLossRemainders[key] ?? 0);
+        const integerLosses = Math.floor(budget);
+        fighterLossRemainders[key] = budget - integerLosses;
+        countryLosses.set(defender, (countryLosses.get(defender) ?? 0) + integerLosses);
+      }
+    }
+    // Largest remainder apportionment: exact totals, proportional counts, ID tie-breaks.
+    for (const [tag, budget] of countryLosses) {
+      const wings = groups.get(tag)!;
+      const available = wings.reduce((sum, w) => sum + w.aircraftCount, 0);
+      const total = Math.min(available, budget);
+      const shares = wings.map(w => {
+        const quota = total * w.aircraftCount / available;
+        return {w, lost: Math.floor(quota), fraction: quota - Math.floor(quota)};
+      }).sort((a, b) => b.fraction - a.fraction || a.w.id.localeCompare(b.w.id));
+      const extra = total - shares.reduce((sum, share) => sum + share.lost, 0);
+      shares.forEach((share, i) => losses.set(share.w.id, share.lost + (i < extra ? 1 : 0)));
+    }
+    const nonFighterLosses = new Map<string, number>();
     for (const fighter of ws.filter(w=>w.type==='FIGHTER')) {
-      const targets=ws.filter(w=>hostility.get(fighter.countryTag)?.has(w.countryTag) && (fighter.mission!=='INTERCEPTION' || w.type==='BOMBER' || w.type==='CAS'));
+      const targets=ws.filter(w=>hostility.get(fighter.countryTag)?.has(w.countryTag) && w.type!=='FIGHTER');
       if (!targets.length) continue;
-      const total=targets.reduce((s,w)=>s+w.aircraftCount,0);
+      // Retain the legacy escort/retaliation budget, including its original target denominator.
+      const legacyTargets=ws.filter(w=>hostility.get(fighter.countryTag)?.has(w.countryTag) && (fighter.mission!=='INTERCEPTION' || w.type==='BOMBER' || w.type==='CAS'));
+      const total=legacyTargets.reduce((s,w)=>s+w.aircraftCount,0);
       for (const target of targets) {
         ids.add(fighter.id);ids.add(target.id);engaged.add(fighter.id);engaged.add(target.id);
         const damage=fighter.aircraftCount*airMissionEfficiency(fighter,ctx)*AIRCRAFT_TYPES.FIGHTER.airAttack*B.combatLossRate/AIRCRAFT_TYPES[target.type].airDefense*target.aircraftCount/total;
-        losses.set(target.id,(losses.get(target.id)??0)+damage);
+        nonFighterLosses.set(target.id,(nonFighterLosses.get(target.id)??0)+damage);
         // Non-fighters defend only; fighters resolve their own simultaneous offensive budget.
-        if (target.type!=='FIGHTER') losses.set(fighter.id,(losses.get(fighter.id)??0)+target.aircraftCount*airMissionEfficiency(target,ctx)*AIRCRAFT_TYPES[target.type].airAttack*B.combatLossRate/AIRCRAFT_TYPES.FIGHTER.airDefense/targets.length);
+        nonFighterLosses.set(fighter.id,(nonFighterLosses.get(fighter.id)??0)+target.aircraftCount*airMissionEfficiency(target,ctx)*AIRCRAFT_TYPES[target.type].airAttack*B.combatLossRate/AIRCRAFT_TYPES.FIGHTER.airDefense/legacyTargets.length);
       }
     }
+    for (const [id, damage] of nonFighterLosses) losses.set(id, (losses.get(id) ?? 0) + Math.ceil(damage));
     if(ids.size) {
-      const engagement = {zoneId,wingIds:[...ids].sort(),losses:Object.fromEntries([...ids].map(id=>[id,Math.min(ws.find(w=>w.id===id)!.aircraftCount,Math.ceil(losses.get(id)??0))]))};
+      const engagement = {zoneId,wingIds:[...ids].sort(),losses:Object.fromEntries([...ids].map(id=>[id,Math.min(ws.find(w=>w.id===id)!.aircraftCount,(losses.get(id)??0))]))};
       engagements.push(engagement);
 
     }
   }
-  return {...state,wings:state.wings.map(w=> {const lost=Math.min(w.aircraftCount,Math.ceil(losses.get(w.id)??0));return {...w,aircraftCount:w.aircraftCount-lost,strength:Math.max(0,w.strength-lost/w.maxAircraft*100),organization:Math.max(0,w.organization-(engaged.has(w.id)?B.combatOrganizationLoss:0))};}).filter(w=>w.aircraftCount>0),engagements,reports:advanceAirCombatReports(state.reports ?? [], engagements, state.wings, day, hostility, onEnded)};
+  return {...state,fighterLossRemainders,wings:state.wings.map(w=> {const lost=Math.min(w.aircraftCount,(losses.get(w.id)??0));return {...w,aircraftCount:w.aircraftCount-lost,strength:Math.max(0,w.strength-lost/w.maxAircraft*100),organization:Math.max(0,w.organization-(engaged.has(w.id)?B.combatOrganizationLoss:0))};}).filter(w=>w.aircraftCount>0),engagements,reports:advanceAirCombatReports(state.reports ?? [], engagements, state.wings, day, hostility, onEnded)};
 }
 export function airMissionsTick(state: AirState, ctx: AirContext) {
   const countries=ctx.countries.map(c=>({...c,resources:{...c.resources},economy:{...c.economy}}));
@@ -114,8 +170,9 @@ export function airMissionsTick(state: AirState, ctx: AirContext) {
   const nextCtx={...ctx,countries,provinces};
   const damage=new Map<string,number>();
   const hostility=buildNavalHostility(ctx.wars);
-  const wings=state.wings.map(original=> {
-    let w={...original};
+  // Stable resource spending order; retain the caller's wing order in the result.
+  const updatedWings=[...state.wings].sort((a,b)=>a.id.localeCompare(b.id)).map(original=> {
+    let w={...enterAirRecovery(original)};
     if (w.rebase) {
       if (!canUseAirBase(w.countryTag,w.rebase.targetProvinceId,nextCtx)) w={...w,rebase:undefined,status:'READY'};
       else if (w.rebase.daysRemaining<=1) w={...w,baseProvinceId:w.rebase.targetProvinceId,rebase:undefined,status:'READY'};
@@ -168,7 +225,7 @@ export function airMissionsTick(state: AirState, ctx: AirContext) {
     0,
     w.organization - B.missionOrganizationLoss
   );
-} else if (w.status === 'READY') {
+} else if (w.status === 'READY' || w.status === 'RECOVERING') {
   const base = airBaseByProvinceId.get(w.baseProvinceId)!;
 
   w.organization = Math.min(
@@ -181,6 +238,15 @@ export function airMissionsTick(state: AirState, ctx: AirContext) {
     w.strength + B.strengthRecovery * base.level
   );
 
+}
+    if (w.status === 'MISSION' || w.status === 'READY' || w.status === 'RECOVERING') {
+      const base = airBaseByProvinceId.get(w.baseProvinceId)!;
+      const fullReplacementCapacity = B.replacementPerLevel * base.level;
+      const multiplier = w.status === 'MISSION' ? B.operationalReplacementMultiplier : 1;
+      const capacity = fullReplacementCapacity * multiplier + (w.replacementRemainder ?? 0);
+      const replacementCapacity = Math.floor(capacity);
+      // Only fractional capacity survives shortages or a full wing; no delivery debt.
+      w.replacementRemainder = capacity - replacementCapacity;
   const p = provinces.find(p => p.id === w.baseProvinceId)!;
 
   const depot =
@@ -198,7 +264,7 @@ export function airMissionsTick(state: AirState, ctx: AirContext) {
   if (depot?.market) {
     const n = Math.min(
       w.maxAircraft - w.aircraftCount,
-      B.replacementPerLevel * base.level,
+      replacementCapacity,
       Math.floor(country.resources.gold / B.replacementGold),
       Math.floor(
         depot.market.goods.iron.stock /
@@ -224,8 +290,21 @@ export function airMissionsTick(state: AirState, ctx: AirContext) {
     }
   }
     }
+    if (w.status === 'RECOVERING') {
+      const recovery = w.recovery;
+      // Drop invalid destinations immediately; never strand an automatic order.
+      if (!recovery || !airZoneById.has(recovery.airZoneId) ||
+          !isAirZoneInRange(w, recovery.airZoneId, nextCtx.provinces) ||
+          !AIRCRAFT_TYPES[w.type].missions.includes(recovery.mission)) w = cancelAirMission(w);
+      else if (w.organization >= 80 && w.strength >= 70 &&
+               w.aircraftCount >= Math.ceil(w.maxAircraft * .75)) {
+        w = assignAirMission(w, recovery.mission, recovery.airZoneId, nextCtx) ?? cancelAirMission(w);
+      }
+    }
     return w;
   });
+  const byId = new Map(updatedWings.map(w => [w.id, w]));
+  const wings = state.wings.map(w => byId.get(w.id)!);
   for(const c of countries) c.resources.gold=Math.max(0,c.resources.gold-Math.min(B.bombingMaxGoldPerCountry,damage.get(c.tag)??0));
   return {state:{...state,wings},countries,provinces};
 }

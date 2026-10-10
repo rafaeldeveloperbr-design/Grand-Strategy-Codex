@@ -13,20 +13,28 @@ export function readAirSave(raw: unknown, ctx: AirContext): AirState {
   const wings: AirWing[]=raw.wings.map((value:unknown)=> {
     if (!record(value)) throw new Error('Air save: invalid wing');
     const fail=()=>{throw new Error(`Air save: invalid wing ${String(value.id)}`);};
-    const {id,countryTag,name,type,aircraftCount,maxAircraft,strength,organization,baseProvinceId,assignedAirZoneId,mission,status,rebase}=value;
+    const {id,countryTag,name,type,aircraftCount,maxAircraft,strength,organization,baseProvinceId,assignedAirZoneId,mission,status,rebase,recovery,replacementRemainder}=value;
     if(typeof id!=='string' || !id || ids.has(id) || typeof countryTag!=='string' || !ctx.countries.some(c=>c.tag===countryTag) || typeof name!=='string' || typeof type!=='string' || !Object.prototype.hasOwnProperty.call(AIRCRAFT_TYPES,type) || typeof baseProvinceId!=='string' || !canUseAirBase(countryTag,baseProvinceId,ctx)) return fail();
     ids.add(id);
     if(typeof aircraftCount!=='number' || !Number.isInteger(aircraftCount) || typeof maxAircraft!=='number' || !Number.isInteger(maxAircraft) || maxAircraft<1 || aircraftCount<1 || aircraftCount>maxAircraft || typeof strength!=='number' || !Number.isFinite(strength) || strength<0 || strength>100 || typeof organization!=='number' || !Number.isFinite(organization) || organization<0 || organization>100) return fail();
-    if(status!=='READY' && status!=='MISSION' && status!=='REBASING') return fail();
+    if (replacementRemainder !== undefined && (typeof replacementRemainder !== 'number' || !Number.isFinite(replacementRemainder) || replacementRemainder < 0 || replacementRemainder >= 1)) return fail();
+    if(status!=='READY' && status!=='MISSION' && status!=='RECOVERING' && status!=='REBASING') return fail();
     if(assignedAirZoneId!==undefined && (typeof assignedAirZoneId!=='string' || !airZoneById.has(assignedAirZoneId))) return fail();
     if(mission!==undefined && (typeof mission!=='string' || !AIRCRAFT_TYPES[type as AircraftType].missions.includes(mission as AirMission))) return fail();
     if(status==='MISSION' ? !mission || !assignedAirZoneId || rebase!==undefined : mission!==undefined || assignedAirZoneId!==undefined) return fail();
+    let parsedRecovery: AirWing['recovery'];
+    if (status === 'RECOVERING') {
+      if (!record(recovery) || typeof recovery.mission !== 'string' ||
+          !AIRCRAFT_TYPES[type as AircraftType].missions.includes(recovery.mission as AirMission) ||
+          typeof recovery.airZoneId !== 'string' || !airZoneById.has(recovery.airZoneId)) return fail();
+      parsedRecovery = {mission:recovery.mission as AirMission, airZoneId:recovery.airZoneId};
+    } else if (recovery !== undefined) return fail();
     let parsedRebase: AirWing['rebase'];
     if(status==='REBASING') {
       if(!record(rebase) || typeof rebase.targetProvinceId!=='string' || rebase.targetProvinceId===baseProvinceId || !canUseAirBase(countryTag,rebase.targetProvinceId,ctx) || typeof rebase.totalDays!=='number' || !Number.isInteger(rebase.totalDays) || rebase.totalDays<1 || typeof rebase.daysRemaining!=='number' || !Number.isInteger(rebase.daysRemaining) || rebase.daysRemaining<1 || rebase.daysRemaining>rebase.totalDays) return fail();
       parsedRebase={targetProvinceId:rebase.targetProvinceId,totalDays:rebase.totalDays,daysRemaining:rebase.daysRemaining};
     } else if(rebase!==undefined) return fail();
-    return {id,countryTag,name,type:type as AircraftType,aircraftCount,maxAircraft,strength,organization,baseProvinceId,assignedAirZoneId:assignedAirZoneId as string | undefined,mission:mission as AirMission | undefined,status,rebase:parsedRebase};
+    return {id,countryTag,name,type:type as AircraftType,aircraftCount,maxAircraft,strength,organization,baseProvinceId,assignedAirZoneId:assignedAirZoneId as string | undefined,mission:mission as AirMission | undefined,status,rebase:parsedRebase,...(parsedRecovery ? {recovery:parsedRecovery} : {}),...(replacementRemainder !== undefined ? {replacementRemainder:replacementRemainder as number} : {})};
   });
   const occupancy=new Map<string,number>();
   for(const w of wings) for(const id of [w.baseProvinceId,...(w.rebase?[w.rebase.targetProvinceId]:[])]) occupancy.set(id,(occupancy.get(id)??0)+1);
@@ -161,6 +169,22 @@ export function readAirSave(raw: unknown, ctx: AirContext): AirState {
     });
     reports = limitAirCombatHistory(reports);
   }
+  let fighterLossRemainders: AirState['fighterLossRemainders'];
+  if (raw.fighterLossRemainders !== undefined) {
+    const fail = (): never => { throw new Error('Air save: invalid fighter loss remainder'); };
+    if (!record(raw.fighterLossRemainders)) return fail();
+    fighterLossRemainders = {};
+    for (const [key, value] of Object.entries(raw.fighterLossRemainders)) {
+      let pair: unknown;
+      try { pair = JSON.parse(key); } catch { return fail(); }
+      if (!Array.isArray(pair) || pair.length !== 3 ||
+          typeof pair[0] !== 'string' || !airZoneById.has(pair[0]) ||
+          !pair.slice(1).every(tag => typeof tag === 'string' && ctx.countries.some(c => c.tag === tag)) ||
+          pair[1] === pair[2] || JSON.stringify(pair) !== key ||
+          typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value >= 1) return fail();
+      fighterLossRemainders[key] = value;
+    }
+  }
   // Engagements are daily feedback, not simulation state; rebuild next tick.
   let production: AirProductionState | undefined;
   if (raw.production !== undefined) {
@@ -185,5 +209,5 @@ export function readAirSave(raw: unknown, ctx: AirContext): AirState {
     }
     if (production.nextId <= largestId) return fail();
   }
-  return {wings,engagements:[],...(reports ? {reports} : {}),...(production ? {production} : {})};
+  return {wings,engagements:[],...(fighterLossRemainders ? {fighterLossRemainders} : {}),...(reports ? {reports} : {}),...(production ? {production} : {})};
 }

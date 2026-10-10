@@ -1,3 +1,5 @@
+import { type AirCombatParticipantSnapshot, type AirCombatReport } from '../../types/air';
+import { createAirCombatReport, finishAirCombatReport, limitAirCombatHistory } from './reports';
 import type { AirState, AirWing, AircraftType, AirMission, AirProductionState } from '../../types/air';
 import { AIRCRAFT_TYPES, AIR_PRODUCTION_CONFIG, AIR_QUEUE_LIMIT } from '../../data/aircraft';
 import { airBaseByProvinceId, airZoneById } from './world';
@@ -29,6 +31,136 @@ export function readAirSave(raw: unknown, ctx: AirContext): AirState {
   const occupancy=new Map<string,number>();
   for(const w of wings) for(const id of [w.baseProvinceId,...(w.rebase?[w.rebase.targetProvinceId]:[])]) occupancy.set(id,(occupancy.get(id)??0)+1);
   for(const [id,count] of occupancy) if(count>(airBaseByProvinceId.get(id)?.capacity ?? 0)) throw new Error(`Air save: overloaded base ${id}`);
+  let reports: AirCombatReport[] | undefined;
+  if (raw.reports !== undefined) {
+    const fail = (): never => { throw new Error('Air save: invalid combat report'); };
+    if (!Array.isArray(raw.reports)) return fail();
+    const reportIds = new Set<string>();
+    const activeZones = new Set<string>();
+    reports = raw.reports.map((value: unknown) => {
+      if (!record(value)) return fail();
+      const {id, zoneId, day, participants} = value;
+      if (typeof id !== 'string' || !id || reportIds.has(id) || typeof zoneId !== 'string' || !airZoneById.has(zoneId) || !Number.isSafeInteger(day) || !Array.isArray(participants) || !participants.length) return fail();
+      reportIds.add(id);
+      const legacy = value.status === undefined;
+      if (!legacy) {
+        if ((value.status !== 'ACTIVE' && value.status !== 'ENDED') || !Number.isSafeInteger(value.startedAt) || value.startedAt !== day || !Number.isSafeInteger(value.lastCombatDay) || (value.lastCombatDay as number) < (value.startedAt as number)) return fail();
+        if (value.status === 'ACTIVE') {
+          if (value.endedAt !== undefined || activeZones.has(zoneId)) return fail();
+          activeZones.add(zoneId);
+        } else if (!Number.isSafeInteger(value.endedAt) || (value.endedAt as number) < (value.lastCombatDay as number)) return fail();
+      }
+      const wingIds = new Set<string>();
+      const snapshots: AirCombatParticipantSnapshot[] = participants.map((p: unknown) => {
+  if (!record(p)) return fail();
+
+  const {
+    wingId,
+    wingName,
+    countryTag,
+    type,
+    mission,
+    initialAircraft,
+    finalAircraft,
+    aircraftLost,
+    aircraftReplacements,
+  } = p;
+
+  if (
+    typeof wingId !== 'string' ||
+    !wingId ||
+    wingIds.has(wingId) ||
+    typeof wingName !== 'string' ||
+    typeof countryTag !== 'string' ||
+    !ctx.countries.some(c => c.tag === countryTag) ||
+    typeof type !== 'string' ||
+    !Object.prototype.hasOwnProperty.call(AIRCRAFT_TYPES, type)
+  ) {
+    return fail();
+  }
+
+  if (
+    mission !== undefined &&
+    (
+      typeof mission !== 'string' ||
+      !AIRCRAFT_TYPES[type as AircraftType].missions.includes(
+        mission as AirMission
+      )
+    )
+  ) {
+    return fail();
+  }
+
+  if (
+    ![initialAircraft, finalAircraft, aircraftLost].every(
+      n => Number.isSafeInteger(n) && (n as number) >= 0
+    )
+  ) {
+    return fail();
+  }
+
+  if (
+    aircraftReplacements !== undefined &&
+    (
+      !Number.isSafeInteger(aircraftReplacements) ||
+      (aircraftReplacements as number) < 0
+    )
+  ) {
+    return fail();
+  }
+
+  // V1 was a single tick. Accumulated reports may include replenishment between ticks.
+  if (
+    legacy &&
+    (
+      (initialAircraft as number) < (finalAircraft as number) ||
+      aircraftLost !==
+        (initialAircraft as number) - (finalAircraft as number)
+    )
+  ) {
+    return fail();
+  }
+
+  wingIds.add(wingId);
+
+  return {
+    wingId,
+    wingName,
+    countryTag,
+    type: type as AircraftType,
+    mission: mission as AirMission | undefined,
+    initialAircraft: initialAircraft as number,
+    finalAircraft: finalAircraft as number,
+    aircraftLost: aircraftLost as number,
+    aircraftReplacements:
+      aircraftReplacements === undefined
+        ? 0
+        : aircraftReplacements as number,
+  };
+});
+      // Totals are derived from factual snapshots, never trusted from serialized data.
+      const report = createAirCombatReport(id, zoneId, day as number, snapshots);
+      let hostileCountryPairs: AirCombatReport['hostileCountryPairs'];
+      if (value.hostileCountryPairs !== undefined) {
+        if (!Array.isArray(value.hostileCountryPairs)) return fail();
+        const tags = new Set(snapshots.map(p => p.countryTag));
+        const pairIds = new Set<string>();
+        hostileCountryPairs = value.hostileCountryPairs.map((pair: unknown) => {
+          if (!Array.isArray(pair) || pair.length !== 2 || !pair.every(tag => typeof tag === 'string' && tags.has(tag)) || pair[0] === pair[1]) return fail();
+          const ordered = [...pair].sort() as [string, string];
+          const key = JSON.stringify(ordered);
+          if (pairIds.has(key)) return fail();
+          pairIds.add(key);
+          return ordered;
+        }).sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]));
+      }
+      if (legacy) return finishAirCombatReport(report, day as number);
+      return {...report, status: value.status as AirCombatReport['status'], lastCombatDay: value.lastCombatDay as number,
+        ...(value.status === 'ENDED' ? {endedAt: value.endedAt as number} : {}),
+        ...(hostileCountryPairs ? {hostileCountryPairs} : {})};
+    });
+    reports = limitAirCombatHistory(reports);
+  }
   // Engagements are daily feedback, not simulation state; rebuild next tick.
   let production: AirProductionState | undefined;
   if (raw.production !== undefined) {
@@ -53,5 +185,5 @@ export function readAirSave(raw: unknown, ctx: AirContext): AirState {
     }
     if (production.nextId <= largestId) return fail();
   }
-  return {wings,engagements:[],...(production ? {production} : {})};
+  return {wings,engagements:[],...(reports ? {reports} : {}),...(production ? {production} : {})};
 }

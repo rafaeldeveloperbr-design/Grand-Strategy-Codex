@@ -14,6 +14,7 @@ export function AirZonePanel({id,state,ctx,player,battles,onClose,onLocate}:{id:
     <p>Batalhas terrestres: {battles.filter(b=>zone.provinceIds.includes(b.provinceId)).length}</p>
     {battles.filter(b=>zone.provinceIds.includes(b.provinceId)).map(b=><p key={b.id}>Apoio em {ctx.provinces.find(p=>p.id===b.provinceId)?.name}: CAS +{(getAirSupportForBattle(state,b,player,ctx)*100).toFixed(1)}% · Superioridade {((getAirSuperiorityModifier(state,b.provinceId,player,ctx)-1)*100).toFixed(1)}%</p>)}
     <p>Combates aéreos: {state.engagements.filter(e=>e.zoneId===id).length} · Perdas: {state.engagements.filter(e=>e.zoneId===id).reduce((s,e)=>s+Object.values(e.losses).reduce((a,b)=>a+b,0),0)}</p>
+    <p>Combate aéreo ativo: {(state.reports ?? []).some(r=>r.zoneId===id && r.status==='ACTIVE') ? 'sim' : 'não'} · Relatórios encerrados: {(state.reports ?? []).filter(r=>r.zoneId===id && r.status==='ENDED').length}</p>
     {wings.map(w=><p key={w.id}>{w.countryTag} {w.type} · {w.mission} · {(airMissionEfficiency(w,ctx)*100).toFixed(0)}%</p>)}
     <button onClick={onLocate}>Localizar zona</button></aside>;
 }

@@ -22,12 +22,12 @@ try {
     const battles=caseWars.flatMap(war=>{const cas=state.wings.find(w=>w.countryTag===war.attacker&&w.type==='CAS'&&w.assignedAirZoneId);const zone=cas&&air.airZoneById.get(cas.assignedAirZoneId);return zone?[{id:`land-${war.id}`,provinceId:zone.provinceIds[0],attackerCountryId:war.attacker,defenderCountryId:war.defender}]:[];});
     for(let i=0;i<samples+5;i++) {
       let start=performance.now();const ai=air.airAITick(state,full,'BRA',context,battles);const a=performance.now()-start;
-      start=performance.now();const fought=air.airCombatTick(state,context);const c=performance.now()-start;
+      start=performance.now();const fought=air.airCombatTick(state,context, 0);const c=performance.now()-start;
       start=performance.now();air.airMissionsTick(fought,context);for(const battle of battles)air.getAirSupportForBattle(fought,battle,battle.attackerCountryId,context);const m=performance.now()-start;
       start=performance.now();for(const w of state.wings)for(const z of air.airZones)air.isAirZoneInRange(w,z.id,provinces);const r=performance.now()-start;
       if(i>=5){times.airAI.push(a);times.airCombat.push(c);times.airMissions.push(m);times.range.push(r);}void ai;
     }
-    results.push({name,wings:state.wings.length,engagements:air.airCombatTick(state,context).engagements.length,landBattles:battles.length,rangeChecks:state.wings.length*air.airZones.length,phases:Object.fromEntries(Object.entries(times).map(([key,values])=>[key,{averageMs:values.reduce((s,v)=>s+v,0)/values.length,maxMs:Math.max(...values)}]))});
+    results.push({name,wings:state.wings.length,engagements:air.airCombatTick(state,context, 0).engagements.length,landBattles:battles.length,rangeChecks:state.wings.length*air.airZones.length,phases:Object.fromEntries(Object.entries(times).map(([key,values])=>[key,{averageMs:values.reduce((s,v)=>s+v,0)/values.length,maxMs:Math.max(...values)}]))});
   }
   const report={samples,world:{countries:countries.length,provinces:provinces.length,zones:air.airZones.length,bases:air.airBases.length,initialWings:initial.wings.length,countriesWithWings:new Set(initial.wings.map(w=>w.countryTag)).size},results};
   await writeFile('artifacts/air-warfare-v1-benchmark.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));

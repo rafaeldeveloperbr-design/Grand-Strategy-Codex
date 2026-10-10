@@ -1,3 +1,4 @@
+import { airCombatReportToast } from '../engine/air/reports';
 import { endedPlayerNavalBattles, enqueueNavalReports } from '../engine/naval/reports';
 import type { NavalBattle } from '../types/naval';
 import { friendlyBeachLandingTick } from '../engine/naval/friendlyBeachLanding';
@@ -293,7 +294,10 @@ export function useGameLoop(props: Props) {
     const recovery = navalRecoveryTick(naval.fleets, countries, provinces, relations, wars);
     naval = { ...naval, fleets: recovery.fleets }; countries = recovery.countries;
     profiler.endPhase('navalCombat');
-    air = airCombatTick(air, { provinces, countries, wars, relations });
+    air = airCombatTick(air, { provinces, countries, wars, relations }, diplomacyDay(snapshot.date), report => {
+      const message = airCombatReportToast(report, playerCountryTag, wars, countries.find(c => c.tag === playerCountryTag)?.name);
+      if (message) addToast(message, 'info', 'Combate aéreo', formatGameDate(snapshot.date));
+    });
     profiler.endPhase('airCombat');
     const rebasing = air.wings.filter(w => w.rebase && w.countryTag === playerCountryTag);
     const airMissions = airMissionsTick(air, { provinces, countries, wars, relations });

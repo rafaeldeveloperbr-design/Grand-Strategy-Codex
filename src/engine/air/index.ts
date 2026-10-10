@@ -1,5 +1,6 @@
 import type { ActiveBattle, Army, Country, Province, War, DiplomaticRelation } from '../../types';
-import type { AirState, AirWing, AirMission, AirCounters } from '../../types/air';
+import type { AirState, AirWing, AirMission, AirCounters, AirCombatReport } from '../../types/air';
+import { advanceAirCombatReports } from './reports';
 import { AIRCRAFT_TYPES, AIR_BALANCE as B } from '../../data/aircraft';
 import { buildNavalHostility } from '../naval';
 import { airBases, airBaseByProvinceId, airZoneById, airZoneByProvinceId, airZones } from './world';
@@ -80,7 +81,7 @@ export function airAITick(state: AirState, full: ReadonlySet<string>, player: st
   return {state:{...state,wings},bots:bots.size};
 }
 /** One snapshot per zone; fighters distribute a bounded daily budget across hostile targets. */
-export function airCombatTick(state: AirState, ctx: AirContext): AirState {
+export function airCombatTick(state: AirState, ctx: AirContext, day: number, onEnded?: (report: AirCombatReport) => void): AirState {
   const hostility=buildNavalHostility(ctx.wars), losses=new Map<string,number>(), engaged=new Set<string>();
   const zones=new Map<string,AirWing[]>();
   for (const w of [...state.wings].sort((a,b)=>a.id.localeCompare(b.id))) if (w.assignedAirZoneId && airMissionEfficiency(w,ctx)>0) {const bucket=zones.get(w.assignedAirZoneId)??[];bucket.push(w);zones.set(w.assignedAirZoneId,bucket);}
@@ -99,9 +100,13 @@ export function airCombatTick(state: AirState, ctx: AirContext): AirState {
         if (target.type!=='FIGHTER') losses.set(fighter.id,(losses.get(fighter.id)??0)+target.aircraftCount*airMissionEfficiency(target,ctx)*AIRCRAFT_TYPES[target.type].airAttack*B.combatLossRate/AIRCRAFT_TYPES.FIGHTER.airDefense/targets.length);
       }
     }
-    if(ids.size) engagements.push({zoneId,wingIds:[...ids].sort(),losses:Object.fromEntries([...ids].map(id=>[id,Math.min(ws.find(w=>w.id===id)!.aircraftCount,Math.ceil(losses.get(id)??0))]))});
+    if(ids.size) {
+      const engagement = {zoneId,wingIds:[...ids].sort(),losses:Object.fromEntries([...ids].map(id=>[id,Math.min(ws.find(w=>w.id===id)!.aircraftCount,Math.ceil(losses.get(id)??0))]))};
+      engagements.push(engagement);
+
+    }
   }
-  return {...state,wings:state.wings.map(w=> {const lost=Math.min(w.aircraftCount,Math.ceil(losses.get(w.id)??0));return {...w,aircraftCount:w.aircraftCount-lost,strength:Math.max(0,w.strength-lost/w.maxAircraft*100),organization:Math.max(0,w.organization-(engaged.has(w.id)?B.combatOrganizationLoss:0))};}).filter(w=>w.aircraftCount>0),engagements};
+  return {...state,wings:state.wings.map(w=> {const lost=Math.min(w.aircraftCount,Math.ceil(losses.get(w.id)??0));return {...w,aircraftCount:w.aircraftCount-lost,strength:Math.max(0,w.strength-lost/w.maxAircraft*100),organization:Math.max(0,w.organization-(engaged.has(w.id)?B.combatOrganizationLoss:0))};}).filter(w=>w.aircraftCount>0),engagements,reports:advanceAirCombatReports(state.reports ?? [], engagements, state.wings, day, hostility, onEnded)};
 }
 export function airMissionsTick(state: AirState, ctx: AirContext) {
   const countries=ctx.countries.map(c=>({...c,resources:{...c.resources},economy:{...c.economy}}));
@@ -123,26 +128,101 @@ export function airMissionsTick(state: AirState, ctx: AirContext) {
     country.economy.goldExpense+=maintenance;
     if (!canUseAirBase(w.countryTag,w.baseProvinceId,nextCtx)) return cancelAirMission(w);
     const e=airMissionEfficiency(w,nextCtx);
-    if (e>0) {
-      if (w.mission==='BOMBING') {
-        const zone=airZoneById.get(w.assignedAirZoneId!)!;
-        const owners=[...new Set(zone.provinceIds.map(id=>provinces.find(p=>p.id===id)?.owner).filter((tag):tag is string=>!!tag && !!hostility.get(w.countryTag)?.has(tag)))].sort();
-        const control=getAirZoneControl(state,zone.id,w.countryTag,nextCtx);
-        const power=w.aircraftCount*e*(1-Math.max(0,-control.superiority)*.8)*B.bombingGoldPerAircraft;
-        for(const owner of owners) damage.set(owner,(damage.get(owner)??0)+power/owners.length);
-      }
-      w.organization=Math.max(0,w.organization-B.missionOrganizationLoss);
-    } else if (w.status!=='REBASING') {
-      const base=airBaseByProvinceId.get(w.baseProvinceId)!;
-      w.organization=Math.min(100,w.organization+B.organizationRecovery*base.level);
-      w.strength=Math.min(100,w.strength+B.strengthRecovery*base.level);
-      const p=provinces.find(p=>p.id===w.baseProvinceId)!;
-      // Allied basing uses the operator's own stock, never appropriates the host's goods.
-      const depot=p.owner===w.countryTag && p.market ? p : provinces.filter(p=>p.owner===w.countryTag && p.market).sort((a,b)=>a.id.localeCompare(b.id)).find(p=>p.market!.goods.iron.stock>=B.replacementIron && p.market!.goods.tools.stock>=B.replacementTools);
-      if (depot?.market) {
-        const n=Math.min(w.maxAircraft-w.aircraftCount,B.replacementPerLevel*base.level,Math.floor(country.resources.gold/B.replacementGold),Math.floor(depot.market.goods.iron.stock/B.replacementIron),Math.floor(depot.market.goods.tools.stock/B.replacementTools));
-        if(n>0) {w.aircraftCount+=n;country.resources.gold-=n*B.replacementGold;depot.market.goods.iron.stock-=n*B.replacementIron;depot.market.goods.tools.stock-=n*B.replacementTools;}
-      }
+    if (e > 0) {
+  if (w.mission === 'BOMBING') {
+    const zone = airZoneById.get(w.assignedAirZoneId!)!;
+    const owners = [
+      ...new Set(
+        zone.provinceIds
+          .map(id => provinces.find(p => p.id === id)?.owner)
+          .filter(
+            (tag): tag is string =>
+              !!tag &&
+              !!hostility.get(w.countryTag)?.has(tag)
+          )
+      ),
+    ].sort();
+
+    const control = getAirZoneControl(
+      state,
+      zone.id,
+      w.countryTag,
+      nextCtx
+    );
+
+    const power =
+      w.aircraftCount *
+      e *
+      (1 - Math.max(0, -control.superiority) * 0.8) *
+      B.bombingGoldPerAircraft;
+
+    for (const owner of owners) {
+      damage.set(
+        owner,
+        (damage.get(owner) ?? 0) + power / owners.length
+      );
+    }
+  }
+
+  w.organization = Math.max(
+    0,
+    w.organization - B.missionOrganizationLoss
+  );
+} else if (w.status === 'READY') {
+  const base = airBaseByProvinceId.get(w.baseProvinceId)!;
+
+  w.organization = Math.min(
+    100,
+    w.organization + B.organizationRecovery * base.level
+  );
+
+  w.strength = Math.min(
+    100,
+    w.strength + B.strengthRecovery * base.level
+  );
+
+  const p = provinces.find(p => p.id === w.baseProvinceId)!;
+
+  const depot =
+    p.owner === w.countryTag && p.market
+      ? p
+      : provinces
+          .filter(p => p.owner === w.countryTag && p.market)
+          .sort((a, b) => a.id.localeCompare(b.id))
+          .find(
+            p =>
+              p.market!.goods.iron.stock >= B.replacementIron &&
+              p.market!.goods.tools.stock >= B.replacementTools
+          );
+
+  if (depot?.market) {
+    const n = Math.min(
+      w.maxAircraft - w.aircraftCount,
+      B.replacementPerLevel * base.level,
+      Math.floor(country.resources.gold / B.replacementGold),
+      Math.floor(
+        depot.market.goods.iron.stock /
+          B.replacementIron
+      ),
+      Math.floor(
+        depot.market.goods.tools.stock /
+          B.replacementTools
+      )
+    );
+
+    if (n > 0) {
+      w.aircraftCount += n;
+
+      country.resources.gold -=
+        n * B.replacementGold;
+
+      depot.market.goods.iron.stock -=
+        n * B.replacementIron;
+
+      depot.market.goods.tools.stock -=
+        n * B.replacementTools;
+    }
+  }
     }
     return w;
   });

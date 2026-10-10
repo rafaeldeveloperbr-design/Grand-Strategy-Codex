@@ -1,3 +1,4 @@
+import { markerDetailLevel } from './markerDetail';
 import { getFriendlyDisembarkError, FRIENDLY_BEACH_LANDING_LABEL } from '../../engine/naval/friendlyBeachLanding';
 import { ActiveBattlePanel } from '../ActiveBattlePanel';
 import { mapMetadata } from '../../data/map';
@@ -171,6 +172,19 @@ export const GameMap: React.FC<MapProps> = ({
     unitsPerPixel,
     panBy, focusProvince, focusCountry, fitBounds, focusWorldPoint,
   } = useMapControls(svgRef, initialViewBox);
+  const mapZoom = mapMetadata.initialViewBox.w / viewBox.w;
+  const detailLevel = markerDetailLevel(mapZoom);
+  const activateCompactAir = useCallback((baseId: string) => {
+    setAirMode(true); setNavalMode(false); setAirTarget(null); setAirFeedback('');
+    closeStack(); onClearSelection?.(); onFleetSelect?.(null); setSelectedNavalBattle(null);
+    setSelectedAirZone(airZoneByProvinceId.get(baseId)?.id ?? null);
+  }, [closeStack, onClearSelection, onFleetSelect]);
+  const selectFleet = useCallback((id: string) => {
+    exitAirSelection(); closeStack(); setSelectedNavalBattle(null); onFleetSelect?.(id);
+  }, [exitAirSelection, closeStack, onFleetSelect]);
+  const activateCompactNaval = useCallback((id: string) => {
+    setNavalMode(true); onClearSelection?.(); selectFleet(id);
+  }, [onClearSelection, selectFleet]);
   const focusPlayer = useCallback(() => {
     const country = countryByTag.get(playerCountryTag ?? '');
     if (country) focusCountry(country, provinces);
@@ -259,7 +273,7 @@ export const GameMap: React.FC<MapProps> = ({
     onProvinceClick(provinceId);
   };
 
-  const renderAirLayer = (part: 'zones' | 'markers') => !selectionMode && (airMode || part==='markers') && airState && <AirLayer part={part} mode={airMode} viewport={viewBox} state={airState} ctx={airContext} player={playerCountryTag ?? ''} selected={selectedAirWingId} selectedZone={selectedAirZone} scale={unitsPerPixel} onWing={id=>{setAirTarget(null);setAirFeedback('');setAirMode(true);closeStack();setSelectedNavalBattle(null);onAirWingSelect?.(id);}} onZone={(id,provinceId,inspect)=>{if(airTarget){dispatchAirTarget(provinceId);return;}if(!inspect){handleClick(provinceId);return;}closeStack();onClearSelection?.();onFleetSelect?.(null);onAirWingSelect?.(null);setSelectedNavalBattle(null);setSelectedAirZone(id);}} onBase={handleClick}/>;
+  const renderAirLayer = (part: 'zones' | 'markers') => !selectionMode && (airMode || part==='markers') && airState && <AirLayer detailLevel={detailLevel} onCompactActivate={activateCompactAir} part={part} mode={airMode} viewport={viewBox} state={airState} ctx={airContext} player={playerCountryTag ?? ''} selected={selectedAirWingId} selectedZone={selectedAirZone} scale={unitsPerPixel} onWing={id=>{setAirTarget(null);setAirFeedback('');setAirMode(true);closeStack();setSelectedNavalBattle(null);onAirWingSelect?.(id);}} onZone={(id,provinceId,inspect)=>{if(airTarget){dispatchAirTarget(provinceId);return;}if(!inspect){handleClick(provinceId);return;}closeStack();onClearSelection?.();onFleetSelect?.(null);onAirWingSelect?.(null);setSelectedNavalBattle(null);setSelectedAirZone(id);}} onBase={handleClick}/>;
 
   return (
     <div className="map-container" ref={containerRef}>
@@ -392,6 +406,7 @@ export const GameMap: React.FC<MapProps> = ({
         {/* === Linhas e Marcadores de Exércitos === */}
         {renderAirLayer('zones')}
         <ArmyMovementLayer
+          detailLevel={detailLevel}
           markerScale={unitsPerPixel}
           presentation={presentation}
           countries={countryByTag}
@@ -413,7 +428,7 @@ export const GameMap: React.FC<MapProps> = ({
           provinces={provinces}
         />
         {renderAirLayer('markers')}
-        {!selectionMode && navalState && <NavalLayer fleets={navalState.fleets} battles={navalState.battles} wars={wars} viewport={viewBox} mode={navalMode} selected={selectedFleetId} countries={countryByTag} provinces={provinces} scale={unitsPerPixel} onSelect={id=>{exitAirSelection();closeStack();setSelectedNavalBattle(null);onFleetSelect?.(id);}} onOrder={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetOrder?.(id);}} onIntercept={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetIntercept?.(id);}} onPort={handleClick} onReturnPort={id=>onFleetReturn?.(id)} onBattle={id=>{exitAirSelection();onFleetSelect?.(null);setSelectedNavalBattle(id);const b=navalState.battles.find(b=>b.id===id),n=b?seaNodeById.get(b.seaNodeId):undefined;if(n)focusWorldPoint(n);}}/>}
+        {!selectionMode && navalState && <NavalLayer detailLevel={detailLevel} onCompactActivate={activateCompactNaval} fleets={navalState.fleets} battles={navalState.battles} wars={wars} viewport={viewBox} mode={navalMode} selected={selectedFleetId} countries={countryByTag} provinces={provinces} scale={unitsPerPixel} onSelect={selectFleet} onOrder={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetOrder?.(id);}} onIntercept={id=>{if(selectedFleet?.countryTag===playerCountryTag)onFleetIntercept?.(id);}} onPort={handleClick} onReturnPort={id=>onFleetReturn?.(id)} onBattle={id=>{exitAirSelection();onFleetSelect?.(null);setSelectedNavalBattle(id);const b=navalState.battles.find(b=>b.id===id),n=b?seaNodeById.get(b.seaNodeId):undefined;if(n)focusWorldPoint(n);}}/>}
 
         {/* === Filtro de Glow para exércitos elevados === */}
         <defs>

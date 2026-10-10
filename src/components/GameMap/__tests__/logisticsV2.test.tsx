@@ -40,7 +40,7 @@ describe('Logistics V2 map and tooltips',() => {
   });
   it('popover reports actual shared supply and disconnected logistics',() => {
     const units=[army('BRA',province.id,20,'one'),army('BRA',province.id,20,'two')];const data={...props(),armies:units};
-    const view=render(<GameMap {...data} />);fireEvent.click(view.getByRole('button',{name:/Brasil: 2 exércitos/}));
+    const view=render(<GameMap {...data} initialViewBox={{x:0,y:100,w:720,h:328.57142857142856}} />);fireEvent.click(view.getByRole('button',{name:/Brasil: 2 exércitos/}));
     expect(view.getAllByText(/Desconectada/)).toHaveLength(2);
     expect(view.getAllByText(new RegExp(`${Math.round(getArmySupply(units[0],province,units,network()).ratio*100)}%`)).length).toBeGreaterThan(0);
   });

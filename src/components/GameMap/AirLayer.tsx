@@ -1,12 +1,13 @@
+import { modeMarkerDetail, type MarkerDetailLevel } from './markerDetail';
 import type { AirState } from '../../types/air';
 import type { AirContext } from '../../engine/air';
-import { airBases, airZones, getAirZoneControl } from '../../engine/air';
+import { airBases, airZones, airZoneByProvinceId, getAirZoneControl } from '../../engine/air';
 import { useMemo } from 'react';
 import type { MapViewBox } from '../../data/map/types';
 import airMapBounds from '../../data/airMapBounds.json';
 const boundsById: Readonly<Record<string,readonly number[]>> = airMapBounds;
 
-export function AirLayer({part,mode=true,state,ctx,player,selected,selectedZone,scale,viewport,onWing,onZone,onBase}:{part:'zones'|'markers';mode?:boolean;state:AirState;ctx:AirContext;player:string;selected?:string|null;selectedZone?:string|null;scale:number;viewport:MapViewBox;onWing:(id:string)=>void;onZone:(id:string,provinceId:string,inspect:boolean)=>void;onBase:(id:string)=>void}) {
+export function AirLayer({part,detailLevel='FULL',onCompactActivate,mode=true,state,ctx,player,selected,selectedZone,scale,viewport,onWing,onZone,onBase}:{part:'zones'|'markers';detailLevel?:MarkerDetailLevel;onCompactActivate?:(baseId:string)=>void;mode?:boolean;state:AirState;ctx:AirContext;player:string;selected?:string|null;selectedZone?:string|null;scale:number;viewport:MapViewBox;onWing:(id:string)=>void;onZone:(id:string,provinceId:string,inspect:boolean)=>void;onBase:(id:string)=>void}) {
   const provinces=useMemo(()=>new Map(ctx.provinces.map(p=>[p.id,p])),[ctx.provinces]);
   const countries=useMemo(()=>new Map(ctx.countries.map(c=>[c.tag,c])),[ctx.countries]);
   const controls=useMemo(()=>new Map((part==='zones'?airZones:[]).map(z=>[z.id,getAirZoneControl(state,z.id,player,{provinces:ctx.provinces,countries:ctx.countries,wars:ctx.wars,relations:ctx.relations})])),[part,state,ctx.provinces,ctx.countries,ctx.wars,ctx.relations,player]);
@@ -25,6 +26,19 @@ export function AirLayer({part,mode=true,state,ctx,player,selected,selectedZone,
     {part==='markers' && visibleBases.map(base=> {
       const p=provinces.get(base.provinceId);if(!p)return null;
       const wings=wingsByBase.get(base.provinceId)??[];
+      const detail=modeMarkerDetail(detailLevel,mode);
+      const relevant=wings.some(wing=>wing.id===selected) || selectedZone===airZoneByProvinceId.get(base.provinceId)?.id;
+      if(detail==='HIDDEN'&&!relevant)return null;
+      if(detail!=='FULL') {
+        if(!wings.length)return null;
+        const label=`AirBase ${p.name} · ${wings.length} Wings`;
+        return <g key={base.provinceId} data-air-base-id={base.provinceId} data-province-id={p.id} data-air-compact="" transform={`translate(${p.center.x} ${p.center.y})`} role="button" tabIndex={0} aria-label={label} style={{cursor:'pointer'}}
+          onMouseDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();onCompactActivate?.(p.id);}}
+          onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();onCompactActivate?.(p.id);}}}>
+          <rect x={-22*scale} y={-16*scale} width={44*scale} height={32*scale} fill="transparent" style={{pointerEvents:'all'}} />
+          <text textAnchor="middle" dominantBaseline="central" fontSize={12*scale} fontWeight="600" className="air-marker-text" style={{fill:relevant?'var(--gold)':'var(--text-primary, #fff)',paintOrder:'stroke'}} stroke="#151821" strokeWidth={2*scale} strokeLinejoin="round" pointerEvents="none">✈ {wings.length}</text><title>{label}</title>
+        </g>;
+      }
       if(!mode&&!wings.length)return null;
       return <g key={base.provinceId} data-province-id={p.id} transform={`translate(${p.center.x} ${p.center.y})`}>
         {mode && <g transform={`translate(${-18*scale} ${18*scale})`} role="button" tabIndex={0} aria-label={`AirBase ${p.name}`} onClick={e=>{e.stopPropagation();onBase(p.id);}} onKeyDown={e=>{if(e.key==='Enter')onBase(p.id);}}>

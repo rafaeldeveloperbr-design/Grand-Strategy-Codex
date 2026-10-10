@@ -80,7 +80,7 @@ describe('Military UI V2 selection', () => {
   });
   it('highlights all selected markers and retains the national marker color', () => {
     const units = [army('one', 'a'), army('two', 'b')];
-    const view = render(<GameMap provinces={map()} countries={countries} armies={units} recruitments={[]} buildingConstructions={[]} activeBattles={[]} selectedProvince={null} hoveredProvince={null} selectedArmy="one" selectedArmyIds={['one', 'two']} playerCountryTag="BRA" onProvinceHover={vi.fn()} onProvinceClick={vi.fn()} onArmyClick={vi.fn()} onProvinceRightClick={vi.fn()} />);
+    const view = render(<GameMap initialViewBox={{x:0,y:100,w:720,h:328.57142857142856}} provinces={map()} countries={countries} armies={units} recruitments={[]} buildingConstructions={[]} activeBattles={[]} selectedProvince={null} hoveredProvince={null} selectedArmy="one" selectedArmyIds={['one', 'two']} playerCountryTag="BRA" onProvinceHover={vi.fn()} onProvinceClick={vi.fn()} onArmyClick={vi.fn()} onProvinceRightClick={vi.fn()} />);
     const markers = view.container.querySelectorAll('.army-marker');
     expect(markers).toHaveLength(2);
     for (const marker of markers) expect(marker.getAttribute('class')).toContain('selected');
@@ -89,11 +89,11 @@ describe('Military UI V2 selection', () => {
   it('keeps the live map stack open while its members are toggled', () => {
     const units = [army('one'), army('two')];
     const props = { provinces: map(), countries, armies: units, recruitments: [], buildingConstructions: [], activeBattles: [], selectedProvince: null, hoveredProvince: null, selectedArmy: null as string | null, selectedArmyIds: [] as string[], playerCountryTag: 'BRA', onProvinceHover: vi.fn(), onProvinceClick: vi.fn(), onArmyClick: vi.fn(), onToggleArmy: vi.fn(), onToggleStack: vi.fn(), onProvinceRightClick: vi.fn() };
-    const view = render(<GameMap {...props} />);
+    const view = render(<GameMap initialViewBox={{x:0,y:100,w:720,h:328.57142857142856}} {...props} />);
     fireEvent.click(view.container.querySelector('.army-stack-marker')!);
-    view.rerender(<GameMap {...props} selectedArmy="one" selectedArmyIds={['one']} />);
+    view.rerender(<GameMap initialViewBox={{x:0,y:100,w:720,h:328.57142857142856}} {...props} selectedArmy="one" selectedArmyIds={['one']} />);
     expect(screen.getByRole('dialog')).toBeTruthy();
-    view.rerender(<GameMap {...props} selectedArmy="one" selectedArmyIds={['one', 'two']} />);
+    view.rerender(<GameMap initialViewBox={{x:0,y:100,w:720,h:328.57142857142856}} {...props} selectedArmy="one" selectedArmyIds={['one', 'two']} />);
     expect(screen.getByRole('button', { name: 'Desmarcar todos' })).toBeTruthy();
     expect(view.container.querySelectorAll('[data-army-choice][aria-pressed="true"]')).toHaveLength(2);
   });

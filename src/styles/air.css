@@ -14,3 +14,8 @@
 .air-target-hint button { margin-left: 8px; }
 .air-production { margin: 12px 0; padding: 10px; border: 1px solid var(--border-color, #555); border-radius: 6px; font-size: 12px; }
 .air-production p { margin: 6px 0; }.air-production__option { margin: 6px 0; }.air-production__option small { display: block; color: var(--text-secondary, #aaa); }.air-production button { padding: 4px 6px; }.air-production button:disabled { opacity: .45; }.air-production__order { margin: 8px 0; }.air-production progress { display: block; width: 100%; height: 8px; }
+.air-marker-text--compact {
+  fill: #000;
+  paint-order: stroke;
+}
+

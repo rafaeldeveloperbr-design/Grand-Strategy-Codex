@@ -1,3 +1,5 @@
+import { CompactArmyMarker } from './CompactArmyMarker';
+import type { MarkerDetailLevel } from './markerDetail';
 import React, { useMemo, useId } from 'react';
 import type { Country } from '../../types';
 import { ArmyMarker } from '../ArmyMarker';
@@ -5,6 +7,7 @@ import { ArmyStackMarker } from '../ArmyStackMarker';
 import { SUPPLY_LABELS, type ArmyPresentation, type ArmyVisualGroup } from './mapPresentation';
 
 interface ArmyMovementLayerProps {
+  detailLevel?: MarkerDetailLevel;
   markerScale?: number;
   presentation: ArmyPresentation;
   countries: Map<string, Country>;
@@ -18,8 +21,8 @@ interface ArmyMovementLayerProps {
   onStackToggleAdditive?: (ids: string[]) => void;
 }
 
-export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = React.memo(function ArmyMovementLayer({ markerScale = 1, presentation, countries, selectedArmy, selectedArmyIds, hoveredArmyId, openStackKey, onArmyClick, onArmyHover, onStackOpen, onStackToggleAdditive }: ArmyMovementLayerProps) {
-  const selectedIds = useMemo(() => new Set(selectedArmyIds ?? (selectedArmy ? [selectedArmy] : [])), [selectedArmyIds, selectedArmy]);
+export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = React.memo(function ArmyMovementLayer({ detailLevel = 'FULL', markerScale = 1, presentation, countries, selectedArmy, selectedArmyIds, hoveredArmyId, openStackKey, onArmyClick, onArmyHover, onStackOpen, onStackToggleAdditive }: ArmyMovementLayerProps) {
+  const selectedIds = useMemo(() => new Set([...(selectedArmyIds ?? []), ...(selectedArmy ? [selectedArmy] : [])]), [selectedArmyIds, selectedArmy]);
   const arrowId = useId().replace(/:/g, '');
   const groups = useMemo(() => [...presentation.groups].sort((a, b) => Number(a.armies.some(army => selectedIds.has(army.id))) - Number(b.armies.some(army => selectedIds.has(army.id))) || Number(a.armies.some(army => army.id === hoveredArmyId)) - Number(b.armies.some(army => army.id === hoveredArmyId))), [presentation.groups, selectedIds, hoveredArmyId]);
   const routes = useMemo(() => {
@@ -61,9 +64,11 @@ export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = React.memo(fu
     {groups.map(group => {
       const army = group.armies[0];
       const selectedInGroup = group.armies.some(item => selectedIds.has(item.id));
+      if (detailLevel === 'HIDDEN' && !selectedInGroup) return null;
       const effectiveOwner = army.owner.startsWith('rebel_') && army.originalOwner ? army.originalOwner : army.owner;
       const x = group.x + group.offsetX, y = group.y + group.offsetY;
       const transform = `translate(${x} ${y}) scale(${markerScale}) translate(${-x} ${-y})`;
+      if (detailLevel !== 'FULL') return <g key={group.key} transform={transform}><CompactArmyMarker group={group} country={countries.get(effectiveOwner)} selected={selectedInGroup} expanded={group.key === openStackKey} onArmyClick={onArmyClick} onStackOpen={onStackOpen} onStackToggleAdditive={onStackToggleAdditive} onHover={onArmyHover} /></g>;
       if (group.armies.length > 1) return (
         <g key={group.key} transform={transform}><ArmyStackMarker
           key={group.key}
@@ -77,7 +82,7 @@ export const ArmyMovementLayer: React.FC<ArmyMovementLayerProps> = React.memo(fu
       );
       return <g key={army.id} transform={transform}><ArmyMarker army={army} countries={[]} provinces={[]} resolvedCountry={countries.get(effectiveOwner)} resolvedProvince={army.location ? presentation.provinceById.get(army.location) : undefined} markerPosition={{ x, y }} isSelected={selectedInGroup} isHovered={army.id === hoveredArmyId} offsetX={0} offsetY={0} onClick={onArmyClick} onHover={onArmyHover} /></g>;
     })}
-    {selectedIds.size === 1 && selected && selectedGroup && stats && <g className="army-mini-status" pointerEvents="none" transform={`translate(${selectedGroup.x + selectedGroup.offsetX}, ${selectedGroup.y + selectedGroup.offsetY + 36 * markerScale}) scale(${markerScale})`}>
+    {detailLevel === 'FULL' && selectedIds.size === 1 && selected && selectedGroup && stats && <g className="army-mini-status" pointerEvents="none" transform={`translate(${selectedGroup.x + selectedGroup.offsetX}, ${selectedGroup.y + selectedGroup.offsetY + 36 * markerScale}) scale(${markerScale})`}>
       <rect x="-70" y="-9" width="140" height={selected.destination ? 35 : 25} rx="4" fill="var(--bg-app)" stroke="var(--border-subtle)" />
       <text y="0" textAnchor="middle">{stats.troops.toLocaleString('pt-BR')} · Org {Math.round(stats.organization)} · Moral {Math.round(stats.morale)}</text>
       <text y="10" textAnchor="middle">Supply {SUPPLY_LABELS[stats.supply]} · {Math.round(stats.supplyRatio * 100)}%</text>

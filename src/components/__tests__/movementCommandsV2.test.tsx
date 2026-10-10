@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+// These interaction regressions exercise FULL markers; semantic zoom is covered separately.
+vi.mock('../GameMap/markerDetail', async importOriginal => ({ ...await importOriginal<typeof import('../GameMap/markerDetail')>(), markerDetailLevel: () => 'FULL' }));
 import React from 'react';
 import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';

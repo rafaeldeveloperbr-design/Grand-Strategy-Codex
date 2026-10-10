@@ -1,4 +1,5 @@
 import type { NavalBattle } from '../../types/naval';
+import type { AirCombatReport } from '../../types/air';
 /**
  * useGameModals.ts - 95 linhas - PASSO 5.2
  * Todos os booleans de modal e handlers de open/close
@@ -9,6 +10,7 @@ import type { CombatResult } from '../../types';
 export function useGameModals() {
   const [showWarPanel, setShowWarPanel] = useState(false);
   const [navalReports, setNavalReports] = useState<NavalBattle[]>([]);
+  const [airReport, setAirReport] = useState<AirCombatReport | null>(null);
   const [battleReport, setBattleReport] = useState<CombatResult | null>(null);
   const [showBattleHistory, setShowBattleHistory] = useState(false);
   const [showTechModal, setShowTechModal] = useState(false);
@@ -26,6 +28,7 @@ export function useGameModals() {
     showWarPanel, setShowWarPanel,
     battleReport, setBattleReport,
     navalReports, setNavalReports,
+    airReport, setAirReport,
     showBattleHistory, setShowBattleHistory,
     showTechModal, setShowTechModal,
     showNotificationModal, setShowNotificationModal,
